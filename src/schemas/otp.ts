@@ -1,3 +1,4 @@
+// Schema for issuing an OTP. Supports optional idempotency and context IDs.
 export const sendSchema = {
     type: "object",
     required: ["tenantId", "destination", "channel"],
@@ -12,12 +13,14 @@ export const sendSchema = {
   } as const;
   
   const L = Number(process.env.OTP_LENGTH || 6);
+  // Schema for verifying an OTP. Code length matches configured OTP length.
   export const verifySchema = {
     type: "object", required: ["tenantId", "requestId", "code"],
     additionalProperties: false,
     properties: { tenantId: { type: "string" }, requestId: { type: "string" }, code: { type: "string", minLength: L, maxLength: L } }
   } as const;
   
+  // Schema for resending an OTP using an existing requestId.
   export const resendSchema = {
     type: "object", required: ["tenantId", "requestId"],
     additionalProperties: false,
