@@ -79,9 +79,10 @@ const routes: FastifyPluginAsync = async (app) => {
         return { ok: true };
       }
       
-      return rep
-        .code(r.code === "not_found" ? 404 : 429)
-        .send({ error: r.code });
+      const err: any = new Error(r.code === "not_found" ? "Request not found" : "Resend cooldown in effect");
+      err.statusCode = r.code === "not_found" ? 404 : 429;
+      err.code = r.code === "not_found" ? "not_found" : "cooldown";
+      throw err;
     }
   );
 };

@@ -46,8 +46,9 @@ export async function send(app: FastifyInstance, body: any) {
   }
   
   if (rc > DEST_PER_MINUTE) {
-    const e: any = new Error("destination rate limit");
+    const e: any = new Error("Destination rate limit exceeded");
     e.statusCode = 429;
+    e.code = "rate_limited";
     throw e;
   }
 
