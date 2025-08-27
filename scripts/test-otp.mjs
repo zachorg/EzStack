@@ -15,27 +15,72 @@ const tenantId = args.get('tenant') || 't1';
 const destination = args.get('destination') || '+15555550123';
 const channel = args.get('channel') || 'sms';
 const tryLogs = (args.get('from-logs') || 'true') !== 'false';
+const maxRetries = Number(args.get('max-retries') || 3);
 
 const idemKey = args.get('idem-key');
 const idemVia = args.get('idem-via') || 'header'; // 'header' | 'body'
 
+function computeRetrySeconds(res, bodyText) {
+  const headers = res.headers;
+  const ra = headers.get('retry-after');
+  if (ra) {
+    const s = Number(ra);
+    if (!Number.isNaN(s) && Number.isFinite(s) && s > 0) return Math.min(s, 3600);
+  }
+  const reset = headers.get('x-ratelimit-reset') || headers.get('ratelimit-reset');
+  if (reset) {
+    const n = Number(reset);
+    if (!Number.isNaN(n) && Number.isFinite(n)) {
+      const nowMs = Date.now();
+      // Heuristic: treat big numbers as ms epoch; small as seconds epoch or seconds delta
+      let seconds;
+      if (n > 1e12) {
+        seconds = Math.ceil((n - nowMs) / 1000);
+      } else if (n > 1e10) {
+        seconds = Math.ceil((n - nowMs) / 1000);
+      } else if (n > 10_000_000) {
+        seconds = Math.ceil((n * 1000 - nowMs) / 1000);
+      } else {
+        const nowSec = Math.floor(nowMs / 1000);
+        seconds = Math.max(1, n - nowSec);
+      }
+      if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds, 3600);
+    }
+  }
+  const m = /retry in (\d+)\s*seconds?/i.exec(bodyText || '');
+  if (m) return Math.min(Number(m[1]) || 10, 3600);
+  if (/destination rate limit/i.test(bodyText || '')) return 60;
+  return 10;
+}
+
 async function sendOtp() {
-  const res = await fetch(`${base}/otp/send`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-ezauth-key': apiKey,
-      ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
-    },
-    body: JSON.stringify({
-      tenantId,
-      destination,
-      channel,
-      ...(idemKey && idemVia !== 'header' ? { idempotencyKey: idemKey } : {})
-    })
-  });
-  if (!res.ok) throw new Error(`send failed: ${res.status} ${await res.text()}`);
-  return res.json();
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(`${base}/otp/send`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-ezauth-key': apiKey,
+        ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
+      },
+      body: JSON.stringify({
+        tenantId,
+        destination,
+        channel,
+        ...(idemKey && idemVia !== 'header' ? { idempotencyKey: idemKey } : {})
+      })
+    });
+    if (res.ok) {
+      return res.json();
+    }
+    const text = await res.text();
+    if (res.status === 429 && attempt < maxRetries) {
+      const waitSec = computeRetrySeconds(res, text);
+      console.log(`Rate limited (attempt ${attempt + 1}/${maxRetries + 1}). Waiting ${waitSec}s then retrying...`);
+      await sleep(waitSec * 1000);
+      continue;
+    }
+    throw new Error(`send failed: ${res.status} ${text}`);
+  }
 }
 
 function parseOtpFromLine(line, requestId) {
