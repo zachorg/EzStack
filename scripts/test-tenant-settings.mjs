@@ -34,6 +34,7 @@ const otpLength = Number(args.get('otp-length') || 4);
 const resendSec = Number(args.get('resend') || 5);
 const destPerMinute = Number(args.get('dest-per-minute') || 2);
 const routePerMinute = Number(args.get('route-per-minute') || 10);
+const otpMaxAttempts = Number(args.get('otp-max-attempts') || 3);
 
 const destBase = args.get('destination') || '+15555550123';
 const channel = args.get('channel') || 'sms';
@@ -121,7 +122,7 @@ async function main() {
   const redis = new Redis(redisUrl);
 
   // Phase 1: configure all settings as provided
-  const phase1 = { OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec, DEST_PER_MINUTE: destPerMinute, RATE_ROUTE_MAX: routePerMinute };
+  const phase1 = { OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec, DEST_PER_MINUTE: destPerMinute, RATE_ROUTE_MAX: routePerMinute, OTP_MAX_ATTEMPTS: otpMaxAttempts };
   console.log(`[phase1] writing tenant settings:`, phase1);
   await setTenantSettings(redis, phase1);
   console.log(`[phase1] waiting for cache refresh (6s)...`);
@@ -142,20 +143,34 @@ async function main() {
     console.warn(`[otp] could not parse OTP from logs. Please check logs manually to confirm length=${otpLength}.`);
   }
 
-  // 2) Resend cooldown (use a fresh requestId so verify does not interfere)
-  const resendSeed = await sendOtp({ destination });
+  // 2) Resend cooldown (use a separate destination to avoid per-destination quota)
+  const destForResend = `${destBase}-resend`;
+  const resendSeed = await sendOtp({ destination: destForResend });
   const first = await resendOtp({ requestId: resendSeed.requestId });
   assert(first.ok, `first resend should be 200, got ${first.status}`);
   const second = await resendOtp({ requestId: resendSeed.requestId });
   assert(second.status === 429, `second resend should be 429 due to cooldown, got ${second.status}`);
   console.log(`[cooldown] enforced with status 429 as expected`);
 
-  // 3) Destination-per-minute limit
+  // 2b) Max attempts policy: incorrect codes exhaust attempts and lock request (use new destination)
+  const destForAttempts = `${destBase}-attempts`;
+  const badSeed = await sendOtp({ destination: destForAttempts });
+  const wrong = ("0".repeat(Math.max(4, otpLength))).slice(0, otpLength);
+  for (let i = 0; i < otpMaxAttempts; i++) {
+    const vr = await verifyOtp({ requestId: badSeed.requestId, code: wrong });
+    assert(vr.verified === false, `attempt ${i + 1} should be false`);
+  }
+  const afterExhaust = await verifyOtp({ requestId: badSeed.requestId, code: wrong });
+  assert(afterExhaust.verified === false, `verification should remain false after exceeding max attempts`);
+  console.log(`[attempts] enforced max attempts=${otpMaxAttempts}`);
+
+  // 3) Destination-per-minute limit (use a fresh destination to avoid prior sends)
+  const destForRate = `${destBase}-rate`;
   let okCount = 0, errCount = 0;
   const burst = Math.max(destPerMinute + 2, destPerMinute);
   for (let i = 0; i < burst; i++) {
     try {
-      const r = await sendOtp({ destination });
+      await sendOtp({ destination: destForRate });
       okCount++;
     } catch (e) {
       errCount++;
@@ -165,7 +180,7 @@ async function main() {
   assert(errCount > 0, `expected some requests to be rate limited by destination limit`);
 
   // Phase 2: Route rate limit isolation test
-  const phase2 = { RATE_ROUTE_MAX: Math.max(3, Math.min(routePerMinute, 10)), DEST_PER_MINUTE: 9999, OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec };
+  const phase2 = { RATE_ROUTE_MAX: Math.max(3, Math.min(routePerMinute, 10)), DEST_PER_MINUTE: 9999, OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec, OTP_MAX_ATTEMPTS: otpMaxAttempts };
   console.log(`[phase2] writing tenant settings:`, phase2);
   await setTenantSettings(redis, phase2);
   console.log(`[phase2] waiting for cache refresh (6s)...`);

@@ -100,6 +100,8 @@ export async function send(app: FastifyInstance, body: any) {
 export async function verify(app: FastifyInstance, body: any) {
   const { tenantId, requestId, code } = body;
   const redis = (app as any).redis as Redis;
+  const ts = await (app as any).getTenantSettings?.(tenantId);
+  const OTP_MAX_ATTEMPTS = ts?.otpMaxAttempts ?? Number(process.env.OTP_MAX_ATTEMPTS || 5);
   const key = kOtp(tenantId, requestId);
   const raw = await redis.get(key);
 
@@ -109,9 +111,9 @@ export async function verify(app: FastifyInstance, body: any) {
 
   const data = JSON.parse(raw);
 
-  // Track attempts; invalidate after too many failures
+  // Track attempts; invalidate after too many failures (tenant-configurable)
   data.attempts = (data.attempts || 0) + 1;
-  if (data.attempts > 5) {
+  if (data.attempts > OTP_MAX_ATTEMPTS) {
     await redis.del(key);
     return false;
   }

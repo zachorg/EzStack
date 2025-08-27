@@ -15,6 +15,7 @@ declare module "fastify" {
       resendCooldownSec: number;
       destPerMinute: number;
       routePerMinute: number;
+      otpMaxAttempts: number;
     }>;
     // Optional SQS client and queue name when SQS is configured
     sqs?: SQSClient;
