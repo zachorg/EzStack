@@ -1,14 +1,11 @@
 services:
   api:
-    image: node:20
-    working_dir: /app
-    command: sh -lc "npm install --no-fund --no-audit && npm run dev"
+    build: .
+    image: ezstack:local
     ports: ["8080:8080"]
     environment:
       EZAUTH_API_KEY: dev-secret
       REDIS_URL: redis://redis:6379
-    volumes:
-      - ./:/app
     depends_on:
       redis:
         condition: service_healthy
