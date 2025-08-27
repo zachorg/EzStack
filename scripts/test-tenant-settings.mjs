@@ -68,7 +68,7 @@ async function setTenantSettings(redis, settings) {
 }
 
 async function sendOtp({ destination }) {
-  const res = await fetch(`${base}/otp/send`, {
+  const res = await fetch(`${base}/v1/otp/send`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
     body: JSON.stringify({ tenantId, destination, channel })
@@ -79,7 +79,7 @@ async function sendOtp({ destination }) {
 }
 
 async function resendOtp({ requestId }) {
-  const res = await fetch(`${base}/otp/resend`, {
+  const res = await fetch(`${base}/v1/otp/resend`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
     body: JSON.stringify({ tenantId, requestId })
@@ -88,7 +88,7 @@ async function resendOtp({ requestId }) {
 }
 
 async function verifyOtp({ requestId, code }) {
-  const res = await fetch(`${base}/otp/verify`, {
+  const res = await fetch(`${base}/v1/otp/verify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
     body: JSON.stringify({ tenantId, requestId, code })

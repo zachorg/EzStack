@@ -40,8 +40,8 @@ if (process.env.AWS_SQS_ENDPOINT || process.env.AWS_ACCESS_KEY_ID) {
   await app.register(sqs);
 }
 
-// Mount the OTP route module under /otp
-await app.register(import("./routes/otp.js"), { prefix: "/otp" });
+// Mount the OTP route module under /v1/otp
+await app.register(import("./routes/otp.js"), { prefix: "/v1/otp" });
 
 // Start the HTTP server
 await app.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 8080) });

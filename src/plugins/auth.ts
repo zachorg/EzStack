@@ -4,7 +4,7 @@ import fp from "fastify-plugin";
 export default fp(async (app) => {
   app.addHook("preHandler", async (req, rep) => {
     // Allow unauthenticated health check
-    if (req.routeOptions.url === "/otp/healthz") {
+    if (req.routeOptions.url === "/v1/otp/healthz") {
       return;
     }
 

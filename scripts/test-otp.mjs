@@ -55,7 +55,7 @@ function computeRetrySeconds(res, bodyText) {
 
 async function sendOtp() {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch(`${base}/otp/send`, {
+    const res = await fetch(`${base}/v1/otp/send`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -116,7 +116,7 @@ function getOtpFromDockerLogs(requestId) {
 }
 
 async function verifyOtp(requestId, code) {
-  const res = await fetch(`${base}/otp/verify`, {
+  const res = await fetch(`${base}/v1/otp/verify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
     body: JSON.stringify({ tenantId, requestId, code })
