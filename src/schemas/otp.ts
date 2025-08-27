@@ -27,6 +27,21 @@ export const sendSchema = {
     }
 } as const;
 
+// Optional headers for issuing an OTP. Supports Idempotency-Key header.
+export const sendHeadersSchema = {
+    type: "object",
+    // Allow other headers like content-type and auth
+    additionalProperties: true,
+    properties: {
+        // Fastify lowercases header keys
+        "idempotency-key": {
+            type: "string",
+            minLength: 8,
+            maxLength: 128
+        }
+    }
+} as const;
+
 const L = Number(process.env.OTP_LENGTH || 6);
 
 // Schema for verifying an OTP. Code length matches configured OTP length.

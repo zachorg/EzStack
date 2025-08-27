@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { GetQueueUrlCommand } from "@aws-sdk/client-sqs";
-import { sendSchema, verifySchema, resendSchema } from "../schemas/otp.js";
+import { sendSchema, sendHeadersSchema, verifySchema, resendSchema } from "../schemas/otp.js";
 import * as OTP from "../services/otp.js";
 
 const routes: FastifyPluginAsync = async (app) => {
@@ -41,12 +41,17 @@ const routes: FastifyPluginAsync = async (app) => {
   app.post(
     "/send",   
     { 
-      schema: { body: sendSchema },
+      schema: { body: sendSchema, headers: sendHeadersSchema },
       preHandler: [app.rlPerRoute()]
     },
     async (req: any, rep: any) => {
+      const hdr = req.headers?.["idempotency-key"] as undefined | string | string[];
+      const headerIdem = Array.isArray(hdr) ? hdr[0] : hdr;
+      const bodyIdem = (req.body && (req.body as any).idempotencyKey) as undefined | string;
+      const idempotencyKey = headerIdem || bodyIdem;
+      const payload = { ...(req.body as any), idempotencyKey };
       return rep.send({ 
-        requestId: await OTP.send(app, req.body as any) 
+        requestId: await OTP.send(app, payload) 
       });
     }
   );
