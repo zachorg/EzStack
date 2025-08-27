@@ -8,15 +8,15 @@ export default fp(async (app) => {
   app.decorate(
     "rlPerRoute", 
     (max?: number) => {
-      return async (req, rep) => {
-        const tenantId = (req.body && (req.body as any).tenantId) || (req.headers && (req.headers as any)["x-tenant-id"]) || undefined;
-        const ts = await (app as any).getTenantSettings?.(tenantId);
-        const perTenantMax = ts?.routePerMinute ?? RATE_ROUTE_MAX;
-        return (app as any).rateLimit({
-          max: max ?? perTenantMax,
-          timeWindow: "1 minute"
-        })(req, rep);
-      };
+      return (app as any).rateLimit({
+        timeWindow: "1 minute",
+        max: async (req: any) => {
+          const tenantId = (req.body && (req.body as any).tenantId) || (req.headers && (req.headers as any)["x-tenant-id"]) || undefined;
+          const ts = await (app as any).getTenantSettings?.(tenantId);
+          const perTenantMax = ts?.routePerMinute ?? RATE_ROUTE_MAX;
+          return max ?? perTenantMax;
+        }
+      });
     }
   );
 });

@@ -142,10 +142,11 @@ async function main() {
     console.warn(`[otp] could not parse OTP from logs. Please check logs manually to confirm length=${otpLength}.`);
   }
 
-  // 2) Resend cooldown
-  const first = await resendOtp({ requestId: sendRes.requestId });
+  // 2) Resend cooldown (use a fresh requestId so verify does not interfere)
+  const resendSeed = await sendOtp({ destination });
+  const first = await resendOtp({ requestId: resendSeed.requestId });
   assert(first.ok, `first resend should be 200, got ${first.status}`);
-  const second = await resendOtp({ requestId: sendRes.requestId });
+  const second = await resendOtp({ requestId: resendSeed.requestId });
   assert(second.status === 429, `second resend should be 429 due to cooldown, got ${second.status}`);
   console.log(`[cooldown] enforced with status 429 as expected`);
 
