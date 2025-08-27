@@ -5,6 +5,7 @@ import redis from "./plugins/redis.js";
 import sqs from "./plugins/sqs.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
+import tenantSettings from "./plugins/tenant-settings.js";
 
 // Create Fastify app with info-level logging
 const app = Fastify({ logger: { level: "info" } });
@@ -13,6 +14,8 @@ const app = Fastify({ logger: { level: "info" } });
 await app.register(redis);
 // Global error/404 handler (must be registered before routes)
 await app.register(errors);
+// Tenant settings loader backed by Redis with small in-memory cache
+await app.register(tenantSettings);
 // Install @fastify/rate-limit in non-global mode; we'll apply per-route
 await app.register(fastifyRateLimit, { global: false });
 // Decorates app with helper `rlPerRoute(max?)` to apply per-route limits

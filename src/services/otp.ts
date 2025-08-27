@@ -5,9 +5,6 @@ import { SendMessageCommand, GetQueueUrlCommand } from "@aws-sdk/client-sqs";
 import { destHash, randomOtp, hashOtp } from "../utils/crypto.js";
 
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS || 300);
-const OTP_LENGTH = Number(process.env.OTP_LENGTH || 6);
-const DEST_PER_MINUTE = Number(process.env.DEST_PER_MINUTE || 5);
-const RESEND_COOLDOWN_SEC = Number(process.env.RESEND_COOLDOWN_SEC || 30);
 
 const kOtp    = (t: string, id: string) => `otp:${t}:${id}`;
 const kIdem   = (t: string, k: string)  => `idem:${t}:${k}`;
@@ -28,6 +25,9 @@ async function queueUrl(app: FastifyInstance) {
 export async function send(app: FastifyInstance, body: any) {
   const { tenantId, destination, channel, idempotencyKey, contextId } = body;
   const redis = (app as any).redis as Redis;
+  const ts = await (app as any).getTenantSettings?.(tenantId);
+  const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
+  const DEST_PER_MINUTE = ts?.destPerMinute ?? Number(process.env.DEST_PER_MINUTE || 5);
 
   // Idempotency: return existing requestId for the same idempotencyKey
   if (idempotencyKey) {
@@ -130,6 +130,9 @@ export async function verify(app: FastifyInstance, body: any) {
 export async function resend(app: FastifyInstance, body: any) {
   const { tenantId, requestId } = body;
   const redis = (app as any).redis as Redis;
+  const ts = await (app as any).getTenantSettings?.(tenantId);
+  const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
+  const RESEND_COOLDOWN_SEC = ts?.resendCooldownSec ?? Number(process.env.RESEND_COOLDOWN_SEC || 30);
   const key = kOtp(tenantId, requestId);
   const raw = await redis.get(key);
 

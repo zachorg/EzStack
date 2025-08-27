@@ -6,7 +6,8 @@
         "dev": "tsx watch src/index.ts",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/index.js",
-        "test:otp": "node scripts/test-otp.mjs"
+        "test:otp": "node scripts/test-otp.mjs",
+        "test:tenant": "node scripts/test-tenant-settings.mjs"
     },
     "dependencies": {
         "@aws-sdk/client-sqs": "^3.620.0",

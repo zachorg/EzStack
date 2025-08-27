@@ -42,7 +42,8 @@ export const sendHeadersSchema = {
     }
 } as const;
 
-const L = Number(process.env.OTP_LENGTH || 6);
+const L_MIN = 4;
+const L_MAX = 10;
 
 // Schema for verifying an OTP. Code length matches configured OTP length.
 export const verifySchema = {
@@ -58,8 +59,8 @@ export const verifySchema = {
         },
         code: { 
             type: "string", 
-            minLength: L, 
-            maxLength: L 
+            minLength: L_MIN, 
+            maxLength: L_MAX 
         }
     }
 } as const;
