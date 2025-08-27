@@ -1,9 +1,16 @@
 import "fastify";
 import type { preHandlerHookHandler } from "fastify";
+import type Redis from "ioredis";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 
 declare module "fastify" {
   interface FastifyInstance {
     // Helper added by rate-limit plugin to apply per-route limits
     rlPerRoute: (max?: number) => preHandlerHookHandler;
+    // Redis client provided by redis plugin
+    redis: Redis;
+    // Optional SQS client and queue name when SQS is configured
+    sqs?: SQSClient;
+    sqsQueueName?: string;
   }
 }

@@ -1,8 +1,42 @@
 import type { FastifyPluginAsync } from "fastify";
+import { GetQueueUrlCommand } from "@aws-sdk/client-sqs";
 import { sendSchema, verifySchema, resendSchema } from "../schemas/otp.js";
 import * as OTP from "../services/otp.js";
 
 const routes: FastifyPluginAsync = async (app) => {
+  
+  // Health/readiness check. Unauthenticated by auth plugin exemption.
+  app.get("/healthz", async (_req, rep) => {
+    let redisOk = false;
+    try {
+      const pong = await app.redis.ping();
+      redisOk = pong === "PONG";
+    } catch {
+      redisOk = false;
+    }
+
+    let sqsOk: boolean | undefined = undefined;
+    if (app.sqs && app.sqsQueueName) {
+      try {
+        const r = await app.sqs.send(
+          new GetQueueUrlCommand({ QueueName: app.sqsQueueName })
+        );
+        sqsOk = Boolean(r.QueueUrl);
+      } catch {
+        sqsOk = false;
+      }
+    }
+
+    const ok = redisOk && (sqsOk !== false);
+
+    const payload: any = { ok, checks: { redis: redisOk } };
+    if (sqsOk !== undefined) {
+      payload.checks.sqs = sqsOk;
+    }
+
+    return rep.code(ok ? 200 : 503).send(payload);
+  });
+
   // Issue an OTP and queue a send (if SQS configured). Returns requestId.
   app.post(
     "/send",   
