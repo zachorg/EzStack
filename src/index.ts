@@ -7,8 +7,21 @@ import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
 
-// Create Fastify app with info-level logging
-const app = Fastify({ logger: { level: "info" } });
+// Create Fastify app with info-level logging and redaction for sensitive fields
+const app = Fastify({
+  logger: {
+    level: "info",
+    // Redact potentially sensitive destination values from all logs
+    redact: {
+      paths: [
+        "destination",           // top-level fields in our own logs
+        "body.destination",      // explicit body shape
+        "req.body.destination"   // Fastify request logs if enabled
+      ],
+      censor: "[REDACTED]"
+    }
+  }
+});
 
 // Used for OTP storage, rate limiting, and idempotency
 await app.register(redis);

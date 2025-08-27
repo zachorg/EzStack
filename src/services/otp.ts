@@ -24,6 +24,7 @@ async function queueUrl(app: FastifyInstance) {
 
 export async function send(app: FastifyInstance, body: any) {
   const { tenantId, destination, channel, idempotencyKey, contextId } = body;
+  const log = app.log.child({ tenantId, contextId });
   const redis = (app as any).redis as Redis;
   const ts = await (app as any).getTenantSettings?.(tenantId);
   const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
@@ -90,15 +91,16 @@ export async function send(app: FastifyInstance, body: any) {
       })
     }));
   } else {
-    app.log.warn({ requestId, destination }, "SQS not configured; OTP will only be visible in logs");
+    log.warn({ requestId, destination }, "SQS not configured; OTP will only be visible in logs");
   }
 
-  app.log.info({ requestId, otp, destination }, "OTP generated");
+  log.info({ requestId, otp, destination }, "OTP generated");
   return requestId;
 }
 
 export async function verify(app: FastifyInstance, body: any) {
   const { tenantId, requestId, code } = body;
+  const log = app.log.child({ tenantId });
   const redis = (app as any).redis as Redis;
   const ts = await (app as any).getTenantSettings?.(tenantId);
   const OTP_MAX_ATTEMPTS = ts?.otpMaxAttempts ?? Number(process.env.OTP_MAX_ATTEMPTS || 5);
@@ -106,6 +108,7 @@ export async function verify(app: FastifyInstance, body: any) {
   const raw = await redis.get(key);
 
   if (!raw) {
+    log.warn({ requestId }, "OTP verify: request not found");
     return false;
   }
 
@@ -115,6 +118,7 @@ export async function verify(app: FastifyInstance, body: any) {
   data.attempts = (data.attempts || 0) + 1;
   if (data.attempts > OTP_MAX_ATTEMPTS) {
     await redis.del(key);
+    log.warn({ requestId }, "OTP verify: exceeded max attempts; invalidated");
     return false;
   }
 
@@ -122,15 +126,18 @@ export async function verify(app: FastifyInstance, body: any) {
   const ok = hashOtp(code, data.salt) === data.hash;
   if (!ok) {
     await redis.set(key, JSON.stringify(data), "EX", OTP_TTL_SECONDS);
+    log.warn({ requestId }, "OTP verify: incorrect code");
     return false;
   }
 
   await redis.del(key);
+  log.info({ requestId }, "OTP verify: success");
   return true;
 }
 
 export async function resend(app: FastifyInstance, body: any) {
   const { tenantId, requestId } = body;
+  const log = app.log.child({ tenantId });
   const redis = (app as any).redis as Redis;
   const ts = await (app as any).getTenantSettings?.(tenantId);
   const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
@@ -174,6 +181,6 @@ export async function resend(app: FastifyInstance, body: any) {
     }));
   }
 
-  app.log.info({ requestId, otp }, "OTP resent");
+  log.info({ requestId, otp }, "OTP resent");
   return { ok: true };
 }
