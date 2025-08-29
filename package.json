@@ -8,7 +8,8 @@
         "start": "node dist/index.js",
         "test:otp": "node scripts/test-otp.mjs",
         "test:ote": "node scripts/test-ote.mjs",
-        "test:tenant": "node scripts/test-tenant-settings.mjs"
+        "test:tenant": "node scripts/test-tenant-settings.mjs",
+        "create:tenant": "node scripts/create-tenant.mjs"
     },
     "dependencies": {
         "@aws-sdk/client-ses": "^3.620.0",
@@ -16,7 +17,8 @@
         "@aws-sdk/client-sns": "^3.873.0",
         "@fastify/rate-limit": "^10.0.0",
         "fastify": "^5.0.0",
-        "ioredis": "^5.4.1"
+        "ioredis": "^5.4.1",
+        "firebase-admin": "^12.5.0"
     },
     "devDependencies": {
         "@types/node": "^22.5.0",

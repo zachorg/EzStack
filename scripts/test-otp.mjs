@@ -11,7 +11,7 @@ const args = new Map(process.argv.slice(2).map((a, i, arr) => a.startsWith('--')
 
 const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
 const apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY || 'dev-secret';
-const tenantId = args.get('tenant') || 't1';
+const tenantId = args.get('tenant') || undefined;
 const destination = args.get('destination') || '+15555550123';
 const channel = args.get('channel') || 'sms';
 const tryLogs = (args.get('from-logs') || 'true') !== 'false';
@@ -63,7 +63,6 @@ async function sendOtp() {
         ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
       },
       body: JSON.stringify({
-        tenantId,
         destination,
         channel,
         ...(idemKey && idemVia !== 'header' ? { idempotencyKey: idemKey } : {})
@@ -119,7 +118,7 @@ async function verifyOtp(requestId, code) {
   const res = await fetch(`${base}/v1/otp/verify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
-    body: JSON.stringify({ tenantId, requestId, code })
+    body: JSON.stringify({ requestId, code })
   });
   if (!res.ok) throw new Error(`verify failed: ${res.status} ${await res.text()}`);
   return res.json();

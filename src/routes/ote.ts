@@ -31,7 +31,7 @@ const routes: FastifyPluginAsync = async (app) => {
       const headerIdem = Array.isArray(hdr) ? hdr[0] : hdr;
       const bodyIdem = (req.body && (req.body as any).idempotencyKey) as undefined | string;
       const idempotencyKey = headerIdem || bodyIdem;
-      const payload = { ...(req.body as any), idempotencyKey };
+      const payload = { ...(req.body as any), idempotencyKey, tenantId: req.tenantId };
       return rep.send({
         requestId: await OTE.send(app, payload)
       });
@@ -47,7 +47,7 @@ const routes: FastifyPluginAsync = async (app) => {
     },
     async (req: any) => {
       return {
-        verified: await OTE.verify(app, req.body as any)
+        verified: await OTE.verify(app, { ...(req.body as any), tenantId: req.tenantId })
       };
     }
   );
@@ -60,7 +60,7 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()]
     },
     async (req: any, rep: any) => {
-      const r = await OTE.resend(app, req.body as any);
+      const r = await OTE.resend(app, { ...(req.body as any), tenantId: req.tenantId });
 
       if (r.ok) {
         return { ok: true };

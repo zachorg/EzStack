@@ -6,6 +6,7 @@ import sqs from "./plugins/sqs.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
+import firebase from "./plugins/firebase.js";
 import email from "./plugins/email.js";
 
 // Create Fastify app with info-level logging and redaction for sensitive fields
@@ -30,6 +31,8 @@ await app.register(redis);
 await app.register(errors);
 // Tenant settings loader backed by Redis with small in-memory cache
 await app.register(tenantSettings);
+// Firebase Admin (Firestore access)
+await app.register(firebase);
 // Email plugin (SES-backed)
 await app.register(email);
 // Install @fastify/rate-limit in non-global mode; we'll apply per-route

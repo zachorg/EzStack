@@ -16,3 +16,9 @@ export const hashOtp = (otp: string, salt: string) =>
   crypto.createHash("sha256")
     .update(`${salt}:${otp}`)
     .digest("hex");
+
+// Hash an API key with a server-side pepper; never store plaintext keys.
+export const hashApiKey = (apiKey: string, pepper: string) =>
+  crypto.createHash("sha256")
+    .update(`${pepper}:${apiKey}`)
+    .digest("hex");

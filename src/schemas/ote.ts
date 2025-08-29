@@ -1,13 +1,9 @@
 // Schema for issuing an OTE (email code). Supports optional idempotency and context IDs.
 export const sendSchema = {
     type: "object",
-    required: ["tenantId", "email"],
+    required: ["email"],
     additionalProperties: false,
     properties: {
-        tenantId: { 
-            type: "string", 
-            minLength: 1 
-        },
         email: { 
             type: "string", 
             format: "email"
@@ -42,10 +38,9 @@ const L_MAX = 10;
 // Schema for verifying an OTE. Code length matches configured OTE length.
 export const verifySchema = {
     type: "object",
-    required: ["tenantId", "requestId", "code"],
+    required: ["requestId", "code"],
     additionalProperties: false,
     properties: {
-        tenantId: { type: "string" },
         requestId: { type: "string" },
         code: { type: "string", minLength: L_MIN, maxLength: L_MAX }
     }
@@ -54,10 +49,9 @@ export const verifySchema = {
 // Schema for resending an OTE using an existing requestId.
 export const resendSchema = {
     type: "object",
-    required: ["tenantId", "requestId"],
+    required: ["requestId"],
     additionalProperties: false,
     properties: {
-        tenantId: { type: "string" },
         requestId: { type: "string" }
     }
 } as const;

@@ -24,5 +24,20 @@ declare module "fastify" {
     sqsQueueName?: string;
     // Email sender helper (SES-backed)
     sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
+    // Firebase Firestore
+    firestore: import("firebase-admin/firestore").Firestore;
+    // API key introspection helper backed by Firestore
+    introspectApiKey: (hash: string) => Promise<{
+      key?: { keyId: string; tenantId: string; status: string; createdAt?: string | number };
+      tenant?: { tenantId: string; name?: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
+      plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
+    }>;
+  }
+  interface FastifyRequest {
+    tenantId?: string;
+    authz?: {
+      plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
+      features?: Record<string, boolean>;
+    };
   }
 }

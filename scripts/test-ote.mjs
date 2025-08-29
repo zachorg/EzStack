@@ -16,7 +16,7 @@ const args = new Map(
 
 const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
 const apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY || 'dev-secret';
-const tenantId = args.get('tenant') || 't1';
+const tenantId = args.get('tenant') || undefined;
 const email = args.get('email') || 'user@example.com';
 const maxRetries = Number(args.get('max-retries') || 3);
 const codeArg = args.get('code');
@@ -65,7 +65,6 @@ async function sendOte() {
         ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
       },
       body: JSON.stringify({
-        tenantId,
         email,
         ...(idemKey && idemVia !== 'header' ? { idempotencyKey: idemKey } : {})
       })
@@ -88,7 +87,7 @@ async function verifyOte(requestId, code) {
   const res = await fetch(`${base}/v1/ote/verify`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
-    body: JSON.stringify({ tenantId, requestId, code })
+    body: JSON.stringify({ requestId, code })
   });
   if (!res.ok) throw new Error(`verify failed: ${res.status} ${await res.text()}`);
   return res.json();
@@ -98,7 +97,7 @@ async function resendOte(requestId) {
   const res = await fetch(`${base}/v1/ote/resend`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
-    body: JSON.stringify({ tenantId, requestId })
+    body: JSON.stringify({ requestId })
   });
   return res;
 }
