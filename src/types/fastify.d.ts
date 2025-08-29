@@ -16,9 +16,13 @@ declare module "fastify" {
       destPerMinute: number;
       routePerMinute: number;
       otpMaxAttempts: number;
+      oteLength: number;
+      oteMaxAttempts: number;
     }>;
     // Optional SQS client and queue name when SQS is configured
     sqs?: SQSClient;
     sqsQueueName?: string;
+    // Email sender helper (SES-backed)
+    sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
   }
 }

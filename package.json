@@ -7,9 +7,11 @@
         "build": "tsc -p tsconfig.json",
         "start": "node dist/index.js",
         "test:otp": "node scripts/test-otp.mjs",
+        "test:ote": "node scripts/test-ote.mjs",
         "test:tenant": "node scripts/test-tenant-settings.mjs"
     },
     "dependencies": {
+        "@aws-sdk/client-ses": "^3.620.0",
         "@aws-sdk/client-sqs": "^3.620.0",
         "@aws-sdk/client-sns": "^3.873.0",
         "@fastify/rate-limit": "^10.0.0",
