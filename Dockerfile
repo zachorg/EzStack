@@ -41,5 +41,3 @@ USER nodeuser
 
 # Start command
 CMD ["node", "dist/index.js"]
-
-
