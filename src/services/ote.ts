@@ -74,7 +74,7 @@ export async function send(app: FastifyInstance, body: any) {
     throw err;
   }
 
-  log.info({ requestId }, "OTE send: queued");
+  log.info({ requestId, code }, "OTE send: queued");
   return requestId;
 }
 
@@ -150,7 +150,12 @@ export async function resend(app: FastifyInstance, body: any) {
   const html = `<p>Your verification code is <strong>${code}</strong>.</p><p>It expires in ${Math.floor(OTE_TTL_SECONDS / 60)} minutes.</p>`;
   await (app as any).sendEmail({ to: data.destination, subject, text, html });
 
-  log.info({ requestId }, "OTE resent");
+  const shouldLogCode = process.env.LOG_CODES === "true" || String(process.env.EMAIL_DRY_RUN || "").toLowerCase() === "true";
+  if (shouldLogCode) {
+    app.log.info({ requestId, code }, "OTE resent");
+  } else {
+    log.info({ requestId }, "OTE resent");
+  }
   return { ok: true };
 }
 
