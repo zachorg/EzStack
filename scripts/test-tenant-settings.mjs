@@ -31,12 +31,15 @@ const tenantId = args.get('tenant') || 't1';
 const redisUrl = args.get('redis') || process.env.REDIS_URL || 'redis://localhost:6379';
 
 const otpLength = Number(args.get('otp-length') || 4);
+const oteLength = Number(args.get('ote-length') || otpLength);
 const resendSec = Number(args.get('resend') || 5);
 const destPerMinute = Number(args.get('dest-per-minute') || 2);
 const routePerMinute = Number(args.get('route-per-minute') || 10);
 const otpMaxAttempts = Number(args.get('otp-max-attempts') || 3);
+const oteMaxAttempts = Number(args.get('ote-max-attempts') || otpMaxAttempts);
 
 const destBase = args.get('destination') || '+15555550123';
+const emailBase = args.get('email') || 'user@example.com';
 const channel = args.get('channel') || 'sms';
 
 function dockerAvailable() {
@@ -78,6 +81,17 @@ async function sendOtp({ destination }) {
   return JSON.parse(body);
 }
 
+async function sendOte({ email }) {
+  const res = await fetch(`${base}/v1/ote/send`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    body: JSON.stringify({ tenantId, email })
+  });
+  const body = await res.text();
+  if (!res.ok) throw new Error(`ote send failed: ${res.status} ${body}`);
+  return JSON.parse(body);
+}
+
 async function resendOtp({ requestId }) {
   const res = await fetch(`${base}/v1/otp/resend`, {
     method: 'POST',
@@ -98,6 +112,17 @@ async function verifyOtp({ requestId, code }) {
   return JSON.parse(body);
 }
 
+async function verifyOte({ requestId, code }) {
+  const res = await fetch(`${base}/v1/ote/verify`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    body: JSON.stringify({ tenantId, requestId, code })
+  });
+  const body = await res.text();
+  if (!res.ok) throw new Error(`ote verify failed: ${res.status} ${body}`);
+  return JSON.parse(body);
+}
+
 async function getOtpFromLogs(requestId) {
   if (!dockerAvailable()) return undefined;
   // Poll a few times for logs to show up
@@ -113,6 +138,13 @@ async function getOtpFromLogs(requestId) {
   return undefined;
 }
 
+function maskEmail(e) {
+  const [u, d] = String(e).split('@');
+  if (!d) return e;
+  const ux = u.length <= 2 ? u : (u[0] + '*'.repeat(Math.max(1, u.length - 2)) + u[u.length - 1]);
+  return `${ux}@${d}`;
+}
+
 function assert(cond, msg) {
   if (!cond) throw new Error(`Assertion failed: ${msg}`);
 }
@@ -122,7 +154,7 @@ async function main() {
   const redis = new Redis(redisUrl);
 
   // Phase 1: configure all settings as provided
-  const phase1 = { OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec, DEST_PER_MINUTE: destPerMinute, RATE_ROUTE_MAX: routePerMinute, OTP_MAX_ATTEMPTS: otpMaxAttempts };
+  const phase1 = { OTP_LENGTH: otpLength, OTE_LENGTH: oteLength, RESEND_COOLDOWN_SEC: resendSec, DEST_PER_MINUTE: destPerMinute, RATE_ROUTE_MAX: routePerMinute, OTP_MAX_ATTEMPTS: otpMaxAttempts, OTE_MAX_ATTEMPTS: oteMaxAttempts };
   console.log(`[phase1] writing tenant settings:`, phase1);
   await setTenantSettings(redis, phase1);
   console.log(`[phase1] waiting for cache refresh (6s)...`);
@@ -141,6 +173,25 @@ async function main() {
     assert(verifyRes.verified === true, `verification should succeed for correct code`);
   } else {
     console.warn(`[otp] could not parse OTP from logs. Please check logs manually to confirm length=${otpLength}.`);
+  }
+
+  // 1b) OTE length + verify path (interactive input for code)
+  const email = emailBase;
+  const sendOteRes = await sendOte({ email });
+  console.log(`[ote] requestId=${sendOteRes.requestId} to=${maskEmail(email)}`);
+  console.log(`[ote] Please check inbox and enter the code to proceed.`);
+  const userCode = '0'.repeat(oteLength); // placeholder default
+  // Prompt user via stdin (non-fatal if running non-interactive; just skip)
+  try {
+    const { createInterface } = await import('node:readline/promises');
+    const { stdin, stdout } = await import('node:process');
+    const rl = createInterface({ input: stdin, output: stdout });
+    const entered = await rl.question('Enter OTE code: ');
+    rl.close();
+    const v = await verifyOte({ requestId: sendOteRes.requestId, code: entered.trim() || userCode });
+    console.log(`[ote] verify response:`, v);
+  } catch {
+    console.warn(`[ote] Skipping interactive verify (stdin not available).`);
   }
 
   // 2) Resend cooldown (use a separate destination to avoid per-destination quota)
@@ -179,8 +230,23 @@ async function main() {
   console.log(`[dest-rate] ok=${okCount} errors=${errCount} (limit=${destPerMinute}/min)`);
   assert(errCount > 0, `expected some requests to be rate limited by destination limit`);
 
+  // 3b) OTE destination-per-minute (email) limit
+  const emailForRate = emailBase.replace('@', `+rate@`);
+  let okOte = 0, errOte = 0;
+  const burstOte = Math.max(destPerMinute + 2, destPerMinute);
+  for (let i = 0; i < burstOte; i++) {
+    try {
+      await sendOte({ email: emailForRate });
+      okOte++;
+    } catch (e) {
+      errOte++;
+    }
+  }
+  console.log(`[ote-rate] ok=${okOte} errors=${errOte} (limit=${destPerMinute}/min)`);
+  assert(errOte > 0, `expected some OTE requests to be rate limited by destination limit`);
+
   // Phase 2: Route rate limit isolation test
-  const phase2 = { RATE_ROUTE_MAX: Math.max(3, Math.min(routePerMinute, 10)), DEST_PER_MINUTE: 9999, OTP_LENGTH: otpLength, RESEND_COOLDOWN_SEC: resendSec, OTP_MAX_ATTEMPTS: otpMaxAttempts };
+  const phase2 = { RATE_ROUTE_MAX: Math.max(3, Math.min(routePerMinute, 10)), DEST_PER_MINUTE: 9999, OTP_LENGTH: otpLength, OTE_LENGTH: oteLength, RESEND_COOLDOWN_SEC: resendSec, OTP_MAX_ATTEMPTS: otpMaxAttempts, OTE_MAX_ATTEMPTS: oteMaxAttempts };
   console.log(`[phase2] writing tenant settings:`, phase2);
   await setTenantSettings(redis, phase2);
   console.log(`[phase2] waiting for cache refresh (6s)...`);
