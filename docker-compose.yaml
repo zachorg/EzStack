@@ -3,7 +3,45 @@ services:
     build: .
     image: ezstack:local
     ports: ["8080:8080"]
-    env_file: .env
+    environment:
+      # Point server to mounted service account JSON (preferred in containers)
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account.json
+      # Core config
+      PORT: ${PORT:-8080}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      APIKEY_PEPPER: ${APIKEY_PEPPER:-change_me}
+      AUTH_DISABLE: ${AUTH_DISABLE:-false}
+      AUTH_LEGACY: ${AUTH_LEGACY:-false}
+      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE:-false}
+      # Email/SES
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
+      # SQS (optional)
+      SQS_ENABLE: ${SQS_ENABLE:-false}
+      AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
+      SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
+      # Firebase (optional inline creds; leave blank to use GOOGLE_APPLICATION_CREDENTIALS)
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      # Per-route and OTP/OTE defaults (tenants can override via Redis settings)
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-300}
+      OTP_LENGTH: ${OTP_LENGTH:-6}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTE_TTL_SECONDS: ${OTE_TTL_SECONDS:-300}
+      OTE_LENGTH: ${OTE_LENGTH:-6}
+      OTE_MAX_ATTEMPTS: ${OTE_MAX_ATTEMPTS:-5}
+      RESEND_COOLDOWN_SEC: ${RESEND_COOLDOWN_SEC:-30}
+      DEST_PER_MINUTE: ${DEST_PER_MINUTE:-5}
+      RATE_ROUTE_MAX: ${RATE_ROUTE_MAX:-30}
+      # Auth caching
+      APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
+      APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
+    volumes:
+      # Bind mount your service account JSON here (create ./secrets and place file there)
+      - ./secrets/ezstack-service-account.json:/secrets/service-account.json:ro
     depends_on:
       redis:
         condition: service_healthy

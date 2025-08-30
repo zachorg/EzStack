@@ -70,6 +70,11 @@ web_modules/
 .env.*
 !.env.example
 
+# Firebase config file
+firebase-web/firebase-config.js
+
+secrets/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
