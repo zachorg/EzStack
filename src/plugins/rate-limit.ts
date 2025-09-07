@@ -11,7 +11,8 @@ export default fp(async (app) => {
       return (app as any).rateLimit({
         timeWindow: "1 minute",
         max: async (req: any) => {
-          const tenantId = (req.body && (req.body as any).tenantId) || (req.headers && (req.headers as any)["x-tenant-id"]) || undefined;
+          // Always rely on authenticated tenantId set by auth plugin
+          const tenantId = req.tenantId as string | undefined;
           const ts = await (app as any).getTenantSettings?.(tenantId);
           const perTenantMax = ts?.routePerMinute ?? RATE_ROUTE_MAX;
           return max ?? perTenantMax;

@@ -7,8 +7,8 @@ export default fp(async (app) => {
   const memCache = new Map<string, { value: any; expiresAt: number }>();
   const MEM_TTL_MS = Number(process.env.APIKEY_CACHE_TTL_MS || 30_000);
   const REDIS_TTL_SEC = Number(process.env.APIKEY_REDIS_TTL_SEC || 60);
-  const PEPPER = process.env.APIKEY_PEPPER || "";
   const AUTH_LEGACY = process.env.AUTH_LEGACY === "true";
+  const PEPPER = (app as any).apikeyPepper as string;
 
   app.addHook("preHandler", async (req: any, _rep) => {
     // Allow unauthenticated health checks

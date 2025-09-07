@@ -26,6 +26,8 @@ declare module "fastify" {
     sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
     // Firebase Firestore
     firestore: import("firebase-admin/firestore").Firestore;
+    // Secrets loaded from Google Secret Manager (or env fallback)
+    apikeyPepper: string;
     // API key introspection helper backed by Firestore
     introspectApiKey: (hash: string) => Promise<{
       key?: { keyId: string; tenantId: string; status: string; createdAt?: string | number };

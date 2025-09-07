@@ -6,6 +6,7 @@ import sqs from "./plugins/sqs.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
+import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
 import email from "./plugins/email.js";
 
@@ -31,6 +32,8 @@ await app.register(redis);
 await app.register(errors);
 // Tenant settings loader backed by Redis with small in-memory cache
 await app.register(tenantSettings);
+// Secrets (APIKEY_PEPPER from Google Secret Manager or env fallback)
+await app.register(secrets);
 // Firebase Admin (Firestore access)
 await app.register(firebase);
 // Email plugin (SES-backed)

@@ -9,7 +9,8 @@ services:
       # Core config
       PORT: ${PORT:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      APIKEY_PEPPER: ${APIKEY_PEPPER:-change_me}
+      # Prefer Google Secret Manager; provide full resource name
+      APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_DISABLE: ${AUTH_DISABLE:-false}
       AUTH_LEGACY: ${AUTH_LEGACY:-false}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE:-false}
