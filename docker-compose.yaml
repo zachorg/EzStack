@@ -4,8 +4,6 @@ services:
     image: ezstack:local
     ports: ["8080:8080"]
     environment:
-      # Point server to mounted service account JSON (preferred in containers)
-      GOOGLE_APPLICATION_CREDENTIALS: /secrets/service-account.json
       # Core config
       PORT: ${PORT:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -23,7 +21,7 @@ services:
       SQS_ENABLE: ${SQS_ENABLE:-false}
       AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
       SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
-      # Firebase (optional inline creds; leave blank to use GOOGLE_APPLICATION_CREDENTIALS)
+      # Firebase/Google inline credentials (required for GSM & Firestore)
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
@@ -40,9 +38,6 @@ services:
       # Auth caching
       APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
       APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
-    volumes:
-      # Bind mount your service account JSON here (create ./secrets and place file there)
-      - ./secrets/ezstack-service-account.json:/secrets/service-account.json:ro
     depends_on:
       redis:
         condition: service_healthy

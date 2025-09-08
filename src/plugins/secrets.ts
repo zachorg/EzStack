@@ -5,6 +5,8 @@ import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 export default fp(async (app) => {
   const raw = (process.env.APIKEY_PEPPER || "").trim();
   const projectId = (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "").trim();
+  const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
+  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
   let pepper: string | undefined;
 
@@ -21,7 +23,14 @@ export default fp(async (app) => {
 
     // Try to fetch from GSM if we have a candidate resource name
     if (candidates.length > 0) {
-      const client = new SecretManagerServiceClient();
+      const clientOptions: any = {};
+      if (clientEmail && privateKey) {
+        clientOptions.credentials = { client_email: clientEmail, private_key: privateKey };
+      }
+      if (projectId) {
+        clientOptions.projectId = projectId;
+      }
+      const client = new SecretManagerServiceClient(clientOptions);
       for (const name of candidates) {
         try {
           const [v] = await client.accessSecretVersion({ name });
