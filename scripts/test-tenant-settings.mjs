@@ -3,7 +3,7 @@
 //
 // Usage examples:
 //   node scripts/test-tenant-settings.mjs --tenant t1 \
-//     --base http://localhost:8080 --api-key dev-secret \
+//     --base http://localhost:8080 --api-key YOUR_API_KEY \
 //     --redis redis://localhost:6379 \
 //     --otp-length 4 --resend 5 --dest-per-minute 2 --route-per-minute 10
 //
@@ -26,7 +26,19 @@ const args = new Map(
 );
 
 const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
-const apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY || 'dev-secret';
+let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
+const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
+if (!apiKey && !idToken) {
+  const firstPositional = argsArr.find((t) => !t.startsWith('--'));
+  if (firstPositional) {
+    apiKey = firstPositional;
+    console.warn('[warn] Using first positional argument as api key. Prefer --api-key <key>.');
+  }
+}
+if (!apiKey && !idToken) {
+  console.error('Missing credentials. Provide --api-key or --id-token.');
+  process.exit(2);
+}
 const tenantId = args.get('tenant') || 't1';
 const redisUrl = args.get('redis') || process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -73,7 +85,11 @@ async function setTenantSettings(redis, settings) {
 async function sendOtp({ destination }) {
   const res = await fetch(`${base}/v1/otp/send`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ tenantId, destination, channel })
   });
   const body = await res.text();
@@ -84,7 +100,11 @@ async function sendOtp({ destination }) {
 async function sendOte({ email }) {
   const res = await fetch(`${base}/v1/ote/send`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ tenantId, email })
   });
   const body = await res.text();
@@ -95,7 +115,11 @@ async function sendOte({ email }) {
 async function resendOtp({ requestId }) {
   const res = await fetch(`${base}/v1/otp/resend`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ tenantId, requestId })
   });
   return res;
@@ -104,7 +128,11 @@ async function resendOtp({ requestId }) {
 async function verifyOtp({ requestId, code }) {
   const res = await fetch(`${base}/v1/otp/verify`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ tenantId, requestId, code })
   });
   const body = await res.text();
@@ -115,7 +143,11 @@ async function verifyOtp({ requestId, code }) {
 async function verifyOte({ requestId, code }) {
   const res = await fetch(`${base}/v1/ote/verify`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ tenantId, requestId, code })
   });
   const body = await res.text();

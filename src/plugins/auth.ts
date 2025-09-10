@@ -7,7 +7,6 @@ export default fp(async (app) => {
   const memCache = new Map<string, { value: any; expiresAt: number }>();
   const MEM_TTL_MS = Number(process.env.APIKEY_CACHE_TTL_MS || 30_000);
   const REDIS_TTL_SEC = Number(process.env.APIKEY_REDIS_TTL_SEC || 60);
-  const AUTH_LEGACY = process.env.AUTH_LEGACY === "true";
   const PEPPER = (app as any).apikeyPepper as string;
 
   app.addHook("preHandler", async (req: any, _rep) => {
@@ -16,14 +15,6 @@ export default fp(async (app) => {
       return;
     }
 
-    // Legacy escape hatch for local/dev
-    if (AUTH_LEGACY && process.env.EZAUTH_API_KEY && process.env.AUTH_DISABLE !== "true") {
-      const k = req.headers?.["x-ezauth-key"];
-      if (typeof k === "string" && k === process.env.EZAUTH_API_KEY) {
-        req.tenantId = "legacy";
-        return;
-      }
-    }
 
     // Allow disabling auth entirely (tests/dev only)
     if (process.env.AUTH_DISABLE === "true") {
@@ -31,17 +22,68 @@ export default fp(async (app) => {
     }
 
     const apiKey = req.headers?.["x-ezauth-key"];
-    if (typeof apiKey !== "string" || apiKey.length < 10) {
-      const err: any = new Error("Missing or invalid API key");
+    const authzHeader = req.headers?.["authorization"] as undefined | string;
+    const bearer = typeof authzHeader === "string" && authzHeader.toLowerCase().startsWith("bearer ")
+      ? authzHeader.slice(7).trim()
+      : undefined;
+    const idToken = (req.headers?.["x-firebase-token"] as undefined | string) || bearer;
+
+    if (typeof apiKey !== "string" && typeof idToken !== "string") {
+      const err: any = new Error("Missing credentials: provide x-ezauth-key or x-firebase-token");
       err.statusCode = 401;
       err.code = "unauthorized";
       throw err;
     }
 
+    // Branch: Firebase Auth ID token
+    if (typeof idToken === "string") {
+      try {
+        const res = await (app as any).introspectIdToken(idToken);
+        if (!res?.uid) {
+          const err: any = new Error("Missing or invalid Firebase token");
+          err.statusCode = 401;
+          err.code = "unauthorized";
+          throw err;
+        }
+        req.userId = res.uid;
+        if (res.plan) {
+          req.authz = { plan: res.plan, features: res.user?.featureFlags || {} };
+          const rpm = res.plan?.limits?.requestsPerMinute;
+          if (typeof rpm === "number" && rpm > 0) {
+            const rk = `quota:user:${res.uid}:rpm`;
+            const count = await app.redis.incr(rk);
+            if (count === 1) {
+              await app.redis.expire(rk, 60);
+            }
+            if (count > rpm) {
+              const err: any = new Error("Plan request limit exceeded");
+              err.statusCode = 429;
+              err.code = "rate_limited";
+              throw err;
+            }
+          }
+        }
+        return;
+      } catch (e) {
+        const err: any = new Error("Missing or invalid Firebase token");
+        err.statusCode = 401;
+        err.code = "unauthorized";
+        throw err;
+      }
+    }
+
+    // Branch: API key
     if (!PEPPER) {
       const err: any = new Error("Server misconfigured: APIKEY_PEPPER not set");
       err.statusCode = 500;
       err.code = "internal_error";
+      throw err;
+    }
+
+    if (typeof apiKey !== "string" || apiKey.length < 10) {
+      const err: any = new Error("Missing or invalid API key");
+      err.statusCode = 401;
+      err.code = "unauthorized";
       throw err;
     }
 
@@ -140,6 +182,14 @@ export default fp(async (app) => {
         req.tenantId = parsed.tenant?.tenantId;
         req.authz = { plan: parsed.plan, features: parsed.tenant?.featureFlags || {} };
         return;
+      }
+      // Log the underlying error for diagnostics
+      try {
+        (app as any).log.error({ err: e }, "API key introspection failed");
+      } catch {}
+      // If the error already has a statusCode of 401/403, rethrow as-is
+      if (e && (e.statusCode === 401 || e.statusCode === 403)) {
+        throw e;
       }
       const err: any = new Error("Authentication service unavailable");
       err.statusCode = 503;

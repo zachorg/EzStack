@@ -1,16 +1,30 @@
 #!/usr/bin/env node
 // Minimal OTP e2e tester
-// Usage: node scripts/test-otp.mjs [--base http://localhost:8080] [--api-key dev-secret]
+// Usage: node scripts/test-otp.mjs [--base http://localhost:8080]
+//        [--api-key YOUR_API_KEY] or [--id-token YOUR_FIREBASE_ID_TOKEN]
 
 import { spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
-const args = new Map(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.replace(/^--/, ''), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : 'true'] : []));
+const argv2 = process.argv.slice(2);
+const args = new Map(argv2.map((a, i, arr) => a.startsWith('--') ? [a.replace(/^--/, ''), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : 'true'] : []));
 
 const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
-const apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY || 'dev-secret';
+let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
+const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
+if (!apiKey && !idToken) {
+  const firstPositional = argv2.find((t) => !t.startsWith('--'));
+  if (firstPositional) {
+    apiKey = firstPositional;
+    console.warn('[warn] Using first positional argument as api key. Prefer --api-key <key>.');
+  }
+}
+if (!apiKey && !idToken) {
+  console.error('Missing credentials. Provide --api-key or --id-token.');
+  process.exit(2);
+}
 const tenantId = args.get('tenant') || undefined;
 const destination = args.get('destination') || '+15555550123';
 const channel = args.get('channel') || 'sms';
@@ -59,7 +73,8 @@ async function sendOtp() {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-ezauth-key': apiKey,
+        ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+        ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {}),
         ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
       },
       body: JSON.stringify({
@@ -117,7 +132,11 @@ function getOtpFromDockerLogs(requestId) {
 async function verifyOtp(requestId, code) {
   const res = await fetch(`${base}/v1/otp/verify`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ requestId, code })
   });
   if (!res.ok) throw new Error(`verify failed: ${res.status} ${await res.text()}`);

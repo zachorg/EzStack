@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import { getApps, initializeApp, applicationDefault, cert } from "firebase-admin/app";
 import { getFirestore, Firestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 
 type IntrospectedKey = {
   keyId: string;
@@ -35,15 +36,26 @@ export default fp(async (app) => {
       initializeApp({
         credential: cert({ projectId: pj, clientEmail, privateKey })
       });
+      app.log.info({ projectId: pj, clientEmail }, "Firebase Admin initialized with inline credentials");
     } else {
       // Fallback to application default credentials (e.g., GOOGLE_APPLICATION_CREDENTIALS)
       initializeApp({ credential: applicationDefault() });
+      app.log.info("Firebase Admin initialized with application default credentials");
     }
   }
 
   const firestore: Firestore = getFirestore();
 
   app.decorate("firestore", firestore);
+
+  // Connectivity probe (non-fatal): attempt a trivial list to verify access
+  try {
+    // Use a lightweight query to avoid creating collections
+    await firestore.listCollections();
+    app.log.info("Firestore connectivity check passed");
+  } catch (err: any) {
+    app.log.error({ err }, "Firestore connectivity check failed");
+  }
 
   // Introspect an API key hash against Firestore and assemble authz payload
   app.decorate(
@@ -103,6 +115,52 @@ export default fp(async (app) => {
       }
 
       return { key, tenant, plan };
+    }
+  );
+
+  // Verify Firebase Auth ID token and assemble user-based plan/features (if any)
+  app.decorate(
+    "introspectIdToken",
+    async (idToken: string): Promise<{
+      uid?: string;
+      email?: string;
+      emailVerified?: boolean;
+      user?: { uid: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
+      plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
+    }> => {
+      const auth = getAuth();
+      const decoded = await auth.verifyIdToken(idToken);
+      const uid = decoded.uid;
+
+      // Optional: load a user profile doc if you maintain plans at user-level
+      let user: any;
+      let plan: any;
+      try {
+        const uSnap = await firestore.collection("users").doc(uid).get();
+        if (uSnap.exists) {
+          const u = uSnap.data() as any;
+          user = {
+            uid,
+            status: u.status || "active",
+            planId: u.planId,
+            featureFlags: u.featureFlags || {}
+          };
+          if (user.planId) {
+            const pSnap = await firestore.collection("plans").doc(user.planId).get();
+            if (pSnap.exists) {
+              const p = pSnap.data() as any;
+              plan = {
+                planId: p.planId || pSnap.id,
+                name: p.name,
+                limits: p.limits || {},
+                features: p.features || {}
+              };
+            }
+          }
+        }
+      } catch {}
+
+      return { uid, email: decoded.email, emailVerified: decoded.email_verified, user, plan };
     }
   );
 });

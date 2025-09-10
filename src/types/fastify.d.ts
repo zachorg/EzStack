@@ -34,9 +34,18 @@ declare module "fastify" {
       tenant?: { tenantId: string; name?: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
       plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
     }>;
+    // Firebase Auth token verification and user introspection
+    introspectIdToken: (idToken: string) => Promise<{
+      uid?: string;
+      email?: string;
+      emailVerified?: boolean;
+      user?: { uid: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
+      plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
+    }>;
   }
   interface FastifyRequest {
     tenantId?: string;
+    userId?: string;
     authz?: {
       plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
       features?: Record<string, boolean>;

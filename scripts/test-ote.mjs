@@ -1,21 +1,36 @@
 #!/usr/bin/env node
 // Minimal OTE (email code) e2e tester
-// Usage: node scripts/test-ote.mjs [--base http://localhost:8080] [--api-key dev-secret] [--tenant t1] [--email user@example.com]
+// Usage: node scripts/test-ote.mjs [--base http://localhost:8080]
+//        [--api-key YOUR_API_KEY] or [--id-token YOUR_FIREBASE_ID_TOKEN]
+//        [--tenant t1] [--email user@example.com]
 //        [--idem-key your-key] [--idem-via header|body] [--code 123456] [--resend true]
 
 import { setTimeout as sleep } from 'node:timers/promises';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
+const argv2 = process.argv.slice(2);
 const args = new Map(
-  process.argv
-    .slice(2)
+  argv2
     .map((a, i, arr) => (a.startsWith('--') ? [a.replace(/^--/, ''), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : 'true'] : []))
     .filter(Boolean)
 );
 
 const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
-const apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY || 'dev-secret';
+let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
+const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
+// Fallback: if npm passed only a positional value, treat first non-flag as api key
+if (!apiKey && !idToken) {
+  const firstPositional = argv2.find((t) => !t.startsWith('--'));
+  if (firstPositional) {
+    apiKey = firstPositional;
+    console.warn('[warn] Using first positional argument as api key. Prefer --api-key <key>.');
+  }
+}
+if (!apiKey && !idToken) {
+  console.error('Missing credentials. Provide --api-key or --id-token.');
+  process.exit(2);
+}
 const tenantId = args.get('tenant') || undefined;
 const email = args.get('email') || 'user@example.com';
 const maxRetries = Number(args.get('max-retries') || 3);
@@ -61,7 +76,8 @@ async function sendOte() {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-ezauth-key': apiKey,
+        ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+        ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {}),
         ...(idemKey && idemVia === 'header' ? { 'Idempotency-Key': idemKey } : {})
       },
       body: JSON.stringify({
@@ -86,7 +102,11 @@ async function sendOte() {
 async function verifyOte(requestId, code) {
   const res = await fetch(`${base}/v1/ote/verify`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ requestId, code })
   });
   if (!res.ok) throw new Error(`verify failed: ${res.status} ${await res.text()}`);
@@ -96,7 +116,11 @@ async function verifyOte(requestId, code) {
 async function resendOte(requestId) {
   const res = await fetch(`${base}/v1/ote/resend`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-ezauth-key': apiKey },
+    headers: {
+      'content-type': 'application/json',
+      ...(apiKey ? { 'x-ezauth-key': apiKey } : {}),
+      ...(idToken ? { 'authorization': `Bearer ${idToken}` } : {})
+    },
     body: JSON.stringify({ requestId })
   });
   return res;
