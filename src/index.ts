@@ -11,6 +11,8 @@ import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
 import email from "./plugins/email.js";
 import apikeyRoutes from "./routes/apikeys";
+import otpRoutes from "./routes/otp.js";
+import oteRoutes from "./routes/ote.js";
 
 // Create Fastify app with info-level logging and redaction for sensitive fields
 const app = Fastify({
@@ -61,11 +63,11 @@ if (SQS_ENABLE === "true" || (process.env.AWS_SQS_ENDPOINT && SQS_ENABLE !== "fa
 }
 
 // Mount the OTP route module under /v1/otp
-await app.register(import("./routes/otp.js"), { prefix: "/v1/otp" });
+await app.register(otpRoutes, { prefix: "/v1/otp" });
 // Mount the OTE route module under /v1/ote
-await app.register(import("./routes/ote.js"), { prefix: "/v1/ote" });
+await app.register(oteRoutes, { prefix: "/v1/ote" });
 // API key management routes (healthz + create/list/revoke)
-await app.register(apikeyRoutes);
+await app.register(apikeyRoutes, { prefix: "/v1/apikeys" });
 
 // Start the HTTP server
 await app.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 8080) });
