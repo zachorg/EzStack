@@ -11,7 +11,9 @@ export default fp(async (app) => {
 
   app.addHook("preHandler", async (req: any, _rep) => {
     // Allow unauthenticated health checks
-    if (req.routeOptions.url === "/v1/otp/healthz" || req.routeOptions.url === "/v1/ote/healthz") {
+    if (req.routeOptions.url === "/v1/otp/healthz" 
+      || req.routeOptions.url === "/v1/ote/healthz" 
+      || req.routeOptions.url === "/healthz") {
       return;
     }
 
@@ -27,8 +29,27 @@ export default fp(async (app) => {
       ? authzHeader.slice(7).trim()
       : undefined;
     const idToken = (req.headers?.["x-firebase-token"] as undefined | string) || bearer;
+    const preferApiKey = typeof apiKey === "string";
+
+    // Diagnostics: log which credential types are present (not their values)
+    try {
+      req.log.info(
+        {
+          route: req.routeOptions?.url,
+          hasApiKey: typeof apiKey === "string",
+          hasAuthorizationHeader: typeof authzHeader === "string",
+          hasBearer: typeof bearer === "string",
+          hasXFirebaseToken: typeof (req.headers?.["x-firebase-token"]) === "string",
+          preferApiKey
+        },
+        "auth: credential presence"
+      );
+    } catch {}
 
     if (typeof apiKey !== "string" && typeof idToken !== "string") {
+      try {
+        req.log.warn({ route: req.routeOptions?.url }, "auth: missing credentials");
+      } catch {}
       const err: any = new Error("Missing credentials: provide x-ezauth-key or x-firebase-token");
       err.statusCode = 401;
       err.code = "unauthorized";
@@ -36,7 +57,8 @@ export default fp(async (app) => {
     }
 
     // Branch: Firebase Auth ID token
-    if (typeof idToken === "string") {
+    if (typeof idToken === "string" && !preferApiKey) {
+      try { req.log.info("auth: using firebase id token"); } catch {}
       try {
         const res = await (app as any).introspectIdToken(idToken);
         if (!res?.uid) {
@@ -65,6 +87,7 @@ export default fp(async (app) => {
         }
         return;
       } catch (e) {
+        try { req.log.warn({ err: e && (e as any).message }, "auth: firebase token verification failed"); } catch {}
         const err: any = new Error("Missing or invalid Firebase token");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -74,6 +97,7 @@ export default fp(async (app) => {
 
     // Branch: API key
     if (!PEPPER) {
+      try { req.log.error("auth: missing APIKEY_PEPPER"); } catch {}
       const err: any = new Error("Server misconfigured: APIKEY_PEPPER not set");
       err.statusCode = 500;
       err.code = "internal_error";
@@ -81,6 +105,8 @@ export default fp(async (app) => {
     }
 
     if (typeof apiKey !== "string" || apiKey.length < 10) {
+      console.log("Invalid API key", apiKey);
+      try { req.log.warn({ hasApiKey: typeof apiKey === "string", length: typeof apiKey === "string" ? apiKey.length : 0 }, "auth: invalid api key"); } catch {}
       const err: any = new Error("Missing or invalid API key");
       err.statusCode = 401;
       err.code = "unauthorized";
@@ -96,6 +122,7 @@ export default fp(async (app) => {
     if (hit && hit.expiresAt > now) {
       const { tenant, key, plan } = hit.value;
       if (!key || key.status !== "active") {
+        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -120,12 +147,15 @@ export default fp(async (app) => {
       memCache.set(hash, { value: parsed, expiresAt: now + MEM_TTL_MS });
       const { tenant, key, plan } = parsed;
       if (!key || key.status !== "active") {
+        try { req.log.warn("auth: cached apikey status invalid"); } catch {}
+        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
         throw err;
       }
       if (!tenant || (tenant.status && tenant.status !== "active")) {
+        try { req.log.warn({ tenantStatus: tenant?.status }, "auth: cached tenant suspended"); } catch {}
         const err: any = new Error("Tenant suspended");
         err.statusCode = 403;
         err.code = "forbidden";
@@ -145,12 +175,15 @@ export default fp(async (app) => {
 
       const { tenant, key, plan } = result as any;
       if (!key || key.status !== "active") {
+        try { req.log.warn("auth: apikey status invalid"); } catch {}
+        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
         throw err;
       }
       if (!tenant || (tenant.status && tenant.status !== "active")) {
+        try { req.log.warn({ tenantStatus: tenant?.status }, "auth: tenant suspended"); } catch {}
         const err: any = new Error("Tenant suspended");
         err.statusCode = 403;
         err.code = "forbidden";

@@ -15,8 +15,11 @@
         "@aws-sdk/client-ses": "^3.620.0",
         "@aws-sdk/client-sns": "^3.873.0",
         "@aws-sdk/client-sqs": "^3.620.0",
+        "@fastify/cors": "^10.0.0",
         "@fastify/rate-limit": "^10.0.0",
+        "@google-cloud/kms": "^4.3.0",
         "@google-cloud/secret-manager": "^6.1.0",
+        "argon2": "^0.44.0",
         "fastify": "^5.0.0",
         "firebase-admin": "^12.5.0",
         "ioredis": "^5.4.1"
