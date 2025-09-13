@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import { hashApiKey } from "../../../../src/utils/crypto.js";
+import { hashApiKey } from "../utils/crypto.js";
 
 // Firebase-backed API key authentication with short TTL caching.
 export default fp(async (app) => {

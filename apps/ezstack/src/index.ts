@@ -8,8 +8,8 @@ import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
 import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
-import email from "../../../src/plugins/email.js";
-import apikeyRoutes from "../../../src/routes/apikeys.js";
+import email from "./plugins/email.js";
+import apikeyRoutes from "./routes/apikeys.js";
 
 const app = Fastify({
   logger: {

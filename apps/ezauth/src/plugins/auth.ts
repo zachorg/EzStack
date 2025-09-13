@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import { hashApiKey } from "../../utils/crypto.js";
+import { hashApiKey } from "../utils/crypto.js";
 
 export default fp(async (app) => {
   const memCache = new Map<string, { value: any; expiresAt: number }>();
