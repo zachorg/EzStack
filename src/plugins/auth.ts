@@ -155,7 +155,7 @@ export default fp(async (app) => {
         err.code = "unauthorized";
         throw err;
       }
-      // Allow user-scoped keys only for non-tenant routes; tenant-scoped keys for tenant routes
+      // Only tenant-scoped keys are allowed. Reject keys without tenant.
       if (tenant) {
         if (tenant.status && tenant.status !== "active") {
           try { req.log.warn({ tenantStatus: tenant?.status }, "auth: cached tenant suspended"); } catch {}
@@ -166,16 +166,11 @@ export default fp(async (app) => {
         }
         req.tenantId = tenant.tenantId;
         req.authz = { plan, features: tenant.featureFlags || {} };
-      } else if (key.userId) {
-        // If route requires tenant (e.g., /v1/otp or /v1/ote), reject user-scoped key
-        const url = req.routeOptions?.url as string | undefined;
-        if (url && (url.startsWith("/v1/otp/") || url.startsWith("/v1/ote/"))) {
-          const err: any = new Error("Tenant-scoped key required");
-          err.statusCode = 403;
-          err.code = "forbidden";
-          throw err;
-        }
-        req.userId = key.userId;
+      } else {
+        const err: any = new Error("Tenant-scoped key required");
+        err.statusCode = 403;
+        err.code = "forbidden";
+        throw err;
       }
       return;
     }
@@ -206,15 +201,11 @@ export default fp(async (app) => {
         }
         req.tenantId = tenant.tenantId;
         req.authz = { plan, features: tenant.featureFlags || {} };
-      } else if ((result as any).key?.userId) {
-        const url = req.routeOptions?.url as string | undefined;
-        if (url && (url.startsWith("/v1/otp/") || url.startsWith("/v1/ote/"))) {
-          const err: any = new Error("Tenant-scoped key required");
-          err.statusCode = 403;
-          err.code = "forbidden";
-          throw err;
-        }
-        req.userId = (result as any).key.userId;
+      } else {
+        const err: any = new Error("Tenant-scoped key required");
+        err.statusCode = 403;
+        err.code = "forbidden";
+        throw err;
       }
 
       // Quota enforcement (requests per minute) if plan limit provided
@@ -240,15 +231,11 @@ export default fp(async (app) => {
         if (parsed.tenant?.tenantId) {
           req.tenantId = parsed.tenant?.tenantId;
           req.authz = { plan: parsed.plan, features: parsed.tenant?.featureFlags || {} };
-        } else if (parsed.key?.userId) {
-          const url = req.routeOptions?.url as string | undefined;
-          if (url && (url.startsWith("/v1/otp/") || url.startsWith("/v1/ote/"))) {
-            const err: any = new Error("Tenant-scoped key required");
-            err.statusCode = 403;
-            err.code = "forbidden";
-            throw err;
-          }
-          req.userId = parsed.key.userId;
+        } else {
+          const err: any = new Error("Tenant-scoped key required");
+          err.statusCode = 403;
+          err.code = "forbidden";
+          throw err;
         }
         return;
       }

@@ -100,17 +100,19 @@ export default fp(async (app) => {
             planId: t.planId,
             featureFlags: t.featureFlags || {}
           };
-          if (tenant.planId) {
-            const pSnap = await firestore.collection("plans").doc(tenant.planId).get();
-            if (pSnap.exists) {
-              const p = pSnap.data() as any;
-              plan = {
-                planId: p.planId || pSnap.id,
-                name: p.name,
-                limits: p.limits || {},
-                features: p.features || {}
-              };
-            }
+          const planId = tenant.planId || process.env.DEFAULT_PLAN_ID || "free";
+          const pSnap = await firestore.collection("plans").doc(planId).get();
+          if (pSnap.exists) {
+            const p = pSnap.data() as any;
+            plan = {
+              planId: p.planId || pSnap.id,
+              name: p.name,
+              limits: p.limits || {},
+              features: p.features || {}
+            };
+          } else {
+            // Default in-memory free plan if plans doc missing
+            plan = { planId: "free", name: "Free", limits: {}, features: {} };
           }
         }
       }

@@ -11,7 +11,6 @@ type ApiKeyDoc = {
   salt: string;
   alg: "argon2id";
   params: { memoryCost: number; timeCost: number; parallelism: number };
-  scopes?: string[];
   createdAt: any;
   lastUsedAt: any;
   revokedAt: any;
@@ -80,35 +79,23 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const body = req.body || {};
       const nameRaw: unknown = body.name;
-      const scopesRaw: unknown = body.scopes;
       const demo: boolean = body.demo === true;
       const tenantIdRaw: unknown = body.tenantId;
 
       const name = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim().slice(0, 120) : null;
-      let scopes: string[] | undefined;
-      if (Array.isArray(scopesRaw)) {
-        scopes = scopesRaw
-          .filter((v) => typeof v === "string" && v.trim())
-          .slice(0, 20)
-          .map((v) => v.trim());
-      }
       const tenantId = typeof tenantIdRaw === "string" && tenantIdRaw.trim() ? tenantIdRaw.trim() : undefined;
-
-      // Authorization for tenant-scoped key creation
-      let effectiveTenantId: string | undefined = undefined;
-      let keyType: "tenant" | "user" = "user";
-      if (tenantId) {
-        const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev"]);
-        if (!ok) {
-          return rep.status(403).send({ error: { message: "Forbidden" } });
-        }
-        const t = await (app as any).getTenant(tenantId);
-        if (!t || (t.status && t.status !== "active")) {
-          return rep.status(403).send({ error: { message: "Tenant suspended" } });
-        }
-        effectiveTenantId = tenantId;
-        keyType = "tenant";
+      if (!tenantId) {
+        return rep.status(400).send({ error: { message: "tenantId required" } });
       }
+      const okRole = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev"]);
+      if (!okRole) {
+        return rep.status(403).send({ error: { message: "Forbidden" } });
+      }
+      const t = await (app as any).getTenant(tenantId);
+      if (!t || (t.status && t.status !== "active")) {
+        return rep.status(403).send({ error: { message: "Tenant suspended" } });
+      }
+      const effectiveTenantId: string = tenantId;
 
       const { key, prefix } = generatePlainApiKey();
 
@@ -127,7 +114,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const doc: ApiKeyDoc & { hash: string; status: string; tenantId?: string; type: "tenant" | "user"; createdByEmail?: string } = {
+      const doc: ApiKeyDoc & { hash: string; status: string; tenantId: string; type: "tenant"; createdByEmail?: string } = {
         userId,
         name,
         keyPrefix: prefix,
@@ -140,9 +127,8 @@ const routes: FastifyPluginAsync = async (app) => {
         revokedAt: null,
         hash: lookupHash,
         status: "active",
-        ...(effectiveTenantId ? { tenantId: effectiveTenantId } : {}),
-        type: keyType,
-        ...(Array.isArray(scopes) ? { scopes } : {}),
+        tenantId: effectiveTenantId,
+        type: "tenant",
         ...(keyMaterialEnc ? { keyMaterialEnc } : {}),
       };
 
@@ -169,16 +155,14 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep.status(401).send({ error: { message: "Unauthenticated" } });
       }
       const tenantId = (req.query && (req.query as any).tenantId ? String((req.query as any).tenantId).trim() : "") || undefined;
-      let q;
-      if (tenantId) {
-        const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev", "viewer"]);
-        if (!ok) {
-          return rep.status(403).send({ error: { message: "Forbidden" } });
-        }
-        q = await firestore.collection("apiKeys").where("tenantId", "==", tenantId).get();
-      } else {
-        q = await firestore.collection("apiKeys").where("userId", "==", userId).get();
+      if (!tenantId) {
+        return rep.status(400).send({ error: { message: "tenantId required" } });
       }
+      const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev", "viewer"]);
+      if (!ok) {
+        return rep.status(403).send({ error: { message: "Forbidden" } });
+      }
+      const q = await firestore.collection("apiKeys").where("tenantId", "==", tenantId).get();
       const items = q.docs.map((d: any) => {
         const v = d.data() as any;
         return {
