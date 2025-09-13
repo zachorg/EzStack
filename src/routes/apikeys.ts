@@ -149,7 +149,8 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep.status(401).send({ error: { message: "Unauthenticated" } });
       }
 
-      const q = await firestore.collection("apiKeys").where("userId", "==", userId).orderBy("createdAt", "desc").get();
+      // Avoid composite index requirement by removing orderBy; sort in-memory
+      const q = await firestore.collection("apiKeys").where("userId", "==", userId).get();
       const items = q.docs.map((d: any) => {
         const v = d.data() as any;
         return {
@@ -160,6 +161,27 @@ const routes: FastifyPluginAsync = async (app) => {
           lastUsedAt: v.lastUsedAt ?? null,
           revokedAt: v.revokedAt ?? null,
         };
+      });
+
+      // Sort newest-first by createdAt; nulls last
+      const toMillis = (t: any): number | null => {
+        if (!t) return null;
+        if (typeof t.toMillis === "function") return t.toMillis();
+        if (typeof t === "number") return t;
+        if (typeof t === "object" && typeof t._seconds === "number") {
+          const ns = typeof t._nanoseconds === "number" ? t._nanoseconds : 0;
+          return t._seconds * 1000 + ns / 1e6;
+        }
+        return null;
+      };
+
+      items.sort((a, b) => {
+        const am = toMillis(a.createdAt);
+        const bm = toMillis(b.createdAt);
+        if (am === null && bm === null) return 0;
+        if (am === null) return 1; // nulls last
+        if (bm === null) return -1;
+        return bm - am; // desc
       });
 
       return rep.send({ items });
