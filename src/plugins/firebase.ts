@@ -61,11 +61,11 @@ export default fp(async (app) => {
   app.decorate(
     "introspectApiKey",
     async (hash: string): Promise<{
-      key?: IntrospectedKey;
+      key?: IntrospectedKey & { userId?: string };
       tenant?: TenantDoc;
       plan?: PlanDoc;
     }> => {
-      // apiKeys is modeled as a top-level collection keyed by keyId with field 'hash'
+      // apiKeys stores a deterministic 'hash' for lookup and 'status'
       const q = await firestore
         .collection("apiKeys")
         .where("hash", "==", hash)
@@ -78,11 +78,12 @@ export default fp(async (app) => {
 
       const keySnap = q.docs[0];
       const keyData = keySnap.data() as any;
-      const key: IntrospectedKey = {
+      const key: IntrospectedKey & { userId?: string } = {
         keyId: keyData.keyId || keySnap.id,
         tenantId: keyData.tenantId,
         status: keyData.status || "active",
-        createdAt: keyData.createdAt
+        createdAt: keyData.createdAt,
+        userId: keyData.userId,
       };
 
       let tenant: TenantDoc | undefined;

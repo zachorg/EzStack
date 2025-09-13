@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import argon2 from "argon2";
 import crypto from "node:crypto";
+import { hashApiKey } from "../utils/crypto.js";
 
 type ApiKeyDoc = {
   userId: string;
@@ -95,6 +96,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const salt = crypto.randomBytes(16).toString("base64");
       const hashedKey = await hashWithArgon2id(key, salt, pepper);
+      const lookupHash = hashApiKey(key, pepper);
 
       let keyMaterialEnc: string | undefined;
       if (demo && process.env.DEMO_ENCRYPT_ENABLED === "true") {
@@ -107,7 +109,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const doc: ApiKeyDoc = {
+      const doc: ApiKeyDoc & { hash: string; status: string } = {
         userId,
         name,
         keyPrefix: prefix,
@@ -119,6 +121,8 @@ const routes: FastifyPluginAsync = async (app) => {
         createdAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp(),
         lastUsedAt: null,
         revokedAt: null,
+        hash: lookupHash,
+        status: "active",
         ...(keyMaterialEnc ? { keyMaterialEnc } : {}),
       };
 

@@ -10,7 +10,7 @@ import tenantSettings from "./plugins/tenant-settings.js";
 import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
 import email from "./plugins/email.js";
-import apikeyRoutes from "./routes/apikeys";
+import apikeyRoutes from "./routes/apikeys.js";
 import otpRoutes from "./routes/otp.js";
 import oteRoutes from "./routes/ote.js";
 

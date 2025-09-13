@@ -13,6 +13,7 @@ export default fp(async (app) => {
     // Allow unauthenticated health checks
     if (req.routeOptions.url === "/v1/otp/healthz" 
       || req.routeOptions.url === "/v1/ote/healthz" 
+      || req.routeOptions.url === "/v1/apikeys/healthz"
       || req.routeOptions.url === "/healthz") {
       return;
     }
@@ -95,7 +96,7 @@ export default fp(async (app) => {
       }
     }
 
-    // Branch: API key
+    // Branch: API key (for user or tenant scoped routes)
     if (!PEPPER) {
       try { req.log.error("auth: missing APIKEY_PEPPER"); } catch {}
       const err: any = new Error("Server misconfigured: APIKEY_PEPPER not set");
@@ -154,15 +155,20 @@ export default fp(async (app) => {
         err.code = "unauthorized";
         throw err;
       }
-      if (!tenant || (tenant.status && tenant.status !== "active")) {
-        try { req.log.warn({ tenantStatus: tenant?.status }, "auth: cached tenant suspended"); } catch {}
-        const err: any = new Error("Tenant suspended");
-        err.statusCode = 403;
-        err.code = "forbidden";
-        throw err;
+      // Allow user-scoped keys (no tenant) for certain routes
+      if (tenant) {
+        if (tenant.status && tenant.status !== "active") {
+          try { req.log.warn({ tenantStatus: tenant?.status }, "auth: cached tenant suspended"); } catch {}
+          const err: any = new Error("Tenant suspended");
+          err.statusCode = 403;
+          err.code = "forbidden";
+          throw err;
+        }
+        req.tenantId = tenant.tenantId;
+        req.authz = { plan, features: tenant.featureFlags || {} };
+      } else if (key.userId) {
+        req.userId = key.userId;
       }
-      req.tenantId = tenant.tenantId;
-      req.authz = { plan, features: tenant.featureFlags || {} };
       return;
     }
 
@@ -182,15 +188,19 @@ export default fp(async (app) => {
         err.code = "unauthorized";
         throw err;
       }
-      if (!tenant || (tenant.status && tenant.status !== "active")) {
-        try { req.log.warn({ tenantStatus: tenant?.status }, "auth: tenant suspended"); } catch {}
-        const err: any = new Error("Tenant suspended");
-        err.statusCode = 403;
-        err.code = "forbidden";
-        throw err;
+      if (tenant) {
+        if (tenant.status && tenant.status !== "active") {
+          try { req.log.warn({ tenantStatus: tenant?.status }, "auth: tenant suspended"); } catch {}
+          const err: any = new Error("Tenant suspended");
+          err.statusCode = 403;
+          err.code = "forbidden";
+          throw err;
+        }
+        req.tenantId = tenant.tenantId;
+        req.authz = { plan, features: tenant.featureFlags || {} };
+      } else if ((result as any).key?.userId) {
+        req.userId = (result as any).key.userId;
       }
-      req.tenantId = tenant.tenantId;
-      req.authz = { plan, features: tenant.featureFlags || {} };
 
       // Quota enforcement (requests per minute) if plan limit provided
       const rpm = plan?.limits?.requestsPerMinute;
@@ -212,8 +222,12 @@ export default fp(async (app) => {
       if (failSafe && cached) {
         // If Firestore fails but we had some cache earlier, allow
         const parsed = JSON.parse(cached);
-        req.tenantId = parsed.tenant?.tenantId;
-        req.authz = { plan: parsed.plan, features: parsed.tenant?.featureFlags || {} };
+        if (parsed.tenant?.tenantId) {
+          req.tenantId = parsed.tenant?.tenantId;
+          req.authz = { plan: parsed.plan, features: parsed.tenant?.featureFlags || {} };
+        } else if (parsed.key?.userId) {
+          req.userId = parsed.key.userId;
+        }
         return;
       }
       // Log the underlying error for diagnostics
