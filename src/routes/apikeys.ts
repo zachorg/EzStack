@@ -82,6 +82,7 @@ const routes: FastifyPluginAsync = async (app) => {
       const nameRaw: unknown = body.name;
       const scopesRaw: unknown = body.scopes;
       const demo: boolean = body.demo === true;
+      const tenantIdRaw: unknown = body.tenantId;
 
       const name = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim().slice(0, 120) : null;
       let scopes: string[] | undefined;
@@ -90,6 +91,23 @@ const routes: FastifyPluginAsync = async (app) => {
           .filter((v) => typeof v === "string" && v.trim())
           .slice(0, 20)
           .map((v) => v.trim());
+      }
+      const tenantId = typeof tenantIdRaw === "string" && tenantIdRaw.trim() ? tenantIdRaw.trim() : undefined;
+
+      // Authorization for tenant-scoped key creation
+      let effectiveTenantId: string | undefined = undefined;
+      let keyType: "tenant" | "user" = "user";
+      if (tenantId) {
+        const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev"]);
+        if (!ok) {
+          return rep.status(403).send({ error: { message: "Forbidden" } });
+        }
+        const t = await (app as any).getTenant(tenantId);
+        if (!t || (t.status && t.status !== "active")) {
+          return rep.status(403).send({ error: { message: "Tenant suspended" } });
+        }
+        effectiveTenantId = tenantId;
+        keyType = "tenant";
       }
 
       const { key, prefix } = generatePlainApiKey();
@@ -109,7 +127,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const doc: ApiKeyDoc & { hash: string; status: string } = {
+      const doc: ApiKeyDoc & { hash: string; status: string; tenantId?: string; type: "tenant" | "user"; createdByEmail?: string } = {
         userId,
         name,
         keyPrefix: prefix,
@@ -122,6 +140,8 @@ const routes: FastifyPluginAsync = async (app) => {
         revokedAt: null,
         hash: lookupHash,
         status: "active",
+        ...(effectiveTenantId ? { tenantId: effectiveTenantId } : {}),
+        type: keyType,
         ...(Array.isArray(scopes) ? { scopes } : {}),
         ...(keyMaterialEnc ? { keyMaterialEnc } : {}),
       };
@@ -148,9 +168,17 @@ const routes: FastifyPluginAsync = async (app) => {
       if (!userId) {
         return rep.status(401).send({ error: { message: "Unauthenticated" } });
       }
-
-      // Avoid composite index requirement by removing orderBy; sort in-memory
-      const q = await firestore.collection("apiKeys").where("userId", "==", userId).get();
+      const tenantId = (req.query && (req.query as any).tenantId ? String((req.query as any).tenantId).trim() : "") || undefined;
+      let q;
+      if (tenantId) {
+        const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev", "viewer"]);
+        if (!ok) {
+          return rep.status(403).send({ error: { message: "Forbidden" } });
+        }
+        q = await firestore.collection("apiKeys").where("tenantId", "==", tenantId).get();
+      } else {
+        q = await firestore.collection("apiKeys").where("userId", "==", userId).get();
+      }
       const items = q.docs.map((d: any) => {
         const v = d.data() as any;
         return {
@@ -209,8 +237,15 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep.status(404).send({ error: { message: "Key not found" } });
       }
       const data = snap.data() as any;
-      if (data.userId !== userId) {
-        return rep.status(403).send({ error: { message: "Forbidden" } });
+      if (data.tenantId) {
+        const ok = await (app as any).hasTenantRole(userId, data.tenantId, ["owner", "admin"]);
+        if (!ok) {
+          return rep.status(403).send({ error: { message: "Forbidden" } });
+        }
+      } else {
+        if (data.userId !== userId) {
+          return rep.status(403).send({ error: { message: "Forbidden" } });
+        }
       }
 
       await ref.update({ revokedAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp() });

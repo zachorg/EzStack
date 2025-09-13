@@ -42,6 +42,13 @@ declare module "fastify" {
       user?: { uid: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
       plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
     }>;
+    // Tenant helpers
+    getTenant: (tenantId: string) => Promise<{ tenantId: string; name?: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> } | undefined>;
+    hasTenantRole: (
+      userId: string | undefined,
+      tenantId: string | undefined,
+      rolesAllowed?: Array<"owner" | "admin" | "dev" | "viewer">
+    ) => Promise<boolean>;
   }
   interface FastifyRequest {
     tenantId?: string;

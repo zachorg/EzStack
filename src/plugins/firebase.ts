@@ -119,6 +119,49 @@ export default fp(async (app) => {
     }
   );
 
+  // Load a tenant document by id (non-throwing)
+  app.decorate(
+    "getTenant",
+    async (tenantId: string): Promise<TenantDoc | undefined> => {
+      const tSnap = await firestore.collection("tenants").doc(tenantId).get();
+      if (!tSnap.exists) return undefined;
+      const t = tSnap.data() as any;
+      return {
+        tenantId: t.tenantId || tSnap.id,
+        name: t.name,
+        status: t.status || "active",
+        planId: t.planId,
+        featureFlags: t.featureFlags || {}
+      };
+    }
+  );
+
+  // Check if user is a member of a tenant with one of the allowed roles
+  app.decorate(
+    "hasTenantRole",
+    async (
+      userId: string | undefined,
+      tenantId: string | undefined,
+      rolesAllowed: Array<"owner" | "admin" | "dev" | "viewer"> = ["owner", "admin", "dev", "viewer"]
+    ): Promise<boolean> => {
+      if (!userId || !tenantId) return false;
+      try {
+        const mSnap = await firestore
+          .collection("tenants")
+          .doc(tenantId)
+          .collection("members")
+          .doc(userId)
+          .get();
+        if (!mSnap.exists) return false;
+        const m = mSnap.data() as any;
+        if (m && typeof m.role === "string") {
+          return rolesAllowed.includes(m.role);
+        }
+      } catch {}
+      return false;
+    }
+  );
+
   // Verify Firebase Auth ID token and assemble user-based plan/features (if any)
   app.decorate(
     "introspectIdToken",
