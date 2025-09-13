@@ -4,8 +4,12 @@
     "type": "module",
     "scripts": {
         "dev": "tsx watch src/index.ts",
+        "dev:ezstack": "cross-env SERVICE=ezstack tsx watch src/index.ts",
+        "dev:ezauth": "cross-env SERVICE=ezauth tsx watch src/index.ts",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/index.js",
+        "start:ezstack": "cross-env SERVICE=ezstack node dist/index.js",
+        "start:ezauth": "cross-env SERVICE=ezauth node dist/index.js",
         "test:otp": "node scripts/test-otp.mjs",
         "test:ote": "node scripts/test-ote.mjs",
         "test:tenant": "node scripts/test-tenant-settings.mjs",
@@ -26,6 +30,7 @@
     },
     "devDependencies": {
         "@types/node": "^22.5.0",
+        "cross-env": "^7.0.3",
         "tsx": "^4.19.0",
         "typescript": "^5.5.4"
     }
