@@ -117,12 +117,12 @@ const routes: FastifyPluginAsync = async (app) => {
         salt,
         alg: "argon2id",
         params: { memoryCost: ARGON_PARAMS.memoryCost, timeCost: ARGON_PARAMS.timeCost, parallelism: ARGON_PARAMS.parallelism },
-        scopes,
         createdAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp(),
         lastUsedAt: null,
         revokedAt: null,
         hash: lookupHash,
         status: "active",
+        ...(Array.isArray(scopes) ? { scopes } : {}),
         ...(keyMaterialEnc ? { keyMaterialEnc } : {}),
       };
 
