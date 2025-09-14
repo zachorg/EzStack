@@ -19,13 +19,6 @@ export default fp(async (app) => {
       return;
     }
 
-
-    // Allow disabling auth entirely (tests/dev only)
-    if (process.env.AUTH_DISABLE === "true") {
-      try { req.log.warn("auth: AUTH_DISABLE=true, bypassing authentication"); } catch {}
-      return;
-    }
-
     const apiKey = req.headers?.["x-ezauth-key"];
     const authzHeader = req.headers?.["authorization"] as undefined | string;
     const bearer = typeof authzHeader === "string" && authzHeader.toLowerCase().startsWith("bearer ")

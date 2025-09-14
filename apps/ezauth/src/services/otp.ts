@@ -93,8 +93,8 @@ export async function send(app: FastifyInstance, body: any) {
     log.warn({ requestId, destination }, "SQS not configured; OTP will only be visible in logs");
   }
 
-  // Avoid logging OTP unless explicitly enabled via LOG_CODES for debugging
-  const shouldLogCode = process.env.LOG_CODES === "true";
+  // Avoid logging OTP unless explicitly enabled via LOG_CODES or OTP for debugging/local dev
+  const shouldLogCode = process.env.LOG_CODES === "true" || String(process.env.OTP_DRY_RUN || "").toLowerCase() === "true";
   if (shouldLogCode) {
     log.info({ requestId, otp, destination }, "OTP generated");
   } else {
@@ -181,7 +181,7 @@ export async function resend(app: FastifyInstance, body: any) {
     }));
   }
 
-  const shouldLogCode = process.env.LOG_CODES === "true";
+  const shouldLogCode = process.env.LOG_CODES === "true" || String(process.env.OTP_DRY_RUN || "").toLowerCase() === "true";
   if (shouldLogCode) {
     log.info({ requestId, otp }, "OTP resent");
   } else {

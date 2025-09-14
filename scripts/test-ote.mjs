@@ -8,6 +8,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import fs from 'node:fs';
 
 const argv2 = process.argv.slice(2);
 const args = new Map(
@@ -16,7 +17,10 @@ const args = new Map(
     .filter(Boolean)
 );
 
-const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
+// Default to EzAuth service port from docker-compose (host 8081 -> container 8080)
+const isInDocker = fs.existsSync('/.dockerenv') || process.env.DOCKER_CONTAINER === 'true';
+const defaultBase = isInDocker ? 'http://ezauth:8080' : 'http://localhost:8081';
+const base = args.get('base') || process.env.BASE_URL || defaultBase;
 let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
 const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
 // Fallback: if npm passed only a positional value, treat first non-flag as api key

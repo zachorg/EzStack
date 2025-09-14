@@ -40,14 +40,17 @@ services:
     environment:
       SERVICE: ezauth
       # Core config
-      PORT: ${PORT_EZAUTH:-8081}
+      PORT: ${PORT_EZAUTH:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
       # Email/SES
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      # Email local testing
       EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
+      # OTP/SMS local testing
+      OTP_DRY_RUN: ${OTP_DRY_RUN:-true}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
       # SQS (optional for OTP async send)
