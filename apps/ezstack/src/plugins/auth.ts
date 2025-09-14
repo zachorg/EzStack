@@ -1,7 +1,7 @@
 import fp from "fastify-plugin";
 import { hashApiKey } from "../utils/crypto.js";
 
-// Firebase-backed API key authentication with short TTL caching.
+// Supabase-backed API key authentication with short TTL caching.
 export default fp(async (app) => {
   // Simple in-memory cache for API key introspection results to reduce
   // Redis/Firestore load. Each entry stores the value and an absolute expiry.
@@ -24,7 +24,7 @@ export default fp(async (app) => {
     const bearer = typeof authzHeader === "string" && authzHeader.toLowerCase().startsWith("bearer ")
       ? authzHeader.slice(7).trim()
       : undefined;
-    const idToken = (req.headers?.["x-firebase-token"] as undefined | string) || bearer;
+    const idToken = bearer;
     const preferApiKey = typeof apiKey === "string";
 
     // Diagnostics: log which credential types are present (not their values).
@@ -35,7 +35,6 @@ export default fp(async (app) => {
           hasApiKey: typeof apiKey === "string",
           hasAuthorizationHeader: typeof authzHeader === "string",
           hasBearer: typeof bearer === "string",
-          hasXFirebaseToken: typeof (req.headers?.["x-firebase-token"]) === "string",
           preferApiKey
         },
         "auth: credential presence"
@@ -46,19 +45,19 @@ export default fp(async (app) => {
       try {
         req.log.warn({ route: req.routeOptions?.url }, "auth: missing credentials");
       } catch {}
-      const err: any = new Error("Missing credentials: provide x-ezauth-key or x-firebase-token");
+      const err: any = new Error("Missing credentials: provide x-ezauth-key or Authorization: Bearer <token>");
       err.statusCode = 401;
       err.code = "unauthorized";
       throw err;
     }
 
-    // Branch: Firebase Auth ID token
+    // Branch: Supabase Auth JWT
     if (typeof idToken === "string" && !preferApiKey) {
-      try { req.log.info({ route: req.routeOptions?.url }, "auth: using firebase id token"); } catch {}
+      try { req.log.info({ route: req.routeOptions?.url }, "auth: using supabase jwt"); } catch {}
       try {
         const res = await (app as any).introspectIdToken(idToken);
         if (!res?.uid) {
-          const err: any = new Error("Missing or invalid Firebase token");
+          const err: any = new Error("Missing or invalid token");
           err.statusCode = 401;
           err.code = "unauthorized";
           throw err;
@@ -81,11 +80,11 @@ export default fp(async (app) => {
             }
           }
         }
-        try { req.log.debug({ uid: res.uid }, "auth: firebase token verified"); } catch {}
+        try { req.log.debug({ uid: res.uid }, "auth: supabase token verified"); } catch {}
         return;
       } catch (e) {
-        try { req.log.warn({ err: e && (e as any).message }, "auth: firebase token verification failed"); } catch {}
-        const err: any = new Error("Missing or invalid Firebase token");
+        try { req.log.warn({ err: e && (e as any).message }, "auth: supabase token verification failed"); } catch {}
+        const err: any = new Error("Missing or invalid token");
         err.statusCode = 401;
         err.code = "unauthorized";
         throw err;
@@ -170,7 +169,7 @@ export default fp(async (app) => {
       return;
     }
 
-    // Query Firestore
+    // Query Supabase
     try {
       const result = await (app as any).introspectApiKey(hash);
       // Cache both in Redis and memory (short TTLs)

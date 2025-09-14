@@ -19,7 +19,7 @@ declare module "fastify" {
     sqs?: SQSClient;
     sqsQueueName?: string;
     sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
-    firestore: import("firebase-admin/firestore").Firestore;
+    supabase: import("@supabase/supabase-js").SupabaseClient<any, "public", any>;
     apikeyPepper: string;
     introspectApiKey: (hash: string) => Promise<{
       key?: { keyId: string; tenantId: string; status: string; createdAt?: string | number };

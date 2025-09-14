@@ -63,7 +63,7 @@ async function hashWithArgon2id(plaintext: string, saltB64: string, pepper: stri
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
 const routes: FastifyPluginAsync = async (app) => {
-  const firestore = app.firestore;
+  const supabase = (app as any).supabase;
   const pepper = (app as any).apikeyPepper as string;
 
   app.get("/healthz", async (_req, rep) => {
@@ -114,30 +114,34 @@ const routes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const doc: ApiKeyDoc & { hash: string; status: string; tenantId: string; type: "tenant"; createdByEmail?: string } = {
-        userId,
-        name,
-        keyPrefix: prefix,
-        hashedKey,
-        salt,
-        alg: "argon2id",
-        params: { memoryCost: ARGON_PARAMS.memoryCost, timeCost: ARGON_PARAMS.timeCost, parallelism: ARGON_PARAMS.parallelism },
-        createdAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp(),
-        lastUsedAt: null,
-        revokedAt: null,
-        hash: lookupHash,
-        status: "active",
-        tenantId: effectiveTenantId,
-        type: "tenant",
-        ...(keyMaterialEnc ? { keyMaterialEnc } : {}),
-      };
+      // Insert directly into Supabase;
 
-      const ref = await firestore.collection("apiKeys").add(doc);
+      const { data: inserted, error } = await supabase
+        .from("api_keys")
+        .insert([{
+          user_id: userId,
+          tenant_id: effectiveTenantId,
+          name,
+          key_prefix: prefix,
+          hashed_key: hashedKey,
+          salt,
+          alg: "argon2id",
+          params: { memoryCost: ARGON_PARAMS.memoryCost, timeCost: ARGON_PARAMS.timeCost, parallelism: ARGON_PARAMS.parallelism },
+          hash: lookupHash,
+          status: "active",
+          type: "tenant",
+          ...(keyMaterialEnc ? { key_material_enc: keyMaterialEnc } : {})
+        }])
+        .select("id")
+        .single();
+      if (error || !inserted) {
+        return rep.status(500).send({ error: { message: "Failed to create api key" } });
+      }
 
-      try { req.log.info({ tenantId: effectiveTenantId, userId, id: ref.id }, "apikeys: created api key"); } catch {}
+      try { req.log.info({ tenantId: effectiveTenantId, userId, id: inserted.id }, "apikeys: created api key"); } catch {}
 
       return rep.send({
-        id: ref.id,
+        id: inserted.id,
         key,
         keyPrefix: prefix,
         name,
@@ -164,18 +168,21 @@ const routes: FastifyPluginAsync = async (app) => {
       if (!ok) {
         return rep.status(403).send({ error: { message: "Forbidden" } });
       }
-      const q = await firestore.collection("apiKeys").where("tenantId", "==", tenantId).get();
-      const items = q.docs.map((d: any) => {
-        const v = d.data() as any;
-        return {
-          id: d.id,
-          name: v.name ?? null,
-          keyPrefix: v.keyPrefix,
-          createdAt: v.createdAt ?? null,
-          lastUsedAt: v.lastUsedAt ?? null,
-          revokedAt: v.revokedAt ?? null,
-        };
-      });
+      const { data: rows, error } = await supabase
+        .from("api_keys")
+        .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+        .eq("tenant_id", tenantId);
+      if (error) {
+        return rep.status(500).send({ error: { message: "Failed to list api keys" } });
+      }
+      const items = (rows || []).map((v: any) => ({
+        id: v.id,
+        name: v.name ?? null,
+        keyPrefix: v.key_prefix,
+        createdAt: v.created_at ?? null,
+        lastUsedAt: v.last_used_at ?? null,
+        revokedAt: v.revoked_at ?? null,
+      }));
 
       const toMillis = (t: any): number | null => {
         if (!t) return null;
@@ -188,7 +195,7 @@ const routes: FastifyPluginAsync = async (app) => {
         return null;
       };
 
-      items.sort((a, b) => {
+      items.sort((a: { createdAt: any }, b: { createdAt: any }) => {
         const am = toMillis(a.createdAt);
         const bm = toMillis(b.createdAt);
         if (am === null && bm === null) return 0;
@@ -217,24 +224,34 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep.status(400).send({ error: { message: "Missing id" } });
       }
 
-      const ref = firestore.collection("apiKeys").doc(id);
-      const snap = await ref.get();
-      if (!snap.exists) {
+      const { data: row, error: gErr } = await supabase
+        .from("api_keys")
+        .select("id, tenant_id, user_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (gErr) {
+        return rep.status(500).send({ error: { message: "Failed to load key" } });
+      }
+      if (!row) {
         return rep.status(404).send({ error: { message: "Key not found" } });
       }
-      const data = snap.data() as any;
-      if (data.tenantId) {
-        const ok = await (app as any).hasTenantRole(userId, data.tenantId, ["owner", "admin"]);
+      if (row.tenant_id) {
+        const ok = await (app as any).hasTenantRole(userId, row.tenant_id, ["owner", "admin"]);
         if (!ok) {
           return rep.status(403).send({ error: { message: "Forbidden" } });
         }
       } else {
-        if (data.userId !== userId) {
+        if (row.user_id !== userId) {
           return rep.status(403).send({ error: { message: "Forbidden" } });
         }
       }
-
-      await ref.update({ revokedAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp() });
+      const { error: uErr } = await supabase
+        .from("api_keys")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", id);
+      if (uErr) {
+        return rep.status(500).send({ error: { message: "Failed to revoke key" } });
+      }
       try { req.log.info({ id, userId }, "apikeys: revoked api key"); } catch {}
       return rep.send({ ok: true, deleted: true });
     } catch (err: any) {

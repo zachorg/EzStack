@@ -12,10 +12,11 @@
     "@fastify/rate-limit": "^10.0.0",
     "@google-cloud/kms": "^4.3.0",
     "@google-cloud/secret-manager": "^6.1.0",
+    "@supabase/supabase-js": "^2.45.4",
     "argon2": "^0.44.0",
     "fastify": "^5.0.0",
-    "firebase-admin": "^12.5.0",
-    "ioredis": "^5.4.1"
+    "ioredis": "^5.4.1",
+    "jose": "^5.9.3"
   },
   "devDependencies": {
     "@types/node": "^20.19.14",
