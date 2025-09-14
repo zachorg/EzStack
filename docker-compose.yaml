@@ -12,7 +12,6 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
-      AUTH_DISABLE: ${AUTH_DISABLE_EZSTACK:-false}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZSTACK:-false}
       # Email/SES (not typically needed here, but harmless)
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
@@ -41,11 +40,10 @@ services:
     environment:
       SERVICE: ezauth
       # Core config
-      PORT: ${PORT_EZAUTH:-8080}
+      PORT: ${PORT_EZAUTH:-8081}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
-      AUTH_DISABLE: ${AUTH_DISABLE_EZAUTH:-false}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
       # Email/SES
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
