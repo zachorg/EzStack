@@ -1,19 +1,7 @@
 import crypto from "node:crypto";
 
-export const destHash = (d: string) => 
-  crypto.createHash("sha256")
-    .update(d.trim().toLowerCase())
-    .digest("hex");
-
-export const randomOtp = (len: number) => 
-  Array.from({ length: len }, () => crypto.randomInt(0, 10))
-    .join("");
-
-export const hashOtp = (otp: string, salt: string) =>
-  crypto.createHash("sha256")
-    .update(`${salt}:${otp}`)
-    .digest("hex");
-
+// Derive a deterministic lookup hash for API keys using a server-side pepper.
+// This hash is safe to store/index in databases; never store raw API keys.
 export const hashApiKey = (apiKey: string, pepper: string) =>
   crypto.createHash("sha256")
     .update(`${pepper}:${apiKey}`)
