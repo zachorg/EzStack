@@ -18,10 +18,8 @@
     "ioredis": "^5.4.1"
   },
   "devDependencies": {
-    "@types/node": "^22.5.0",
+    "@types/node": "^20.19.14",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }
 }
-
-

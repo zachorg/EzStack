@@ -1,7 +1,8 @@
 import fp from "fastify-plugin";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 
-export default fp(async (app) => {
+// Loads sensitive configuration (like API key pepper) from Google Secret Manager.
+export default fp(async (app: any) => {
   const raw = (process.env.APIKEY_PEPPER || "").trim();
   const projectId = (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "").trim();
   const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
@@ -20,6 +21,7 @@ export default fp(async (app) => {
       candidates.push(`projects/${projectId}/secrets/${raw}/versions/latest`);
     }
 
+    // Try to fetch from GSM if we have a candidate resource name
     if (candidates.length > 0) {
       const clientOptions: any = {};
       if (clientEmail && privateKey) {
@@ -40,11 +42,12 @@ export default fp(async (app) => {
             break;
           }
         } catch (err: any) {
-          app.log.error({ err, name }, "Failed to load API key pepper from Secret Manager");
+          app.log.error({ err: err && err.message, name }, "Failed to load API key pepper from Secret Manager");
         }
       }
     }
 
+    // If still not resolved and it's not a resource path, treat raw as literal pepper
     if (!pepper && !looksLikeResource) {
       pepper = raw;
       app.log.warn("Using APIKEY_PEPPER as literal value (dev mode)");
@@ -56,7 +59,7 @@ export default fp(async (app) => {
   }
 
   (app as any).apikeyPepper = pepper;
+  try { app.log.info({ hasPepper: Boolean(pepper) }, "secrets: pepper initialized"); } catch {}
 });
-
 
 
