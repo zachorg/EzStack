@@ -25,6 +25,8 @@ type PlanDoc = {
   features?: Record<string, boolean>;
 };
 
+// Initializes Firebase Admin SDK, decorates app with Firestore and helper
+// methods for API key introspection and ID token verification.
 export default fp(async (app) => {
   // Initialize Firebase Admin app once per process
   if (getApps().length === 0) {

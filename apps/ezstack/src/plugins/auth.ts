@@ -3,14 +3,15 @@ import { hashApiKey } from "../utils/crypto.js";
 
 // Firebase-backed API key authentication with short TTL caching.
 export default fp(async (app) => {
-  // Simple in-memory cache
+  // Simple in-memory cache for API key introspection results to reduce
+  // Redis/Firestore load. Each entry stores the value and an absolute expiry.
   const memCache = new Map<string, { value: any; expiresAt: number }>();
   const MEM_TTL_MS = Number(process.env.APIKEY_CACHE_TTL_MS || 30_000);
   const REDIS_TTL_SEC = Number(process.env.APIKEY_REDIS_TTL_SEC || 60);
   const PEPPER = (app as any).apikeyPepper as string;
 
   app.addHook("preHandler", async (req: any, _rep) => {
-    // Allow unauthenticated health checks
+    // Allow unauthenticated health checks so uptime probes don't require auth.
     if (req.routeOptions.url === "/v1/otp/healthz" 
       || req.routeOptions.url === "/v1/ote/healthz" 
       || req.routeOptions.url === "/v1/apikeys/healthz"
@@ -21,6 +22,7 @@ export default fp(async (app) => {
 
     // Allow disabling auth entirely (tests/dev only)
     if (process.env.AUTH_DISABLE === "true") {
+      try { req.log.warn("auth: AUTH_DISABLE=true, bypassing authentication"); } catch {}
       return;
     }
 
@@ -32,7 +34,7 @@ export default fp(async (app) => {
     const idToken = (req.headers?.["x-firebase-token"] as undefined | string) || bearer;
     const preferApiKey = typeof apiKey === "string";
 
-    // Diagnostics: log which credential types are present (not their values)
+    // Diagnostics: log which credential types are present (not their values).
     try {
       req.log.info(
         {
@@ -59,7 +61,7 @@ export default fp(async (app) => {
 
     // Branch: Firebase Auth ID token
     if (typeof idToken === "string" && !preferApiKey) {
-      try { req.log.info("auth: using firebase id token"); } catch {}
+      try { req.log.info({ route: req.routeOptions?.url }, "auth: using firebase id token"); } catch {}
       try {
         const res = await (app as any).introspectIdToken(idToken);
         if (!res?.uid) {
@@ -86,6 +88,7 @@ export default fp(async (app) => {
             }
           }
         }
+        try { req.log.debug({ uid: res.uid }, "auth: firebase token verified"); } catch {}
         return;
       } catch (e) {
         try { req.log.warn({ err: e && (e as any).message }, "auth: firebase token verification failed"); } catch {}
@@ -106,7 +109,6 @@ export default fp(async (app) => {
     }
 
     if (typeof apiKey !== "string" || apiKey.length < 10) {
-      console.log("Invalid API key", apiKey);
       try { req.log.warn({ hasApiKey: typeof apiKey === "string", length: typeof apiKey === "string" ? apiKey.length : 0 }, "auth: invalid api key"); } catch {}
       const err: any = new Error("Missing or invalid API key");
       err.statusCode = 401;
@@ -123,7 +125,6 @@ export default fp(async (app) => {
     if (hit && hit.expiresAt > now) {
       const { tenant, key, plan } = hit.value;
       if (!key || key.status !== "active") {
-        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -137,6 +138,7 @@ export default fp(async (app) => {
       }
       req.tenantId = tenant.tenantId;
       req.authz = { plan, features: tenant.featureFlags || {} };
+      try { req.log.debug({ cache: "memory", tenantId: tenant.tenantId }, "auth: cache hit"); } catch {}
       return;
     }
 
@@ -149,7 +151,6 @@ export default fp(async (app) => {
       const { tenant, key, plan } = parsed;
       if (!key || key.status !== "active") {
         try { req.log.warn("auth: cached apikey status invalid"); } catch {}
-        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -172,6 +173,7 @@ export default fp(async (app) => {
         err.code = "forbidden";
         throw err;
       }
+      try { req.log.debug({ cache: "redis", tenantId: tenant?.tenantId }, "auth: cache hit"); } catch {}
       return;
     }
 
@@ -185,7 +187,6 @@ export default fp(async (app) => {
       const { tenant, key, plan } = result as any;
       if (!key || key.status !== "active") {
         try { req.log.warn("auth: apikey status invalid"); } catch {}
-        console.log("Invalid API key", apiKey);
         const err: any = new Error("Missing or invalid API key");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -223,6 +224,7 @@ export default fp(async (app) => {
           throw err;
         }
       }
+      try { req.log.info({ tenantId: tenant?.tenantId, planId: plan?.planId }, "auth: apikey verified"); } catch {}
     } catch (e: any) {
       const failSafe = process.env.AUTH_FAIL_SAFE === "true";
       if (failSafe && cached) {
@@ -231,6 +233,7 @@ export default fp(async (app) => {
         if (parsed.tenant?.tenantId) {
           req.tenantId = parsed.tenant?.tenantId;
           req.authz = { plan: parsed.plan, features: parsed.tenant?.featureFlags || {} };
+          try { req.log.warn({ tenantId: req.tenantId }, "auth: fail-safe allow using cached authz"); } catch {}
         } else {
           const err: any = new Error("Tenant-scoped key required");
           err.statusCode = 403;

@@ -48,6 +48,9 @@ if (SQS_ENABLE === "true" || (process.env.AWS_SQS_ENDPOINT && SQS_ENABLE !== "fa
 await app.register(otpRoutes, { prefix: "/v1/otp" });
 await app.register(oteRoutes, { prefix: "/v1/ote" });
 
-await app.listen({ host: "0.0.0.0", port: Number(process.env.PORT || 8080) });
+// Start server
+const port = Number(process.env.PORT || 8080);
+app.log.info({ port }, "Starting EzAuth service");
+await app.listen({ host: "0.0.0.0", port });
 
 

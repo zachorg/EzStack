@@ -82,6 +82,7 @@ export default fp(async (app) => {
     const now = Date.now();
     const hit = cache.get(tenantId);
     if (hit && hit.expiresAt > now) {
+      try { (app as any).log?.debug?.({ tenantId }, "tenant-settings: cache hit"); } catch {}
       return hit.value;
     }
 
@@ -94,9 +95,11 @@ export default fp(async (app) => {
 
       // Update cache and return
       cache.set(tenantId, { value: merged, expiresAt: now + CACHE_TTL_MS });
+      try { (app as any).log?.debug?.({ tenantId }, "tenant-settings: loaded from redis"); } catch {}
       return merged;
     } catch {
       // Return defaults on any error
+      try { (app as any).log?.warn?.({ tenantId }, "tenant-settings: failed to load, using defaults"); } catch {}
       return { ...DEFAULTS };
     }
   });

@@ -71,8 +71,10 @@ export default fp(async (app) => {
       const parsed = raw ? JSON.parse(raw) : undefined;
       const merged: TenantSettings = { ...DEFAULTS, ...fromRaw(parsed) } as TenantSettings;
       cache.set(tenantId, { value: merged, expiresAt: now + CACHE_TTL_MS });
+      app.log.info({ tenantId }, "Tenant settings loaded and cached");
       return merged;
     } catch {
+      app.log.warn({ tenantId }, "Tenant settings unavailable; using defaults");
       return { ...DEFAULTS };
     }
   });

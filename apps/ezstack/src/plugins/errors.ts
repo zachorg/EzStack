@@ -2,6 +2,7 @@ import fp from "fastify-plugin";
 
 // Global error/404 shaping to { error: { code, message } }
 export default fp(async (app) => {
+  // Convert thrown/returned errors into consistent API error shape
   app.setErrorHandler((err, _req, rep) => {
     // Validation errors from Fastify/Ajv
     const isValidationError = (err as any).validation || (err as any).code === "FST_ERR_VALIDATION";

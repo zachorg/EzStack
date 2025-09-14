@@ -7,6 +7,8 @@ export default fp(async (app) => {
   app.decorate(
     "rlPerRoute", 
     (max?: number) => {
+      // Returns a per-route rate limit preHandler that respects per-tenant overrides
+      // from tenant settings. This keeps burst limits consistent across tenants.
       return (app as any).rateLimit({
         timeWindow: "1 minute",
         max: async (req: any) => {
@@ -18,6 +20,7 @@ export default fp(async (app) => {
       });
     }
   );
+  app.log.info({ defaultMaxPerMinute: RATE_ROUTE_MAX }, "Rate limit plugin initialized");
 });
 
 

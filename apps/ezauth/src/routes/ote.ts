@@ -27,14 +27,15 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()]
     },
     async (req: any, rep: any) => {
+      // Support idempotency via either header or body field
       const hdr = req.headers?.["idempotency-key"] as undefined | string | string[];
       const headerIdem = Array.isArray(hdr) ? hdr[0] : hdr;
       const bodyIdem = (req.body && (req.body as any).idempotencyKey) as undefined | string;
       const idempotencyKey = headerIdem || bodyIdem;
       const payload = { ...(req.body as any), idempotencyKey, tenantId: req.tenantId };
-      return rep.send({
-        requestId: await OTE.send(app, payload)
-      });
+      const requestId = await OTE.send(app, payload);
+      req.log.info({ requestId }, "ote/send: issued");
+      return rep.send({ requestId });
     }
   );
 
@@ -46,9 +47,8 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()]
     },
     async (req: any) => {
-      return {
-        verified: await OTE.verify(app, { ...(req.body as any), tenantId: req.tenantId })
-      };
+      const verified = await OTE.verify(app, { ...(req.body as any), tenantId: req.tenantId });
+      return { verified };
     }
   );
 
@@ -59,10 +59,11 @@ const routes: FastifyPluginAsync = async (app) => {
       schema: { body: resendSchema },
       preHandler: [app.rlPerRoute()]
     },
-    async (req: any, rep: any) => {
+    async (req: any) => {
       const r = await OTE.resend(app, { ...(req.body as any), tenantId: req.tenantId });
 
       if (r.ok) {
+        req.log.info({ requestId: (req.body as any)?.requestId }, "ote/resend: ok");
         return { ok: true };
       }
 

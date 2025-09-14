@@ -60,6 +60,8 @@ async function hashWithArgon2id(plaintext: string, saltB64: string, pepper: stri
   return argon2.hash(`${pepper}${plaintext}`, { ...ARGON_PARAMS, salt });
 }
 
+// API key management routes: create/list/revoke. All routes rely on the auth
+// plugin to populate req.userId and tenant authorization.
 const routes: FastifyPluginAsync = async (app) => {
   const firestore = app.firestore;
   const pepper = (app as any).apikeyPepper as string;
@@ -132,6 +134,8 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const ref = await firestore.collection("apiKeys").add(doc);
 
+      try { req.log.info({ tenantId: effectiveTenantId, userId, id: ref.id }, "apikeys: created api key"); } catch {}
+
       return rep.send({
         id: ref.id,
         key,
@@ -193,6 +197,7 @@ const routes: FastifyPluginAsync = async (app) => {
         return bm - am;
       });
 
+      try { req.log.debug({ tenantId, count: items.length }, "apikeys: listed keys"); } catch {}
       return rep.send({ items });
     } catch (err: any) {
       req.log?.error({ err }, "listApiKeys failed");
@@ -230,6 +235,7 @@ const routes: FastifyPluginAsync = async (app) => {
       }
 
       await ref.update({ revokedAt: (await import("firebase-admin/firestore")).FieldValue.serverTimestamp() });
+      try { req.log.info({ id, userId }, "apikeys: revoked api key"); } catch {}
       return rep.send({ ok: true, deleted: true });
     } catch (err: any) {
       req.log?.error({ err }, "revokeApiKey failed");

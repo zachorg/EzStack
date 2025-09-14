@@ -42,7 +42,7 @@ export default fp(async (app) => {
             break;
           }
         } catch (err: any) {
-          app.log.error({ err, name }, "Failed to load API key pepper from Secret Manager");
+          app.log.error({ err: err && err.message, name }, "Failed to load API key pepper from Secret Manager");
         }
       }
     }
@@ -59,6 +59,7 @@ export default fp(async (app) => {
   }
 
   (app as any).apikeyPepper = pepper;
+  try { app.log.info({ hasPepper: Boolean(pepper) }, "secrets: pepper initialized"); } catch {}
 });
 
 

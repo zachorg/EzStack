@@ -2,6 +2,8 @@ import fp from "fastify-plugin";
 import "@fastify/rate-limit";
 
 // Adds helper to apply per-route rate limiting with a default max per minute.
+// This wraps the fastify-rate-limit plugin to pull per-tenant defaults from
+// tenant settings and allow an override per route.
 export default fp(async (app) => {
   const RATE_ROUTE_MAX = Number(process.env.RATE_ROUTE_MAX || 30);
 
@@ -15,7 +17,9 @@ export default fp(async (app) => {
           const tenantId = req.tenantId as string | undefined;
           const ts = await (app as any).getTenantSettings?.(tenantId);
           const perTenantMax = ts?.routePerMinute ?? RATE_ROUTE_MAX;
-          return max ?? perTenantMax;
+          const effective = max ?? perTenantMax;
+          try { req.log.debug({ tenantId, effective }, "rate-limit: effective per-route limit"); } catch {}
+          return effective;
         }
       });
     }

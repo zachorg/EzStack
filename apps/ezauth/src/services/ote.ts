@@ -18,9 +18,11 @@ export async function send(app: FastifyInstance, body: any) {
   const OTE_LENGTH = (ts?.oteLength ?? ts?.otpLength ?? Number(process.env.OTE_LENGTH || process.env.OTP_LENGTH || 6));
   const DEST_PER_MINUTE = ts?.destPerMinute ?? Number(process.env.DEST_PER_MINUTE || 5);
 
+  // Ensure idempotent requests return the original requestId when provided
   if (idempotencyKey) {
     const i = await redis.get(kIdem(tenantId, idempotencyKey));
     if (i) {
+      log.info({ idempotencyKey }, "OTE send: idempotent hit");
       return i;
     }
   }
@@ -37,6 +39,7 @@ export async function send(app: FastifyInstance, body: any) {
     const e: any = new Error("Destination rate limit exceeded");
     e.statusCode = 429;
     e.code = "rate_limited";
+    log.warn({ dest_hash: dh, rc, limit: DEST_PER_MINUTE }, "OTE send: destination rate limited");
     throw e;
   }
 
@@ -66,10 +69,16 @@ export async function send(app: FastifyInstance, body: any) {
     await (app as any).sendEmail({ to: normalized, subject, text, html });
   } catch (err) {
     await redis.del(kOte(tenantId, requestId));
+    log.error({ err, requestId }, "OTE send: email dispatch failed; rolling back state");
     throw err;
   }
 
-  log.info({ requestId, code }, "OTE send: queued");
+  const shouldLogCode = process.env.LOG_CODES === "true" || String(process.env.EMAIL_DRY_RUN || "").toLowerCase() === "true";
+  if (shouldLogCode) {
+    log.info({ requestId, code }, "OTE send: queued");
+  } else {
+    log.info({ requestId }, "OTE send: queued");
+  }
   return requestId;
 }
 

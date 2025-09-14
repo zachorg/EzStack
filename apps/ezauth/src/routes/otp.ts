@@ -44,14 +44,15 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()]
     },
     async (req: any, rep: any) => {
+      // Extract idempotency key from header or body for safe retries
       const hdr = req.headers?.["idempotency-key"] as undefined | string | string[];
       const headerIdem = Array.isArray(hdr) ? hdr[0] : hdr;
       const bodyIdem = (req.body && (req.body as any).idempotencyKey) as undefined | string;
       const idempotencyKey = headerIdem || bodyIdem;
       const payload = { ...(req.body as any), idempotencyKey, tenantId: req.tenantId };
-      return rep.send({ 
-        requestId: await OTP.send(app, payload) 
-      });
+      const requestId = await OTP.send(app, payload);
+      req.log.info({ requestId }, "otp/send: issued");
+      return rep.send({ requestId });
     }
   );
 
@@ -63,9 +64,8 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()]
     },
     async (req: any) => {
-      return {
-        verified: await OTP.verify(app, { ...(req.body as any), tenantId: req.tenantId })
-      };
+      const verified = await OTP.verify(app, { ...(req.body as any), tenantId: req.tenantId });
+      return { verified };
     }
   );
 
@@ -76,10 +76,11 @@ const routes: FastifyPluginAsync = async (app) => {
       schema: { body: resendSchema },
       preHandler: [app.rlPerRoute()]
     },
-    async (req: any, rep: any) => {
+    async (req: any) => {
       const r = await OTP.resend(app, { ...(req.body as any), tenantId: req.tenantId });
       
       if (r.ok) {
+        req.log.info({ requestId: (req.body as any)?.requestId }, "otp/resend: ok");
         return { ok: true };
       }
       

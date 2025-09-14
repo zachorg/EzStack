@@ -23,6 +23,7 @@ export default fp(async (app) => {
     region,
     endpoint: process.env.AWS_SES_ENDPOINT || undefined
   });
+  app.log.info({ region, endpoint: process.env.AWS_SES_ENDPOINT ? true : false }, "SES client initialized");
 
   app.decorate(
     "sendEmail",
@@ -41,7 +42,13 @@ export default fp(async (app) => {
         }
       });
 
-      await ses.send(cmd);
+      try {
+        await ses.send(cmd);
+        app.log.info({ to, from: Source }, "SES email sent");
+      } catch (err) {
+        app.log.error({ err, to, from: Source }, "SES send failed");
+        throw err;
+      }
     }
   );
 });

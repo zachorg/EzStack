@@ -29,9 +29,11 @@ export async function send(app: FastifyInstance, body: any) {
   const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
   const DEST_PER_MINUTE = ts?.destPerMinute ?? Number(process.env.DEST_PER_MINUTE || 5);
 
+  // Ensure idempotent requests return the original requestId when provided
   if (idempotencyKey) {
     const i = await redis.get(kIdem(tenantId, idempotencyKey));
     if (i) {
+      log.info({ idempotencyKey }, "OTP send: idempotent hit");
       return i;
     }
   }
@@ -47,6 +49,7 @@ export async function send(app: FastifyInstance, body: any) {
     const e: any = new Error("Destination rate limit exceeded");
     e.statusCode = 429;
     e.code = "rate_limited";
+    log.warn({ dest_hash: dh, rc, limit: DEST_PER_MINUTE }, "OTP send: destination rate limited");
     throw e;
   }
 
@@ -78,6 +81,7 @@ export async function send(app: FastifyInstance, body: any) {
         type: "otp.send",
         requestId,
         tenantId,
+        // destination is intentionally included for downstream sender; it will be redacted in logs
         destination,
         channel,
         contextId,
@@ -85,10 +89,17 @@ export async function send(app: FastifyInstance, body: any) {
       })
     }));
   } else {
+    // Only log destination when SQS is disabled to aid local testing; redact in base logger
     log.warn({ requestId, destination }, "SQS not configured; OTP will only be visible in logs");
   }
 
-  log.info({ requestId, otp, destination }, "OTP generated");
+  // Avoid logging OTP unless explicitly enabled via LOG_CODES for debugging
+  const shouldLogCode = process.env.LOG_CODES === "true";
+  if (shouldLogCode) {
+    log.info({ requestId, otp, destination }, "OTP generated");
+  } else {
+    log.info({ requestId }, "OTP generated");
+  }
   return requestId;
 }
 
@@ -170,7 +181,12 @@ export async function resend(app: FastifyInstance, body: any) {
     }));
   }
 
-  log.info({ requestId, otp }, "OTP resent");
+  const shouldLogCode = process.env.LOG_CODES === "true";
+  if (shouldLogCode) {
+    log.info({ requestId, otp }, "OTP resent");
+  } else {
+    log.info({ requestId }, "OTP resent");
+  }
   return { ok: true };
 }
 
