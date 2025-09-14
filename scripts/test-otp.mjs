@@ -1,17 +1,22 @@
 #!/usr/bin/env node
 // Minimal OTP e2e tester
-// Usage: node scripts/test-otp.mjs [--base http://localhost:8080]
+// Usage: node scripts/test-otp.mjs [--base http://localhost:8081]
 //        [--api-key YOUR_API_KEY] or [--id-token YOUR_FIREBASE_ID_TOKEN]
+//        [--docker-service ezauth] [--from-logs true|false]
 
 import { spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+import fs from 'node:fs';
 
 const argv2 = process.argv.slice(2);
 const args = new Map(argv2.map((a, i, arr) => a.startsWith('--') ? [a.replace(/^--/, ''), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : 'true'] : []));
 
-const base = args.get('base') || process.env.BASE_URL || 'http://localhost:8080';
+// Default base: host -> localhost:8081, inside docker -> ezauth:8080
+const isInDocker = fs.existsSync('/.dockerenv') || process.env.DOCKER_CONTAINER === 'true';
+const defaultBase = isInDocker ? 'http://ezauth:8080' : 'http://localhost:8081';
+const base = args.get('base') || process.env.BASE_URL || defaultBase;
 let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
 const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
 if (!apiKey && !idToken) {
@@ -30,6 +35,7 @@ const destination = args.get('destination') || '+15555550123';
 const channel = args.get('channel') || 'sms';
 const tryLogs = (args.get('from-logs') || 'true') !== 'false';
 const maxRetries = Number(args.get('max-retries') || 3);
+const dockerService = args.get('docker-service') || process.env.DOCKER_SERVICE || 'ezauth';
 
 const idemKey = args.get('idem-key');
 const idemVia = args.get('idem-via') || 'header'; // 'header' | 'body'
@@ -118,7 +124,7 @@ function dockerAvailable() {
 }
 
 function getOtpFromDockerLogs(requestId) {
-  const args = ['compose', 'logs', '--no-color', '--since', '2m', 'api'];
+  const args = ['compose', 'logs', '--no-color', '--since', '2m', dockerService];
   const r = spawnSync('docker', args, { encoding: 'utf8' });
   if (r.status !== 0) return undefined;
   const lines = r.stdout.split(/\r?\n/);

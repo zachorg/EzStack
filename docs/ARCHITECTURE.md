@@ -70,7 +70,7 @@ Paths under `/v1/apikeys`:
 - `APIKEY_PEPPER` (required)
 - `PORT`, `CORS_ORIGIN`
 - Optional demo encryption: `DEMO_ENCRYPT_ENABLED`, `KMS_KEY_RESOURCE`
-- Optional: `AUTH_DISABLE`, `AUTH_FAIL_SAFE`, SQS envs
+- Optional: `AUTH_FAIL_SAFE`, SQS envs
 
 ## Firestore Indexes (optional)
 - If server-side sorting needed: composite indexes

@@ -1,23 +1,59 @@
 services:
-  api:
+  ezstack:
+    build:
+      context: ./apps/ezstack
+      dockerfile: Dockerfile
     image: ezstack:latest
     ports: ["8080:8080"]
     environment:
+      SERVICE: ezstack
       # Core config
-      PORT: ${PORT:-8080}
+      PORT: ${PORT_EZSTACK:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      EZAUTH_API_KEY: ${EZAUTH_API_KEY}
-      FIREBASE_ID_TOKEN: ${FIREBASE_ID_TOKEN}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
-      AUTH_DISABLE: ${AUTH_DISABLE:-false}
-      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE:-false}
-      # Email/SES
+      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZSTACK:-false}
+      # Email/SES (not typically needed here, but harmless)
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
       EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
-      # SQS (optional)
+      # Firebase/Google inline credentials (required for GSM & Firestore)
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      # Auth caching
+      APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
+      APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
+    volumes:
+      - ./scripts:/app/scripts:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  ezauth:
+    build:
+      context: ./apps/ezauth
+      dockerfile: Dockerfile
+    image: ezauth:latest
+    ports: ["8081:8080"]
+    environment:
+      SERVICE: ezauth
+      # Core config
+      PORT: ${PORT_EZAUTH:-8080}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Prefer Google Secret Manager; provide full resource name
+      APIKEY_PEPPER: ${APIKEY_PEPPER:-}
+      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
+      # Email/SES
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      # Email local testing
+      EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
+      # OTP/SMS local testing
+      OTP_DRY_RUN: ${OTP_DRY_RUN:-true}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
+      # SQS (optional for OTP async send)
       SQS_ENABLE: ${SQS_ENABLE:-false}
       AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
       SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
@@ -35,9 +71,6 @@ services:
       RESEND_COOLDOWN_SEC: ${RESEND_COOLDOWN_SEC:-30}
       DEST_PER_MINUTE: ${DEST_PER_MINUTE:-5}
       RATE_ROUTE_MAX: ${RATE_ROUTE_MAX:-30}
-      # Auth caching
-      APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
-      APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
     volumes:
       - ./scripts:/app/scripts:ro
     depends_on:
