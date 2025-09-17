@@ -3,7 +3,7 @@ import { supabaseServer } from "@/lib/supabase/server";
 
 export async function POST() {
   try {
-    const supabase = supabaseServer();
+    const supabase = await supabaseServer();
     const { data } = await supabase.auth.getUser();
     const uid = data.user?.id;
     if (!uid) return NextResponse.json({ error: { message: "Login required" } }, { status: 401 });

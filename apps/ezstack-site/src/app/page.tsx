@@ -7,10 +7,6 @@ import { Section } from "./components/section";
 import { CtaBand } from "./components/cta-band";
 
 export default async function Home() {
-  const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  const _isLoggedIn = Boolean(data.user);
-
   return (
     <div className="relative font-sans space-y-16">
       <AuroraBackground />

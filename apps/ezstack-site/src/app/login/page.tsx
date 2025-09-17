@@ -31,9 +31,6 @@ export default function LoginPage() {
     }
   }
 
-  // With Supabase, sessions are managed by cookies automatically.
-  async function startSessionWithCurrentUser() {}
-
   // Create an account with email/password and start a session.
   async function signUpWithEmailPassword() {
     setLoading(true);
