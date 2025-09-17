@@ -1,4 +1,20 @@
 services:
+  ezstack-site:
+    build:
+      context: ./apps/ezstack-site
+      dockerfile: Dockerfile
+    image: ezstack-site:latest
+    ports: ["3000:3000"]
+    environment:
+      # Next.js runtime env
+      NEXT_PUBLIC_SUPABASE_URL: ${SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      # Functions/API base URL – point to ezstack service
+      NEXT_PUBLIC_API_BASE_URL: http://ezstack:8080
+    depends_on:
+      ezstack:
+        condition: service_started
+  
   ezstack:
     build:
       context: ./apps/ezstack
@@ -23,7 +39,6 @@ services:
       EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
-      # Firebase removed
       # Auth caching
       APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
       APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
@@ -64,7 +79,6 @@ services:
       SQS_ENABLE: ${SQS_ENABLE:-false}
       AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
       SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
-      # Firebase removed
       # Per-route and OTP/OTE defaults (tenants can override via Redis settings)
       OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-300}
       OTP_LENGTH: ${OTP_LENGTH:-6}
