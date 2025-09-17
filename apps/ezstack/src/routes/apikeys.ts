@@ -3,20 +3,6 @@ import argon2 from "argon2";
 import crypto from "node:crypto";
 import { hashApiKey } from "../utils/crypto.js";
 
-type ApiKeyDoc = {
-  userId: string;
-  name?: string | null;
-  keyPrefix: string;
-  hashedKey: string;
-  salt: string;
-  alg: "argon2id";
-  params: { memoryCost: number; timeCost: number; parallelism: number };
-  createdAt: any;
-  lastUsedAt: any;
-  revokedAt: any;
-  keyMaterialEnc?: string;
-};
-
 const ARGON_PARAMS = {
   type: argon2.argon2id,
   memoryCost: 19456,
