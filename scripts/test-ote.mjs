@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Minimal OTE (email code) e2e tester
 // Usage: node scripts/test-ote.mjs [--base http://localhost:8080]
-//        [--api-key YOUR_API_KEY] or [--id-token YOUR_FIREBASE_ID_TOKEN]
+//        [--api-key YOUR_API_KEY] or [--id-token YOUR_SUPABASE_JWT]
 //        [--tenant t1] [--email user@example.com]
 //        [--idem-key your-key] [--idem-via header|body] [--code 123456] [--resend true]
 
@@ -22,7 +22,7 @@ const isInDocker = fs.existsSync('/.dockerenv') || process.env.DOCKER_CONTAINER 
 const defaultBase = isInDocker ? 'http://ezauth:8080' : 'http://localhost:8081';
 const base = args.get('base') || process.env.BASE_URL || defaultBase;
 let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
-const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
+const idToken = args.get('id-token') || process.env.SUPABASE_ID_TOKEN;
 // Fallback: if npm passed only a positional value, treat first non-flag as api key
 if (!apiKey && !idToken) {
   const firstPositional = argv2.find((t) => !t.startsWith('--'));

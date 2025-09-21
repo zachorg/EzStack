@@ -1,15 +1,37 @@
 services:
+  ezstack-site:
+    build:
+      context: ./apps/ezstack-site
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://ezstack:8080}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+    image: ezstack-site:latest
+    container_name: ezstack-site
+    ports: ["3000:3000"]
+    depends_on:
+      ezstack:
+        condition: service_started
+  
   ezstack:
     build:
       context: ./apps/ezstack
       dockerfile: Dockerfile
     image: ezstack:latest
+    container_name: ezstack
     ports: ["8080:8080"]
     environment:
       SERVICE: ezstack
       # Core config
       PORT: ${PORT_EZSTACK:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Supabase
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL:-${SUPABASE_URL}/auth/v1/jwks}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZSTACK:-false}
@@ -18,10 +40,6 @@ services:
       EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
-      # Firebase/Google inline credentials (required for GSM & Firestore)
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
-      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
-      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
       # Auth caching
       APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
       APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
@@ -36,12 +54,18 @@ services:
       context: ./apps/ezauth
       dockerfile: Dockerfile
     image: ezauth:latest
-    ports: ["8081:8080"]
+    container_name: ezauth
+    ports: ["8081:8081"]
     environment:
       SERVICE: ezauth
       # Core config
-      PORT: ${PORT_EZAUTH:-8080}
+      PORT: ${PORT_EZAUTH:-8081}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      # Supabase
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL:-${SUPABASE_URL}/auth/v1/jwks}
       # Prefer Google Secret Manager; provide full resource name
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
@@ -57,10 +81,6 @@ services:
       SQS_ENABLE: ${SQS_ENABLE:-false}
       AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
       SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
-      # Firebase/Google inline credentials (required for GSM & Firestore)
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
-      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
-      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
       # Per-route and OTP/OTE defaults (tenants can override via Redis settings)
       OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-300}
       OTP_LENGTH: ${OTP_LENGTH:-6}
@@ -78,6 +98,7 @@ services:
         condition: service_healthy
   redis:
     image: redis:7-alpine
+    container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
     ports: ["6379:6379"]
     volumes:

@@ -4,9 +4,9 @@ import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 // Loads sensitive configuration (like API key pepper) from Google Secret Manager.
 export default fp(async (app: any) => {
   const raw = (process.env.APIKEY_PEPPER || "").trim();
-  const projectId = (process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "").trim();
-  const clientEmail = (process.env.FIREBASE_CLIENT_EMAIL || "").trim();
-  const privateKey = (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  const projectId = (process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "").trim();
+  const clientEmail = (process.env.GOOGLE_CLIENT_EMAIL || "").trim();
+  const privateKey = (process.env.GOOGLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
   let pepper: string | undefined;
 
