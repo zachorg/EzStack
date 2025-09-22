@@ -4,7 +4,7 @@ Quickstart
 
 1. Set environment variables:
 
-   - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Firebase: `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`, `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `NEXT_PUBLIC_FIREBASE_APP_ID`
    - Optional external API base: `NEXT_PUBLIC_API_BASE_URL` (defaults to `http://127.0.0.1:4000`)
 
 2. Run the dev server:
@@ -20,8 +20,8 @@ npm run dev
 
 Implementation notes
 
-- Auth is handled via Supabase cookies. Use `@/lib/supabase/server` in route handlers and server components, and `@/lib/supabase/client` in the browser.
-- API key routes under `src/app/api/keys/route.ts` proxy to `NEXT_PUBLIC_API_BASE_URL` and forward `Authorization: Bearer <Supabase access token>`.
+- Auth is handled via Firebase Authentication with session cookies. Use `@/lib/firebase/server` in route handlers and server components, and `@/lib/firebase/client` in the browser.
+- API key routes under `src/app/api/keys/route.ts` proxy to `NEXT_PUBLIC_API_BASE_URL` and forward `Authorization: Bearer <Firebase ID token>`.
 - Rate-limit headers like `Retry-After` and `X-RateLimit-Reset` from the external API should be surfaced by the proxy for UX.
 
 Adding a product tile

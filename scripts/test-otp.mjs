@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Minimal OTP e2e tester
 // Usage: node scripts/test-otp.mjs [--base http://localhost:8081]
-//        [--api-key YOUR_API_KEY] or [--id-token YOUR_SUPABASE_JWT]
+//        [--api-key YOUR_API_KEY] or [--id-token YOUR_FIREBASE_JWT]
 //        [--docker-service ezauth] [--from-logs true|false]
 
 import { spawnSync } from 'node:child_process';
@@ -18,7 +18,7 @@ const isInDocker = fs.existsSync('/.dockerenv') || process.env.DOCKER_CONTAINER 
 const defaultBase = isInDocker ? 'http://ezauth:8080' : 'http://localhost:8081';
 const base = args.get('base') || process.env.BASE_URL || defaultBase;
 let apiKey = args.get('api-key') || process.env.EZAUTH_API_KEY;
-const idToken = args.get('id-token') || process.env.SUPABASE_ID_TOKEN;
+const idToken = args.get('id-token') || process.env.FIREBASE_ID_TOKEN;
 if (!apiKey && !idToken) {
   const firstPositional = argv2.find((t) => !t.startsWith('--'));
   if (firstPositional) {
