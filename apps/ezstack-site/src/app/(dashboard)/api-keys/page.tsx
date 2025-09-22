@@ -68,10 +68,18 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
       let resolvedTenantId = tenantId;
       if (!resolvedTenantId) {
         try {
-          const { supabaseBrowser } = await import("@/lib/supabase/client");
-          const supabase = supabaseBrowser();
-          const { data } = await supabase.auth.getUser();
-          resolvedTenantId = data.user?.id ?? null;
+          const { auth } = await import("@/lib/firebase/client");
+          const { onAuthStateChanged } = await import("firebase/auth");
+          
+          // Get current user
+          if (auth) {
+            resolvedTenantId = await new Promise<string | null>((resolve) => {
+              const unsubscribe = onAuthStateChanged(auth!, (user) => {
+                unsubscribe();
+                resolve(user?.uid ?? null);
+              });
+            });
+          }
         } catch {}
       }
       if (!resolvedTenantId) {
@@ -247,17 +255,17 @@ function useTenantSelection() {
     let unsub: (() => void) | undefined;
     (async () => {
       try {
-        const { supabaseBrowser } = await import("@/lib/supabase/client");
-        const supabase = supabaseBrowser();
+        const { auth } = await import("@/lib/firebase/client");
+        const { onAuthStateChanged } = await import("firebase/auth");
+        
         try { await fetch("/api/tenants/bootstrap", { method: "POST", cache: "no-store" }); } catch {}
-        const { data: initial } = await supabase.auth.getUser();
-        setTenantId(initial.user?.id ?? null);
-        const {
-          data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-          setTenantId(session?.user?.id ?? null);
-        });
-        unsub = () => subscription.unsubscribe();
+        
+        // Set up auth state listener
+        if (auth) {
+          unsub = onAuthStateChanged(auth, (user) => {
+            setTenantId(user?.uid ?? null);
+          });
+        }
       } catch {
         setTenantId(null);
       }

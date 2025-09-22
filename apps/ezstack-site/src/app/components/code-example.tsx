@@ -8,14 +8,14 @@ type TabKey = "curl" | "node" | "python";
 const snippets: Record<TabKey, string> = {
   curl: `curl -X POST https://<host>/api/proxy/otp/send \
   -H "content-type: application/json" \
-  -H "authorization: Bearer <SUPABASE_ID_TOKEN>" \
+  -H "authorization: Bearer <FIREBASE_ID_TOKEN>" \
   -H "idempotency-key: idem-123" \
   -d '{ "destination":"+15555550123", "channel":"sms" }'`,
   node: `await fetch('https://<host>/api/proxy/otp/send', {
   method: 'POST',
   headers: {
     'content-type': 'application/json',
-    authorization: 'Bearer <SUPABASE_ID_TOKEN>',
+    authorization: 'Bearer <FIREBASE_ID_TOKEN>',
     'idempotency-key': 'idem-123',
   },
   body: JSON.stringify({ destination: '+15555550123', channel: 'sms' }),
@@ -25,7 +25,7 @@ const snippets: Record<TabKey, string> = {
 requests.post('https://<host>/api/proxy/otp/send',
   headers={
     'content-type': 'application/json',
-    'authorization': 'Bearer <SUPABASE_ID_TOKEN>',
+    'authorization': 'Bearer <FIREBASE_ID_TOKEN>',
     'idempotency-key': 'idem-123',
   },
   json={ 'destination': '+15555550123', 'channel': 'sms' },

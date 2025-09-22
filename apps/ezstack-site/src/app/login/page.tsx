@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { auth, googleProvider } from "@/lib/firebase/client";
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -16,14 +17,35 @@ export default function LoginPage() {
     if (r) setRedirect(r);
   }, []);
 
-  // Sign in with Google using Supabase OAuth (redirect flow).
+  // Sign in with Google using Firebase Auth (popup flow).
   async function signInGoogle() {
     setLoading(true);
     setMessage(null);
+    
+    if (!auth || !googleProvider) {
+      setMessage("Firebase authentication not configured");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const supabase = supabaseBrowser();
-      const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
-      if (error) setMessage(error.message);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const idToken = await user.getIdToken();
+      
+      // Send token to our session endpoint
+      const response = await fetch("/api/session/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      
+      if (response.ok) {
+        window.location.href = redirect || "/";
+      } else {
+        const error = await response.json();
+        setMessage(error.message || "Session creation failed");
+      }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Sign-in failed.");
     } finally {
@@ -35,11 +57,31 @@ export default function LoginPage() {
   async function signUpWithEmailPassword() {
     setLoading(true);
     setMessage(null);
+    
+    if (!auth) {
+      setMessage("Firebase authentication not configured");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const supabase = supabaseBrowser();
-      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
-      if (error) throw error;
-      window.location.href = redirect || "/";
+      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const user = userCredential.user;
+      const idToken = await user.getIdToken();
+      
+      // Send token to our session endpoint
+      const response = await fetch("/api/session/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      
+      if (response.ok) {
+        window.location.href = redirect || "/";
+      } else {
+        const error = await response.json();
+        setMessage(error.message || "Session creation failed");
+      }
     } catch (e) {
       setMessage(
         e instanceof Error ? e.message : "Account creation failed. Check email and password."
@@ -53,11 +95,31 @@ export default function LoginPage() {
   async function signInWithEmailPassword() {
     setLoading(true);
     setMessage(null);
+    
+    if (!auth) {
+      setMessage("Firebase authentication not configured");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const supabase = supabaseBrowser();
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) throw error;
-      window.location.href = redirect || "/";
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+      const user = userCredential.user;
+      const idToken = await user.getIdToken();
+      
+      // Send token to our session endpoint
+      const response = await fetch("/api/session/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+      
+      if (response.ok) {
+        window.location.href = redirect || "/";
+      } else {
+        const error = await response.json();
+        setMessage(error.message || "Session creation failed");
+      }
     } catch (e) {
       setMessage(
         e instanceof Error ? e.message : "Sign-in failed. Check your credentials."

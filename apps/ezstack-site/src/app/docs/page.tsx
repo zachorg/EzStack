@@ -12,8 +12,8 @@ export default function DocsPage() {
       </ol>
       <h2>API Key</h2>
       <p>
-        The app uses Supabase for authentication. The Next.js API route at <code>/api/keys</code> forwards requests
-        to the EzStack API and passes your Supabase access token in the <code>Authorization</code> header.
+        The app uses Firebase for authentication. The Next.js API route at <code>/api/keys</code> forwards requests
+        to the EzStack API and passes your Firebase ID token in the <code>Authorization</code> header.
         Plaintext keys are never stored client-side.
       </p>
       <h2>Next steps</h2>

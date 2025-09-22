@@ -12,9 +12,9 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Supabase sets auth cookies: sb-access-token / sb-refresh-token
-  const sbAccess = req.cookies.get("sb-access-token")?.value;
-  if (!sbAccess) {
+  // Firebase sets session cookie
+  const sessionCookie = req.cookies.get("session")?.value;
+  if (!sessionCookie) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);

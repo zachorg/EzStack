@@ -49,7 +49,8 @@ async function hashWithArgon2id(plaintext: string, saltB64: string, pepper: stri
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
 const routes: FastifyPluginAsync = async (app) => {
-  const supabase = (app as any).supabase;
+  const firebase = (app as any).firebase;
+  const db = firebase.db;
   const pepper = (app as any).apikeyPepper as string;
 
   app.get("/healthz", async (_req, rep) => {
@@ -100,29 +101,33 @@ const routes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      // Insert directly into Supabase;
+      // Insert directly into Firestore;
+      const keyDoc = db.collection("api_keys").doc();
+      const keyData = {
+        id: keyDoc.id,
+        user_id: userId,
+        tenant_id: effectiveTenantId,
+        name,
+        key_prefix: prefix,
+        hashed_key: hashedKey,
+        salt,
+        alg: "argon2id",
+        params: { memoryCost: ARGON_PARAMS.memoryCost, timeCost: ARGON_PARAMS.timeCost, parallelism: ARGON_PARAMS.parallelism },
+        hash: lookupHash,
+        status: "active",
+        type: "tenant",
+        created_at: new Date(),
+        updated_at: new Date(),
+        ...(keyMaterialEnc ? { key_material_enc: keyMaterialEnc } : {})
+      };
 
-      const { data: inserted, error } = await supabase
-        .from("api_keys")
-        .insert([{
-          user_id: userId,
-          tenant_id: effectiveTenantId,
-          name,
-          key_prefix: prefix,
-          hashed_key: hashedKey,
-          salt,
-          alg: "argon2id",
-          params: { memoryCost: ARGON_PARAMS.memoryCost, timeCost: ARGON_PARAMS.timeCost, parallelism: ARGON_PARAMS.parallelism },
-          hash: lookupHash,
-          status: "active",
-          type: "tenant",
-          ...(keyMaterialEnc ? { key_material_enc: keyMaterialEnc } : {})
-        }])
-        .select("id")
-        .single();
-      if (error || !inserted) {
+      try {
+        await keyDoc.set(keyData);
+      } catch (error) {
         return rep.status(500).send({ error: { message: "Failed to create api key" } });
       }
+
+      const inserted = { id: keyDoc.id };
 
       try { req.log.info({ tenantId: effectiveTenantId, userId, id: inserted.id }, "apikeys: created api key"); } catch {}
 
@@ -154,44 +159,48 @@ const routes: FastifyPluginAsync = async (app) => {
       if (!ok) {
         return rep.status(403).send({ error: { message: "Forbidden" } });
       }
-      const { data: rows, error } = await supabase
-        .from("api_keys")
-        .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
-        .eq("tenant_id", tenantId);
-      if (error) {
+      try {
+        const querySnapshot = await db.collection("api_keys")
+          .where("tenant_id", "==", tenantId)
+          .get();
+        
+        const items = querySnapshot.docs.map((doc: any) => {
+          const data = doc.data();
+          return {
+            id: data.id || doc.id,
+            name: data.name ?? null,
+            keyPrefix: data.key_prefix,
+            createdAt: data.created_at ?? null,
+            lastUsedAt: data.last_used_at ?? null,
+            revokedAt: data.revoked_at ?? null,
+          };
+        });
+
+        const toMillis = (t: any): number | null => {
+          if (!t) return null;
+          if (typeof t.toMillis === "function") return t.toMillis();
+          if (typeof t === "number") return t;
+          if (typeof t === "object" && typeof t._seconds === "number") {
+            const ns = typeof t._nanoseconds === "number" ? t._nanoseconds : 0;
+            return t._seconds * 1000 + ns / 1e6;
+          }
+          return null;
+        };
+
+        items.sort((a: { createdAt: any }, b: { createdAt: any }) => {
+          const am = toMillis(a.createdAt);
+          const bm = toMillis(b.createdAt);
+          if (am === null && bm === null) return 0;
+          if (am === null) return 1;
+          if (bm === null) return -1;
+          return bm - am;
+        });
+
+        try { req.log.debug({ tenantId, count: items.length }, "apikeys: listed keys"); } catch {}
+        return rep.send({ items });
+      } catch (error) {
         return rep.status(500).send({ error: { message: "Failed to list api keys" } });
       }
-      const items = (rows || []).map((v: any) => ({
-        id: v.id,
-        name: v.name ?? null,
-        keyPrefix: v.key_prefix,
-        createdAt: v.created_at ?? null,
-        lastUsedAt: v.last_used_at ?? null,
-        revokedAt: v.revoked_at ?? null,
-      }));
-
-      const toMillis = (t: any): number | null => {
-        if (!t) return null;
-        if (typeof t.toMillis === "function") return t.toMillis();
-        if (typeof t === "number") return t;
-        if (typeof t === "object" && typeof t._seconds === "number") {
-          const ns = typeof t._nanoseconds === "number" ? t._nanoseconds : 0;
-          return t._seconds * 1000 + ns / 1e6;
-        }
-        return null;
-      };
-
-      items.sort((a: { createdAt: any }, b: { createdAt: any }) => {
-        const am = toMillis(a.createdAt);
-        const bm = toMillis(b.createdAt);
-        if (am === null && bm === null) return 0;
-        if (am === null) return 1;
-        if (bm === null) return -1;
-        return bm - am;
-      });
-
-      try { req.log.debug({ tenantId, count: items.length }, "apikeys: listed keys"); } catch {}
-      return rep.send({ items });
     } catch (err: any) {
       req.log?.error({ err }, "listApiKeys failed");
       return rep.status(500).send({ error: { message: "Internal error" } });
@@ -210,36 +219,33 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep.status(400).send({ error: { message: "Missing id" } });
       }
 
-      const { data: row, error: gErr } = await supabase
-        .from("api_keys")
-        .select("id, tenant_id, user_id")
-        .eq("id", id)
-        .maybeSingle();
-      if (gErr) {
-        return rep.status(500).send({ error: { message: "Failed to load key" } });
-      }
-      if (!row) {
-        return rep.status(404).send({ error: { message: "Key not found" } });
-      }
-      if (row.tenant_id) {
-        const ok = await (app as any).hasTenantRole(userId, row.tenant_id, ["owner", "admin"]);
-        if (!ok) {
-          return rep.status(403).send({ error: { message: "Forbidden" } });
+      try {
+        const keyDoc = await db.collection("api_keys").doc(id).get();
+        if (!keyDoc.exists) {
+          return rep.status(404).send({ error: { message: "Key not found" } });
         }
-      } else {
-        if (row.user_id !== userId) {
-          return rep.status(403).send({ error: { message: "Forbidden" } });
+        const row = keyDoc.data();
+        if (row.tenant_id) {
+          const ok = await (app as any).hasTenantRole(userId, row.tenant_id, ["owner", "admin"]);
+          if (!ok) {
+            return rep.status(403).send({ error: { message: "Forbidden" } });
+          }
+        } else {
+          if (row.user_id !== userId) {
+            return rep.status(403).send({ error: { message: "Forbidden" } });
+          }
         }
-      }
-      const { error: uErr } = await supabase
-        .from("api_keys")
-        .update({ revoked_at: new Date().toISOString() })
-        .eq("id", id);
-      if (uErr) {
+        
+        await db.collection("api_keys").doc(id).update({
+          revoked_at: new Date(),
+          updated_at: new Date()
+        });
+        
+        try { req.log.info({ id, userId }, "apikeys: revoked api key"); } catch {}
+        return rep.send({ ok: true, deleted: true });
+      } catch (error) {
         return rep.status(500).send({ error: { message: "Failed to revoke key" } });
       }
-      try { req.log.info({ id, userId }, "apikeys: revoked api key"); } catch {}
-      return rep.send({ ok: true, deleted: true });
     } catch (err: any) {
       req.log?.error({ err }, "revokeApiKey failed");
       return rep.status(500).send({ error: { message: "Internal error" } });

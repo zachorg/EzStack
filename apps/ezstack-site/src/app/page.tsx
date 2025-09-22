@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { supabaseServer } from "@/lib/supabase/server";
 import { AuroraBackground } from "./components/aurora-background";
 import { CodeExample } from "./components/code-example";
 import { BentoGrid } from "./components/bento-grid";
@@ -55,7 +54,7 @@ export default async function Home() {
           </li>
           <li className="rounded-lg border border-black/[.08] dark:border-white/[.145] p-4">
             <p className="font-medium mb-1">Send & verify</p>
-            <p className="text-foreground/75">Use the Supabase proxy to send and verify one-time codes.</p>
+            <p className="text-foreground/75">Use the Firebase proxy to send and verify one-time codes.</p>
           </li>
           <li className="rounded-lg border border-black/[.08] dark:border-white/[.145] p-4">
             <p className="font-medium mb-1">Handle cooldown</p>

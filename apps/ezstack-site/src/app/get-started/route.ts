@@ -1,17 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { adminAuth } from "@/lib/firebase/server";
+import { cookies } from "next/headers";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
-  const supabase = await supabaseServer();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
-    url.pathname = "/login";
-    url.searchParams.set("redirect", "/api-keys");
-    return NextResponse.redirect(url);
+  
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+    
+    if (sessionCookie) {
+      // Verify the session cookie
+      await adminAuth.verifySessionCookie(sessionCookie, true);
+      // User is authenticated, redirect to api-keys
+      url.pathname = "/api-keys";
+      url.searchParams.delete("redirect");
+      return NextResponse.redirect(url);
+    }
+  } catch {
+    // Session verification failed, continue to login redirect
   }
-  url.pathname = "/api-keys";
-  url.searchParams.delete("redirect");
+  
+  // User is not authenticated, redirect to login
+  url.pathname = "/login";
+  url.searchParams.set("redirect", "/api-keys");
   return NextResponse.redirect(url);
 }
 

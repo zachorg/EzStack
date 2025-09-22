@@ -17,7 +17,11 @@ declare module "fastify" {
       oteLength: number;
       oteMaxAttempts: number;
     }>;
-    supabase: import("@supabase/supabase-js").SupabaseClient<any, "public", any>;
+    firebase: {
+      auth: import("firebase-admin/auth").Auth;
+      db: import("firebase-admin/firestore").Firestore;
+      app: import("firebase-admin/app").App;
+    };
     apikeyPepper: string;
     // Look up an API key hash and assemble tenant and plan context
     introspectApiKey: (hash: string) => Promise<{
@@ -25,7 +29,7 @@ declare module "fastify" {
       tenant?: { tenantId: string; name?: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
       plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
     }>;
-    // Verify Supabase ID token and enrich with optional user/plan
+    // Verify Firebase ID token and enrich with optional user/plan
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;
       email?: string;

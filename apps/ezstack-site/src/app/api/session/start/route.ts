@@ -1,36 +1,58 @@
-// Creates a signed session cookie from a Supabase ID token.
+// Creates a signed session cookie from a Firebase ID token.
 // Called after client completes Google or Email/Password sign-in.
 import { NextResponse } from "next/server";
-import type { Provider } from "@supabase/supabase-js";
-import { supabaseRoute } from "@/lib/supabase/server";
+import { adminAuth, adminDb } from "@/lib/firebase/server";
 
 export async function POST(req: Request) {
 	try {
-		const supabase = await supabaseRoute();
 		const body = await req.json().catch(() => ({} as Record<string, unknown>));
-		const email = String((body as { email?: string }).email || "").trim();
-		const password = String((body as { password?: string }).password || "").trim();
-		const provider = String((body as { provider?: string }).provider || "").trim();
+		const idToken = String((body as { idToken?: string }).idToken || "").trim();
 
-		if (email && password) {
-			const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-			if (error) return NextResponse.json({ error: { code: "unauthorized", message: error.message } }, { status: 401 });
-			return NextResponse.json({ ok: true, uid: data.user?.id });
+		if (!idToken) {
+			return NextResponse.json({ error: { code: "invalid_request", message: "Firebase ID token is required" } }, { status: 400 });
 		}
 
-		if (provider) {
-			const { data, error } = await supabase.auth.signInWithOAuth({ provider: provider as Provider });
-			if (error) return NextResponse.json({ error: { code: "unauthorized", message: error.message } }, { status: 401 });
-			return NextResponse.json({ ok: true, url: data?.url });
+		// Verify the Firebase ID token
+		const decodedToken = await adminAuth.verifyIdToken(idToken);
+		const uid = decodedToken.uid;
+		const email = decodedToken.email;
+
+		// Create or update user document in Firestore
+		const userRef = adminDb.collection("users").doc(uid);
+		const userDoc = await userRef.get();
+
+		if (!userDoc.exists) {
+			// Create new user document
+			await userRef.set({
+				id: uid,
+				email: email,
+				status: "active",
+				created_at: new Date(),
+				updated_at: new Date(),
+			});
+		} else {
+			// Update existing user
+			await userRef.update({
+				email: email,
+				updated_at: new Date(),
+				last_login: new Date(),
+			});
 		}
 
-		if (email) {
-			const { error } = await supabase.auth.signInWithOtp({ email });
-			if (error) return NextResponse.json({ error: { code: "unauthorized", message: error.message } }, { status: 401 });
-			return NextResponse.json({ ok: true });
-		}
+		// Create session cookie (optional - you can also just rely on Firebase Auth state)
+		const sessionCookie = await adminAuth.createSessionCookie(idToken, {
+			expiresIn: 60 * 60 * 24 * 5 * 1000, // 5 days
+		});
 
-		return NextResponse.json({ error: { code: "invalid_request", message: "Provide email/password, provider, or email for OTP" } }, { status: 400 });
+		const response = NextResponse.json({ ok: true, uid });
+		response.cookies.set("session", sessionCookie, {
+			maxAge: 60 * 60 * 24 * 5, // 5 days
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+		});
+
+		return response;
 	} catch (err) {
 		const isDev = process.env.NODE_ENV !== "production";
 		const detail = err instanceof Error ? err.message : String(err);

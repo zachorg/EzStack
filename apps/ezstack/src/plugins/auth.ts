@@ -1,7 +1,7 @@
 import fp from "fastify-plugin";
 import { hashApiKey } from "../utils/crypto.js";
 
-// Supabase-backed API key authentication with short TTL caching.
+// Firebase-backed API key authentication with short TTL caching.
 export default fp(async (app) => {
   // Simple in-memory cache for API key introspection results to reduce
   // Redis/Firestore load. Each entry stores the value and an absolute expiry.
@@ -51,9 +51,9 @@ export default fp(async (app) => {
       throw err;
     }
 
-    // Branch: Supabase Auth JWT
+    // Branch: Firebase Auth JWT
     if (typeof idToken === "string" && !preferApiKey) {
-      try { req.log.info({ route: req.routeOptions?.url }, "auth: using supabase jwt"); } catch {}
+      try { req.log.info({ route: req.routeOptions?.url }, "auth: using firebase jwt"); } catch {}
       try {
         const res = await (app as any).introspectIdToken(idToken);
         if (!res?.uid) {
@@ -80,10 +80,10 @@ export default fp(async (app) => {
             }
           }
         }
-        try { req.log.debug({ uid: res.uid }, "auth: supabase token verified"); } catch {}
+        try { req.log.debug({ uid: res.uid }, "auth: firebase token verified"); } catch {}
         return;
       } catch (e) {
-        try { req.log.warn({ err: e && (e as any).message }, "auth: supabase token verification failed"); } catch {}
+        try { req.log.warn({ err: e && (e as any).message }, "auth: firebase token verification failed"); } catch {}
         const err: any = new Error("Missing or invalid token");
         err.statusCode = 401;
         err.code = "unauthorized";
@@ -169,7 +169,7 @@ export default fp(async (app) => {
       return;
     }
 
-    // Query Supabase
+    // Query Firebase
     try {
       const result = await (app as any).introspectApiKey(hash);
       // Cache both in Redis and memory (short TTLs)
