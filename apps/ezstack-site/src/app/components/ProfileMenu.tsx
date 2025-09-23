@@ -71,11 +71,11 @@ export default function ProfileMenu() {
           className="absolute right-0 mt-2 w-48 rounded border bg-background shadow"
         >
           <a
-            href="/api-keys"
+            href="/account"
             className="block px-4 py-2 text-sm hover:bg-gray-50"
             role="menuitem"
           >
-            API Keys
+            Account Settings
           </a>
           <button
             onClick={signOut}

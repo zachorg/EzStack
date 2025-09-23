@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     if (sessionCookie) {
       // Verify the session cookie
       await adminAuth.verifySessionCookie(sessionCookie, true);
-      // User is authenticated, redirect to api-keys
-      url.pathname = "/api-keys";
+      // User is authenticated, redirect to account
+      url.pathname = "/account";
       url.searchParams.delete("redirect");
       return NextResponse.redirect(url);
     }
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   
   // User is not authenticated, redirect to login
   url.pathname = "/login";
-  url.searchParams.set("redirect", "/api-keys");
+  url.searchParams.set("redirect", "/account");
   return NextResponse.redirect(url);
 }
 

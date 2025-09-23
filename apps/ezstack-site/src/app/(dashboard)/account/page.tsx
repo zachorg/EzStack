@@ -7,7 +7,19 @@ import { cn } from "@/lib/utils";
 
 type KeyItem = ListApiKeysResponse["items"][number];
 
-function formatDate(value: KeyItem["createdAt"]) {
+type UserProfile = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+  lastSignInTime: string | null;
+  status: string;
+  planId: string | null;
+};
+
+function formatDate(value: KeyItem["createdAt"] | string | null) {
   if (!value) return "—";
   try {
     if (typeof value === "string" || typeof value === "number") {
@@ -19,6 +31,36 @@ function formatDate(value: KeyItem["createdAt"]) {
     }
   } catch {}
   return "—";
+}
+
+function useUserProfile() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/user/profile", { cache: "no-store" });
+      if (response.ok) {
+        const data = await response.json();
+        setProfile(data);
+      } else {
+        setError("Failed to load profile");
+      }
+    } catch {
+      setError("Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  return { profile, loading, error, refetch: fetchProfile };
 }
 
 function useKeys(tenantId: string | null) {
@@ -47,6 +89,78 @@ function useKeys(tenantId: string | null) {
   }, [tenantId]);
 
   return { items, loading, error, reload };
+}
+
+function UserInfoSection({ profile, loading, error }: { profile: UserProfile | null; loading: boolean; error: string | null }) {
+  if (loading) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Account Information</h2>
+        <div className="text-sm text-gray-600">Loading...</div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Account Information</h2>
+        <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      </section>
+    );
+  }
+
+  if (!profile) return null;
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">Account Information</h2>
+      <div className="rounded border bg-gray-50 p-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Email</dt>
+            <dd className="mt-1 text-sm text-gray-900">
+              {profile.email || "—"}
+              {profile.emailVerified && (
+                <span className="ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs bg-green-100 text-green-800">
+                  Verified
+                </span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Display Name</dt>
+            <dd className="mt-1 text-sm text-gray-900">{profile.displayName || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Account Status</dt>
+            <dd className="mt-1 text-sm">
+              <span className={cn(
+                "inline-flex items-center rounded px-2 py-0.5 text-xs",
+                profile.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
+              )}>
+                {profile.status}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">User ID</dt>
+            <dd className="mt-1 text-sm text-gray-900 font-mono">{profile.uid}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Account Created</dt>
+            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.createdAt)}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-gray-500">Last Sign In</dt>
+            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.lastSignInTime)}</dd>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { tenantId: string | null; onCreated: (opts: { key: string; keyPrefix: string }) => void; disabled?: boolean; existingNames?: string[] }) {
@@ -230,7 +344,7 @@ function CreatedKeyPanel({ keyValue, keyPrefix, onDismiss }: { keyValue: string;
   return (
     <div className="rounded border border-amber-300 bg-amber-50 p-4">
       <h3 className="text-base font-semibold">New API key created</h3>
-      <p className="mt-1 text-sm text-amber-900">This key is shown once. Store it securely. We can’t show it again.</p>
+      <p className="mt-1 text-sm text-amber-900">This key is shown once. Store it securely. We can&apos;t show it again.</p>
       <div className="mt-3 flex items-center gap-2">
         <code className="block grow rounded border bg-white px-2 py-1 font-mono text-sm" aria-label="API key value">{display}</code>
         <button className="rounded border px-2 py-1 text-sm" onClick={() => setRevealed((v) => !v)} aria-pressed={revealed} aria-label={revealed ? "Hide key" : "Show key"}>
@@ -275,14 +389,14 @@ function useTenantSelection() {
   return { tenantId };
 }
 
-export default function ApiKeysPage() {
+export default function AccountPage() {
+  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
   const { tenantId } = useTenantSelection();
   const { items, loading, error, reload } = useKeys(tenantId);
   const [created, setCreated] = useState<{ key: string; keyPrefix: string } | null>(null);
   const [confirm, setConfirm] = useState<{ id: string; keyPrefix: string } | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Roles are not needed with single-tenant-per-user simplification
 
   const onCreated = (k: { key: string; keyPrefix: string }) => {
     // Show the key panel first; refresh the list after user dismisses
@@ -310,48 +424,56 @@ export default function ApiKeysPage() {
   };
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-4">
+    <main className="mx-auto max-w-5xl space-y-8 p-4">
       <header>
-        <h1 className="text-2xl font-bold">API Keys</h1>
+        <h1 className="text-2xl font-bold">Account Settings</h1>
       </header>
 
-      {/* Tenant is the signed-in user; no selector needed */}
-
-      <CreateKeySection
-        tenantId={tenantId}
-        onCreated={onCreated}
-        disabled={!tenantId}
-        existingNames={(items || []).map((it) => (it.name || "").trim()).filter(Boolean)}
+      {/* User Information Section */}
+      <UserInfoSection 
+        profile={profile} 
+        loading={profileLoading} 
+        error={profileError} 
       />
 
-      {created ? (
-        <CreatedKeyPanel
-          keyValue={created.key}
-          keyPrefix={created.keyPrefix}
-          onDismiss={() => {
-            void reload();
-            setCreated(null);
-          }}
+      {/* API Keys Section */}
+      <div className="space-y-6">
+        <CreateKeySection
+          tenantId={tenantId}
+          onCreated={onCreated}
+          disabled={!tenantId}
+          existingNames={(items || []).map((it) => (it.name || "").trim()).filter(Boolean)}
         />
-      ) : null}
 
-      <section aria-labelledby="keys-heading" className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 id="keys-heading" className="text-lg font-semibold">Your keys</h2>
-          <button className="rounded border px-3 py-2 text-sm" onClick={() => reload()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
-        </div>
-        {error ? (
-          <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        {created ? (
+          <CreatedKeyPanel
+            keyValue={created.key}
+            keyPrefix={created.keyPrefix}
+            onDismiss={() => {
+              void reload();
+              setCreated(null);
+            }}
+          />
         ) : null}
-        {actionError ? (
-          <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</div>
-        ) : null}
-        {items ? (
-          <KeysTable items={items} onRevoke={onRevokeRequested} revokingId={revokingId} />
-        ) : (
-          <div className="text-sm text-gray-600">{loading ? "Loading…" : ""}</div>
-        )}
-      </section>
+
+        <section aria-labelledby="keys-heading" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 id="keys-heading" className="text-lg font-semibold">Your API Keys</h2>
+            <button className="rounded border px-3 py-2 text-sm" onClick={() => reload()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
+          </div>
+          {error ? (
+            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+          ) : null}
+          {actionError ? (
+            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</div>
+          ) : null}
+          {items ? (
+            <KeysTable items={items} onRevoke={onRevokeRequested} revokingId={revokingId} />
+          ) : (
+            <div className="text-sm text-gray-600">{loading ? "Loading…" : ""}</div>
+          )}
+        </section>
+      </div>
 
       <RevokeDialog
         open={Boolean(confirm)}
@@ -362,5 +484,3 @@ export default function ApiKeysPage() {
     </main>
   );
 }
-
-

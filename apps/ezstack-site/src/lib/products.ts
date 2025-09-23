@@ -24,7 +24,7 @@ export const productTiles: ProductTile[] = [
     bullets: ["OTP/OTE in one call", "Idempotent sends", "Rate-limit headers"],
     icon: ShieldCheck,
     primaryHref: "/docs/ezauth/overview",
-    secondaryHref: "/dashboard/api-keys",
+    secondaryHref: "/account",
     span: "wide",
   },
   {

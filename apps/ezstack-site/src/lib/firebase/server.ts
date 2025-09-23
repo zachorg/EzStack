@@ -15,6 +15,7 @@ interface MockAuth {
   verifySessionCookie: (cookie: string, checkRevoked?: boolean) => Promise<never>;
   createSessionCookie: (idToken: string, sessionCookieOptions: object) => Promise<never>;
   revokeRefreshTokens: (uid: string) => Promise<never>;
+  getUser: (uid: string) => Promise<never>;
 }
 
 interface MockDb {
@@ -69,6 +70,7 @@ try {
         verifySessionCookie: () => Promise.reject(new Error("Firebase not configured")),
         createSessionCookie: () => Promise.reject(new Error("Firebase not configured")),
         revokeRefreshTokens: () => Promise.reject(new Error("Firebase not configured")),
+        getUser: () => Promise.reject(new Error("Firebase not configured")),
       } as MockAuth;
       adminDb = {
         collection: () => ({
@@ -103,6 +105,7 @@ try {
     verifySessionCookie: () => Promise.reject(new Error("Firebase initialization failed")),
     createSessionCookie: () => Promise.reject(new Error("Firebase initialization failed")),
     revokeRefreshTokens: () => Promise.reject(new Error("Firebase initialization failed")),
+    getUser: () => Promise.reject(new Error("Firebase initialization failed")),
   } as MockAuth;
   adminDb = {
     collection: () => ({
