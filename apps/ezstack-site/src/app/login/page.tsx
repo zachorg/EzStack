@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { auth, googleProvider } from "@/lib/firebase/client";
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -41,6 +41,9 @@ export default function LoginPage() {
       });
       
       if (response.ok) {
+        // Sign out from Firebase to prevent persistent Google session
+        // This doesn't affect our server-side session cookie
+        await signOut(auth);
         window.location.href = redirect || "/";
       } else {
         const error = await response.json();

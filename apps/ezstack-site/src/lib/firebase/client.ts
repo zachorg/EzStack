@@ -32,9 +32,15 @@ if (isFirebaseConfigured) {
     db = getFirestore(app);
     googleProvider = new GoogleAuthProvider();
 
-    // Configure Google provider
+    // Configure Google provider for better UX
     googleProvider.addScope('email');
     googleProvider.addScope('profile');
+    
+    // Force account selection and prevent persistent sessions
+    googleProvider.setCustomParameters({
+      'prompt': 'select_account',  // Always show account picker
+      'login_hint': '',            // Don't pre-fill any account
+    });
   } catch (error) {
     console.error("Failed to initialize Firebase:", error);
     app = null;
