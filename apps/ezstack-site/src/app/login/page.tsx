@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { auth, googleProvider } from "@/lib/firebase/client";
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -15,9 +15,48 @@ export default function LoginPage() {
     const url = new URL(window.location.href);
     const r = url.searchParams.get("redirect");
     if (r) setRedirect(r);
+
+    // Handle redirect result from Google sign-in
+    if (auth && googleProvider) {
+      handleRedirectResult();
+    }
   }, []);
 
-  // Sign in with Google using Firebase Auth (popup flow).
+  // Handle the result of Google sign-in redirect
+  async function handleRedirectResult() {
+    if (!auth) return;
+    
+    try {
+      const result = await getRedirectResult(auth);
+      if (result && result.user) {
+        setLoading(true);
+        const user = result.user;
+        const idToken = await user.getIdToken();
+        
+        // Send token to our session endpoint
+        const response = await fetch("/api/session/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        
+        if (response.ok) {
+          // Sign out from Firebase to prevent persistent Google session
+          await signOut(auth);
+          window.location.href = redirect || "/";
+        } else {
+          const error = await response.json();
+          setMessage(error.message || "Session creation failed");
+          setLoading(false);
+        }
+      }
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Sign-in failed.");
+      setLoading(false);
+    }
+  }
+
+  // Sign in with Google using Firebase Auth (redirect flow).
   async function signInGoogle() {
     setLoading(true);
     setMessage(null);
@@ -29,29 +68,11 @@ export default function LoginPage() {
     }
     
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      const idToken = await user.getIdToken();
-      
-      // Send token to our session endpoint
-      const response = await fetch("/api/session/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      
-      if (response.ok) {
-        // Sign out from Firebase to prevent persistent Google session
-        // This doesn't affect our server-side session cookie
-        await signOut(auth);
-        window.location.href = redirect || "/";
-      } else {
-        const error = await response.json();
-        setMessage(error.message || "Session creation failed");
-      }
+      // Use redirect instead of popup to avoid COOP issues
+      await signInWithRedirect(auth, googleProvider);
+      // The redirect will handle the rest - no need for additional code here
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Sign-in failed.");
-    } finally {
       setLoading(false);
     }
   }

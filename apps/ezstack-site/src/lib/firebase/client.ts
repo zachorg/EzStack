@@ -36,10 +36,10 @@ if (isFirebaseConfigured) {
     googleProvider.addScope('email');
     googleProvider.addScope('profile');
     
-    // Force account selection and prevent persistent sessions
+    // Configure for better compatibility with COOP policies
     googleProvider.setCustomParameters({
-      'prompt': 'select_account',  // Always show account picker
-      'login_hint': '',            // Don't pre-fill any account
+      'prompt': 'consent',  // Request consent to avoid COOP issues
+      'access_type': 'offline',
     });
   } catch (error) {
     console.error("Failed to initialize Firebase:", error);

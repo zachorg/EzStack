@@ -173,6 +173,7 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
   const isDuplicate = trimmed ? normalizedExisting.includes(trimmed.toLowerCase()) : false;
   const canSubmit = !submitting && !disabled && !isDuplicate;
 
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -379,13 +380,32 @@ function useTenantSelection() {
           unsub = onAuthStateChanged(auth, (user) => {
             setTenantId(user?.uid ?? null);
           });
+          
+          // Also check current user immediately
+          if (auth.currentUser) {
+            setTenantId(auth.currentUser.uid);
+          } else {
+            // If no client auth but we have a session cookie, try to get the user ID from the server
+            fetch("/api/session/status", { cache: "no-store" })
+              .then(res => res.json())
+              .then(data => {
+                if (data.loggedIn && data.uid) {
+                  // Use the server user ID as tenantId as a fallback
+                  setTenantId(data.uid);
+                }
+              })
+              .catch(() => {
+                // Ignore errors - user is probably not signed in
+              });
+          }
         }
-      } catch {
+      } catch (error) {
         setTenantId(null);
       }
     })();
     return () => { if (unsub) unsub(); };
   }, []);
+  
   return { tenantId };
 }
 
