@@ -1,4 +1,46 @@
+networks:
+  web:
+    external: false
+  internal:
+    external: false
+
+volumes:
+  traefik_letsencrypt:
+  redisdata:
+
 services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Redirect HTTP -> HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+
+      # Let's Encrypt (HTTP-01)
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=${LETS_ENCRYPT_EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "traefik_letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - web
+      - internal
+
   ezstack-site:
     build:
       context: ./apps/ezstack-site
@@ -14,14 +56,27 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
     image: ezstack-site:latest
     container_name: ezstack-site
-    ports: ["3000:3000"]
+    restart: unless-stopped
+    # Don't publish to the Internet; only Traefik should
+    expose:
+      - "3000"
     volumes:
       - ./secrets:/app/secrets:ro
     environment:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      NODE_ENV: production
     depends_on:
       ezstack:
         condition: service_started
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${FRONTEND_HOST}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=le"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+    networks:
+      - web
+      - internal
   
   ezstack:
     build:
@@ -29,7 +84,9 @@ services:
       dockerfile: Dockerfile
     image: ezstack:latest
     container_name: ezstack
-    ports: ["8080:8080"]
+    restart: unless-stopped
+    expose:
+      - "8080"
     environment:
       SERVICE: ezstack
       # Core config
@@ -48,12 +105,24 @@ services:
       # Auth caching
       APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
       APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
+      NODE_ENV: production
+      # CORS (example): allow your site host
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://$FRONTEND_HOST}
     volumes:
       - ./scripts:/app/scripts:ro
       - ./secrets:/app/secrets:ro
     depends_on:
       redis:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`${API_HOST}`)"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.routers.api.tls.certresolver=le"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+    networks:
+      - web
+      - internal
 
   ezauth:
     build:
@@ -61,7 +130,9 @@ services:
       dockerfile: Dockerfile
     image: ezauth:latest
     container_name: ezauth
-    ports: ["8081:8081"]
+    restart: unless-stopped
+    expose:
+      - "8081"
     environment:
       SERVICE: ezauth
       # Core config
@@ -94,17 +165,32 @@ services:
       RESEND_COOLDOWN_SEC: ${RESEND_COOLDOWN_SEC:-30}
       DEST_PER_MINUTE: ${DEST_PER_MINUTE:-5}
       RATE_ROUTE_MAX: ${RATE_ROUTE_MAX:-30}
+      NODE_ENV: production
+      # CORS (example): allow your site host
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://$FRONTEND_HOST}
     volumes:
       - ./scripts:/app/scripts:ro
       - ./secrets:/app/secrets:ro
     depends_on:
       redis:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`${AUTH_HOST}`)"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.tls.certresolver=le"
+      - "traefik.http.services.auth.loadbalancer.server.port=8081"
+    networks:
+      - web
+      - internal
   redis:
     image: redis:7-alpine
     container_name: redis
     command: ["redis-server", "--appendonly", "yes"]
-    ports: ["6379:6379"]
+    restart: unless-stopped
+    # DO NOT publish redis to the Internet
+    expose:
+      - "6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -112,5 +198,5 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
-volumes:
-  redisdata:
+    networks:
+      - internal
