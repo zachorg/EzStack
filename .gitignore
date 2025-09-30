@@ -70,8 +70,15 @@ web_modules/
 .env.*
 !.env.example
 
-# Firebase config file
-firebase-web/firebase-config.js
+.cmds
+
+# Deployment scripts
+deploy.sh
+build-images.sh
+transfer-images.sh
+.rsync_exclude
+docker-images/
+docker-compose.prebuilt.yml
 
 secrets/
 
@@ -120,9 +127,6 @@ dist
 
 # DynamoDB Local files
 .dynamodb/
-
-# Firebase cache directory
-.firebase/
 
 # TernJS port file
 .tern-port
