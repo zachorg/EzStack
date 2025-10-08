@@ -1,0 +1,130 @@
+networks:
+  internal:
+    external: false
+
+volumes:
+  redisdata:
+
+services:
+  ezstack-site:
+    build:
+      context: ./apps/ezstack-site
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:?error}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:?error}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:?error}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:?error}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:?error}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:?error}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.ezstack.app}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://ezstack.app}
+    image: ezstack-site:latest
+    container_name: ezstack-site
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Exposed for Cloudflare Tunnel
+    volumes:
+      - ./secrets:/app/secrets:ro
+    environment:
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      NODE_ENV: production
+    depends_on:
+      ezstack:
+        condition: service_started
+    networks:
+      - internal
+  
+  ezstack:
+    build:
+      context: ./apps/ezstack
+      dockerfile: Dockerfile
+    image: ezstack:latest
+    container_name: ezstack
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Exposed for Cloudflare Tunnel
+    environment:
+      SERVICE: ezstack
+      PORT: ${PORT_EZSTACK:-8080}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      APIKEY_PEPPER: ${APIKEY_PEPPER:-}
+      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZSTACK:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
+      APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
+      APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://ezstack.app}
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./secrets:/app/secrets:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  ezauth:
+    build:
+      context: ./apps/ezauth
+      dockerfile: Dockerfile
+    image: ezauth:latest
+    container_name: ezauth
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # Exposed for Cloudflare Tunnel
+    environment:
+      SERVICE: ezauth
+      PORT: ${PORT_EZAUTH:-8081}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      APIKEY_PEPPER: ${APIKEY_PEPPER:-}
+      AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      EMAIL_DRY_RUN: ${EMAIL_DRY_RUN:-true}
+      OTP_DRY_RUN: ${OTP_DRY_RUN:-true}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
+      SQS_ENABLE: ${SQS_ENABLE:-false}
+      AWS_SQS_ENDPOINT: ${AWS_SQS_ENDPOINT:-}
+      SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-ez-send-queue}
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-300}
+      OTP_LENGTH: ${OTP_LENGTH:-6}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTE_TTL_SECONDS: ${OTE_TTL_SECONDS:-300}
+      OTE_LENGTH: ${OTE_LENGTH:-6}
+      OTE_MAX_ATTEMPTS: ${OTE_MAX_ATTEMPTS:-5}
+      RESEND_COOLDOWN_SEC: ${RESEND_COOLDOWN_SEC:-30}
+      DEST_PER_MINUTE: ${DEST_PER_MINUTE:-5}
+      RATE_ROUTE_MAX: ${RATE_ROUTE_MAX:-30}
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://ezstack.app}
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./secrets:/app/secrets:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - internal

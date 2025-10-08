@@ -1,0 +1,25 @@
+tunnel: ezstack-dev
+credentials-file: /Users/[YourUsername]/.cloudflared/[tunnel-id].json
+
+# Ingress rules - order matters!
+ingress:
+  # Main site
+  - hostname: ezstack.app
+    service: http://localhost:3000
+    originRequest:
+      httpHostHeader: ezstack.app
+  
+  # API service
+  - hostname: api.ezstack.app
+    service: http://localhost:8080
+    originRequest:
+      httpHostHeader: api.ezstack.app
+  
+  # Auth service  
+  - hostname: auth.ezstack.app
+    service: http://localhost:8081
+    originRequest:
+      httpHostHeader: auth.ezstack.app
+  
+  # Catch-all (required)
+  - service: http_status:404
