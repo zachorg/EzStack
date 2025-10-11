@@ -1,8 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { auth, googleProvider } from "@/lib/firebase/client";
-import { signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { signInWithRedirect, getRedirectResult, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from "firebase/auth";
+
+// Verbose logging utility
+const log = (level: 'info' | 'warn' | 'error' | 'debug', message: string, data?: Record<string, unknown>) => {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [LOGIN] [${level.toUpperCase()}] ${message}`;
+  
+  if (data) {
+    console[level](logMessage, data);
+  } else {
+    console[level](logMessage);
+  }
+};
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -13,26 +25,37 @@ export default function LoginPage() {
 
   useEffect(() => {
     const url = new URL(window.location.href);
+    
     const r = url.searchParams.get("redirect");
-    if (r) setRedirect(r);
-
-    // Handle redirect result from Google sign-in
-    if (auth && googleProvider) {
-      handleRedirectResult();
+    if (r) {
+      setRedirect(r);
     }
   }, []);
 
-  // Handle the result of Google sign-in redirect
-  async function handleRedirectResult() {
-    if (!auth) return;
-    
+  // Sign in with Google using Firebase Auth (popup flow).
+  async function signInWithGoogleWithPopup() {
     try {
-      const result = await getRedirectResult(auth);
+      setLoading(true);
+      setMessage(null);
+
+      if (!auth || !googleProvider) {
+        log("error", "Firebase authentication not configured", {
+          authAvailable: !!auth,
+          googleProviderAvailable: !!googleProvider,
+        });
+        setMessage("Firebase authentication not configured");
+        setLoading(false);
+        return;
+      }
+    
+      // Use popup instead of redirect for better reliability
+      const result = await signInWithPopup(auth, googleProvider);
+
       if (result && result.user) {
         setLoading(true);
+        
         const user = result.user;
         const idToken = await user.getIdToken();
-        
         // Send token to our session endpoint
         const response = await fetch("/api/session/start", {
           method: "POST",
@@ -43,37 +66,41 @@ export default function LoginPage() {
         if (response.ok) {
           // Sign out from Firebase to prevent persistent Google session
           await signOut(auth);
-          window.location.href = redirect || "/";
+          
+          const redirectUrl = redirect || "/";
+          window.location.href = redirectUrl;
         } else {
           const error = await response.json();
+          log('error', 'Session creation failed', { 
+            status: response.status, 
+            error: error 
+          });
           setMessage(error.message || "Session creation failed");
           setLoading(false);
         }
+      } else {
       }
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Sign-in failed.");
-      setLoading(false);
-    }
-  }
+    } catch (error: unknown) {
+      console.error("Firebase Google sign-in error:", error);
 
-  // Sign in with Google using Firebase Auth (redirect flow).
-  async function signInGoogle() {
-    setLoading(true);
-    setMessage(null);
-    
-    if (!auth || !googleProvider) {
-      setMessage("Firebase authentication not configured");
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      // Use redirect instead of popup to avoid COOP issues
-      await signInWithRedirect(auth, googleProvider);
-      // The redirect will handle the rest - no need for additional code here
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Sign-in failed.");
-      setLoading(false);
+      // Provide more specific error messages
+      if (error && typeof error === "object" && "code" in error) {
+        const firebaseError = error as { code: string };
+        if (firebaseError.code === "auth/popup-closed-by-user") {
+          return { error: "Sign-in was cancelled by user. Please try again." };
+        } else if (firebaseError.code === "auth/popup-blocked") {
+          return {
+            error:
+              "Pop-up was blocked by your browser. Please allow pop-ups and try again.",
+          };
+        } else if (firebaseError.code === "auth/network-request-failed") {
+          return {
+            error: "Network error. Please check your connection and try again.",
+          };
+        } else if (firebaseError.code === "auth/internal-error") {
+          return { error: "An internal error occurred. Please try again." };
+        }
+      }
     }
   }
 
@@ -83,6 +110,7 @@ export default function LoginPage() {
     setMessage(null);
     
     if (!auth) {
+      log('error', 'Firebase authentication not configured for sign-up');
       setMessage("Firebase authentication not configured");
       setLoading(false);
       return;
@@ -91,8 +119,8 @@ export default function LoginPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const user = userCredential.user;
-      const idToken = await user.getIdToken();
       
+      const idToken = await user.getIdToken();
       // Send token to our session endpoint
       const response = await fetch("/api/session/start", {
         method: "POST",
@@ -100,13 +128,24 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       });
       
+      
       if (response.ok) {
-        window.location.href = redirect || "/";
+        const redirectUrl = redirect || "/";
+        window.location.href = redirectUrl;
       } else {
         const error = await response.json();
+        log('error', 'Session creation failed after account creation', { 
+          status: response.status, 
+          error: error 
+        });
         setMessage(error.message || "Session creation failed");
       }
     } catch (e) {
+      log('error', 'Account creation failed', { 
+        error: e instanceof Error ? e.message : 'Unknown error',
+        stack: e instanceof Error ? e.stack : undefined,
+        email: email.trim()
+      });
       setMessage(
         e instanceof Error ? e.message : "Account creation failed. Check email and password."
       );
@@ -121,6 +160,7 @@ export default function LoginPage() {
     setMessage(null);
     
     if (!auth) {
+      log('error', 'Firebase authentication not configured for sign-in');
       setMessage("Firebase authentication not configured");
       setLoading(false);
       return;
@@ -129,8 +169,8 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
       const user = userCredential.user;
-      const idToken = await user.getIdToken();
       
+      const idToken = await user.getIdToken();
       // Send token to our session endpoint
       const response = await fetch("/api/session/start", {
         method: "POST",
@@ -138,13 +178,24 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       });
       
+      
       if (response.ok) {
-        window.location.href = redirect || "/";
+        const redirectUrl = redirect || "/";
+        window.location.href = redirectUrl;
       } else {
         const error = await response.json();
+        log('error', 'Session creation failed after sign-in', { 
+          status: response.status, 
+          error: error 
+        });
         setMessage(error.message || "Session creation failed");
       }
     } catch (e) {
+      log('error', 'Sign-in failed', { 
+        error: e instanceof Error ? e.message : 'Unknown error',
+        stack: e instanceof Error ? e.stack : undefined,
+        email: email.trim()
+      });
       setMessage(
         e instanceof Error ? e.message : "Sign-in failed. Check your credentials."
       );
@@ -160,7 +211,9 @@ export default function LoginPage() {
         Use your Google account to access the console.
       </p>
       <button
-        onClick={signInGoogle}
+        onClick={() => {
+          signInWithGoogleWithPopup();
+        }}
         disabled={loading}
         className="px-4 py-2 bg-black text-white rounded disabled:opacity-50"
       >
@@ -171,7 +224,9 @@ export default function LoginPage() {
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+          }}
           placeholder="you@example.com"
           className="w-full px-3 py-2 border rounded"
           disabled={loading}
@@ -180,7 +235,9 @@ export default function LoginPage() {
         <input
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+          }}
           placeholder="Your password"
           className="w-full px-3 py-2 border rounded"
           disabled={loading}
@@ -188,14 +245,18 @@ export default function LoginPage() {
         />
         <div className="flex gap-2">
           <button
-            onClick={signUpWithEmailPassword}
+            onClick={() => {
+              signUpWithEmailPassword();
+            }}
             disabled={loading || !email || !password}
             className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
           >
             Create account
           </button>
           <button
-            onClick={signInWithEmailPassword}
+            onClick={() => {
+              signInWithEmailPassword();
+            }}
             disabled={loading || !email || !password}
             className="px-4 py-2 bg-gray-900 text-white rounded disabled:opacity-50"
           >
@@ -203,9 +264,11 @@ export default function LoginPage() {
           </button>
         </div>
       </div>
-      {message && <p className="text-sm text-gray-600">{message}</p>}
+      {message && (
+        <p className="text-sm text-gray-600">
+          {message}
+        </p>
+      )}
     </div>
   );
 }
-
-
