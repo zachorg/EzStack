@@ -60,9 +60,7 @@ try {
       }
     }
 
-    const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccountJson?.project_id;
-    
-    if (!serviceAccountJson || !projectId) {
+    if (!serviceAccountJson) {
       console.warn("Firebase Admin configuration not found. Some features may not work.");
       // Create mock objects for build-time
       adminAuth = {
@@ -87,10 +85,12 @@ try {
     } else {
       app = initializeApp({
         credential: cert(serviceAccountJson),
-        projectId: projectId,
+        projectId: serviceAccountJson?.project_id,
       });
       adminAuth = getAuth(app);
       adminDb = getFirestore(app);
+      
+      console.log('Firebase Admin initialized!');
     }
   } else {
     app = getApps()[0];
