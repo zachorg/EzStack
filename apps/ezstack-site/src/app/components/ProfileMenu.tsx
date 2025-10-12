@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLogin } from "./LoginContext";
 
 // Type for session status response from API
 type SessionStatus = { loggedIn: boolean; uid?: string };
 
 export default function ProfileMenu() {
+  const { openLoginDialog } = useLogin();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<SessionStatus>({ loggedIn: false });
+  const [isLoading, setIsLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch current session status on component mount
@@ -18,6 +21,9 @@ export default function ProfileMenu() {
         const data = (await res.json()) as SessionStatus;
         setStatus(data);
       } catch {}
+      finally {
+        setIsLoading(false);
+      }
     }
     fetchStatus();
   }, []);
@@ -42,15 +48,37 @@ export default function ProfileMenu() {
     } catch {}
   }
 
-  // If not logged in, show sign in link
+  // Show loading state to prevent hydration mismatch
+  if (isLoading) {
+    return (
+      <div className="flex gap-2">
+        <div className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-white dark:border-white rounded-md opacity-50">
+          Sign In
+        </div>
+        <div className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-white dark:border-white rounded-md opacity-50">
+          Sign Up
+        </div>
+      </div>
+    );
+  }
+
+  // If not logged in, show sign in and sign up buttons
   if (!status.loggedIn) {
     return (
-      <a
-        href="/login"
-        className="text-sm px-3 py-1.5 border rounded hover:bg-gray-50"
-      >
-        Sign in / Create account
-      </a>
+      <div className="flex gap-2">
+        <button
+          onClick={openLoginDialog}
+          className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out cursor-pointer"
+        >
+          Sign In
+        </button>
+        <button
+          onClick={openLoginDialog}
+          className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out cursor-pointer"
+        >
+          Sign Up
+        </button>
+      </div>
     );
   }
 
@@ -79,7 +107,7 @@ export default function ProfileMenu() {
           </a>
           <button
             onClick={signOut}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
             role="menuitem"
           >
             Sign out

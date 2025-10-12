@@ -1,11 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { AuroraBackground } from "./components/aurora-background";
 import { CodeExample } from "./components/code-example";
 import { BentoGrid } from "./components/bento-grid";
 import { Section } from "./components/section";
 import { CtaBand } from "./components/cta-band";
+import LoginDialog from "./components/LoginDialog";
+import { useLogin } from "./components/LoginContext";
 
-export default async function Home() {
+function HomeContent() {
+  const { isLoginDialogOpen, openLoginDialog, closeLoginDialog, setRedirect } = useLogin();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Check for login query parameter to auto-open dialog
+  useEffect(() => {
+    if (searchParams.get("login") === "true") {
+      openLoginDialog();
+      // Clear the URL parameters after opening the dialog
+      router.replace("/");
+    }
+    if (searchParams.get("redirect")) {
+      setRedirect(searchParams.get("redirect") || undefined);
+    }
+  }, [searchParams, openLoginDialog, setRedirect, router]);
   return (
     <div className="relative font-sans space-y-16">
       <AuroraBackground />
@@ -18,12 +39,12 @@ export default async function Home() {
           limits, and tenant-aware plans. Add EzPayments, EzAnalytics as you grow.
         </p>
         <div className="flex gap-3 justify-center sm:justify-start">
-          <Link
-            href="/get-started"
+          <button
+            onClick={openLoginDialog}
             className="rounded-full border border-transparent bg-foreground text-background px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
-            Get started
-          </Link>
+            Sign in
+          </button>
           <Link
             href="/docs"
             className="rounded-full border border-black/[.08] dark:border-white/[.145] px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a]"
@@ -79,6 +100,20 @@ export default async function Home() {
       </Section>
 
       <CtaBand />
+
+      {/* Login Dialog */}
+      <LoginDialog 
+        isOpen={isLoginDialogOpen} 
+        onClose={closeLoginDialog}
+      />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="relative font-sans space-y-16"><AuroraBackground /></div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
