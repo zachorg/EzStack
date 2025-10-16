@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
@@ -17,27 +17,20 @@ export default fp(async (app: any) => {
     throw new Error(`Failed to read Firebase service account from ${serviceAccountPath}: ${error instanceof Error ? error.message : String(error)}. Please ensure the file exists and contains valid JSON.`);
   }
 
-  const projectId = serviceAccountJson.project_id;
-  
-  if (!projectId) {
-    throw new Error("project_id not found in service account file");
-  }
-
-  // Initialize Firebase Admin (avoid duplicate initialization)
-  let firebaseApp;
-  if (getApps().length === 0) {
-    firebaseApp = initializeApp({
-      credential: cert(serviceAccountJson),
-      projectId: projectId,
-    });
-  } else {
-    firebaseApp = getApps()[0];
-  }
+  // Initialize Firebase Admin with service account credentials
+  const firebaseApp = initializeApp({
+    credential: cert(serviceAccountJson),
+    projectId: serviceAccountJson.project_id,
+  });
 
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
 
-  app.decorate("firebase", { auth, db, app: firebaseApp });
+  if(!auth || !db) {
+    throw new Error("Failed to initialize Firebase Admin");
+  }
+
+  app.decorate("firebase", { auth, db });
 
   app.decorate("introspectIdToken", async (token: string) => {
     try {
@@ -82,7 +75,7 @@ export default fp(async (app: any) => {
 
       return { uid, email, emailVerified, user, plan };
     } catch (error) {
-      throw new Error(`Invalid Firebase ID token: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Invalid Firebase ID token (${token}): ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 

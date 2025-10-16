@@ -254,6 +254,3 @@ const routes: FastifyPluginAsync = async (app) => {
 };
 
 export default routes;
-
-
-

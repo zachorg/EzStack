@@ -17,7 +17,26 @@ export class ApiError extends Error {
 type Json = Record<string, unknown> | undefined;
 type HeaderMap = Record<string, string> | undefined;
 
-async function apiFetch<T>(idToken: string, reqPath: string, init?: RequestInit): Promise<T> {
+/**
+ * Get Firebase ID token for the current user
+ * @returns Promise<string | null> - The ID token or null if not authenticated
+ */
+export async function getIdToken(): Promise<string | null> {
+  try {
+    if (!auth || !auth.currentUser) {
+      return null;
+    }
+    
+    return await auth.currentUser.getIdToken(true);
+  } catch (error) {
+    console.error("Error getting Firebase ID token:", error);
+    return null;
+  }
+}
+
+async function apiFetch<T>(tenantId: string, reqPath: string, init?: RequestInit): Promise<T> {
+  const idToken = await getIdToken();
+  console.log("🔑 apiFetch: idToken", idToken);
   const res = await fetch(reqPath, {
     ...init,
     headers: {
@@ -45,15 +64,15 @@ async function apiFetch<T>(idToken: string, reqPath: string, init?: RequestInit)
 }
 
 export const api = {
-  get<T>(idToken: string, path: string, headers?: HeaderMap): Promise<T> {
-    return apiFetch<T>(idToken, path, { method: "GET", headers });
+  get<T>(tenantId: string, path: string, headers?: HeaderMap): Promise<T> {
+    return apiFetch<T>(tenantId, path, { method: "GET", headers });
   },
-  post<T>(idToken: string, path: string, body?: Json, headers?: HeaderMap): Promise<T> {
-    return apiFetch<T>(idToken, path, { method: "POST", body: JSON.stringify(body ?? {}), headers });
+  post<T>(tenantId: string, path: string, body?: Json, headers?: HeaderMap): Promise<T> {
+    return apiFetch<T>(tenantId, path, { method: "POST", body: JSON.stringify(body ?? {}), headers });
   },
-  delete<T>(idToken: string, path: string, body?: Json, headers?: HeaderMap): Promise<T> {
+  delete<T>(tenantId: string, path: string, body?: Json, headers?: HeaderMap): Promise<T> {
     // Next.js route supports DELETE with a JSON body
-    return apiFetch<T>(idToken, path, { method: "DELETE", body: JSON.stringify(body ?? {}), headers });
+    return apiFetch<T>(tenantId, path, { method: "DELETE", body: JSON.stringify(body ?? {}), headers });
   },
 };
 

@@ -1,5 +1,10 @@
 "use client";
 
+
+const { auth, googleProvider } = await import("@/lib/firebase/client");
+const { signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("firebase/auth");
+
+import { User } from "firebase/auth";
 import React, {
   createContext,
   useContext,
@@ -10,7 +15,8 @@ import React, {
 } from "react";
 
 // Types
-interface User {
+interface UserProfile {
+  firebaseUser: User;
   uid: string;
   email: string | null;
   displayName: string | null;
@@ -24,7 +30,7 @@ interface User {
 
 interface AuthContextType {
   // Auth state
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -47,7 +53,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,89 +63,48 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
   }, []);
 
-  // Fetch user profile from server
-  const fetchUserProfile = useCallback(async (): Promise<User | null> => {
-    try {
-      const response = await fetch("/api/user/profile", {
-        cache: "no-store",
-        credentials: "include",
-      });
+  // Fetch user profile from Firebase
+  const fetchUserProfile =
+    useCallback(async (): Promise<UserProfile | null> => {
+      try {
+        // Import Firebase auth dynamically
+        const { auth } = await import("@/lib/firebase/client");
 
-      if (response.ok) {
-        const profile = await response.json();
-        return profile;
-      } else if (response.status === 401) {
-        // User not authenticated
-        return null;
-      } else {
-        throw new Error("Failed to fetch user profile");
-      }
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-      return null;
-    }
-  }, []);
+        if (!auth) {
+          console.warn("Firebase not configured");
+          return null;
+        }
 
-  // Fetch user profile from Firebase (persistent authentication)
-  const fetchUserProfileGoogle = useCallback(async (): Promise<User | null> => {
-    try {
-      // Import Firebase auth dynamically
-      const { auth } = await import("@/lib/firebase/client");
-      
-      if (!auth) {
-        console.warn("Firebase not configured");
-        return null;
-      }
+        // Get current Firebase user (persistent across sessions)
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) {
+          console.log("No Firebase user found");
+          return null;
+        }
 
-      // Get current Firebase user (persistent across sessions)
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser) {
-        console.log("No Firebase user found");
+        return {
+          firebaseUser: firebaseUser,
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          status: "active",
+          planId: "",
+          photoURL: firebaseUser.photoURL,
+          emailVerified: firebaseUser.emailVerified,
+          createdAt: "",
+          lastSignInTime: "",
+        };
+      } catch (err) {
+        console.error("Error fetching Firebase user profile:", err);
         return null;
       }
-
-      // Get fresh ID token
-      const idToken = await firebaseUser.getIdToken();
-      
-      // Send token to session endpoint to create/refresh server session
-      const sessionResponse = await fetch("/api/session/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-        credentials: "include",
-      });
-
-      if (!sessionResponse.ok) {
-        console.warn("Failed to create/refresh server session");
-        return null;
-      }
-
-      // Now fetch user profile with valid session
-      const response = await fetch("/api/user/profile", {
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const profile = await response.json();
-        return profile;
-      } else if (response.status === 401) {
-        // User not authenticated
-        return null;
-      } else {
-        throw new Error("Failed to fetch user profile");
-      }
-    } catch (err) {
-      console.error("Error fetching Firebase user profile:", err);
-      return null;
-    }
-  }, []);
+    }, []);
 
   // Refresh user data
   const refreshUser = useCallback(async () => {
     try {
       const userProfile = await fetchUserProfile();
-      setUser(userProfile);
+      setUserProfile(userProfile);
       setIsAuthenticated(!!userProfile);
     } catch (err) {
       console.error("Error refreshing user:", err);
@@ -148,7 +113,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [fetchUserProfile]);
 
-  // Initialize auth state
+  // Initialize auth state and listen for auth changes
   useEffect(() => {
     const initializeAuth = async () => {
       setIsLoading(true);
@@ -157,7 +122,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         console.log("AuthProvider: userProfile", userProfile);
         console.log("AuthProvider: isAuthenticated", !!userProfile);
-        setUser(userProfile);
+        setUserProfile(userProfile);
         setIsAuthenticated(!!userProfile);
       } catch (err) {
         console.error("Error initializing auth:", err);
@@ -169,7 +134,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     initializeAuth();
-  }, [fetchUserProfile]);
+
+    // Set up Firebase auth state listener
+    let unsubscribe: (() => void) | null = null;
+
+    const setupAuthListener = async () => {
+      try {
+        const { auth } = await import("@/lib/firebase/client");
+        const { onAuthStateChanged } = await import("firebase/auth");
+
+        if (auth) {
+          unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+              console.log("AuthProvider: onAuthStateChanged: ", firebaseUser);
+              // User is signed in
+              const userProfile = {
+                firebaseUser: firebaseUser,
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                status: "active",
+                planId: "",
+                photoURL: firebaseUser.photoURL,
+                emailVerified: firebaseUser.emailVerified,
+                createdAt: "",
+                lastSignInTime: "",
+              };
+              setUserProfile(userProfile);
+              setIsAuthenticated(true);
+            } else {
+              // User is signed out
+              setUserProfile(null);
+              setIsAuthenticated(false);
+            }
+          });
+        }
+      } catch (error) {
+        console.warn("Failed to set up auth state listener:", error);
+      }
+    };
+
+    setupAuthListener();
+
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, []);
 
   // Login with email/password
   const login = useCallback(
@@ -178,10 +191,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
 
       try {
-        // Import Firebase auth dynamically
-        const { auth } = await import("@/lib/firebase/client");
-        const { signInWithEmailAndPassword } = await import("firebase/auth");
-
         if (!auth) {
           throw new Error(
             "Firebase authentication not configured. Please check your environment variables."
@@ -203,10 +212,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           credentials: "include",
         });
 
-        if (response.ok) {
-          // Refresh user data
-          await refreshUser();
-        } else {
+        if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
             errorData.error?.message || "Session creation failed"
@@ -222,7 +228,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(false);
       }
     },
-    [refreshUser]
+    []
   );
 
   // Login with Google
@@ -231,10 +237,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      // Import Firebase auth dynamically
-      const { auth, googleProvider } = await import("@/lib/firebase/client");
-      const { signInWithPopup, signOut } = await import("firebase/auth");
-
       if (!auth || !googleProvider) {
         throw new Error(
           "Firebase authentication not configured. Please check your environment variables."
@@ -252,13 +254,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials: "include",
       });
 
-      if (response.ok) {
-        // Sign out from Firebase to prevent persistent Google session
-        await signOut(auth);
-
-        // Refresh user data
-        await refreshUser();
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || "Session creation failed");
       }
@@ -280,12 +276,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setError(null);
 
       try {
-        // Import Firebase auth dynamically
-        const { auth } = await import("@/lib/firebase/client");
-        const { createUserWithEmailAndPassword } = await import(
-          "firebase/auth"
-        );
-
         if (!auth) {
           throw new Error(
             "Firebase authentication not configured. Please check your environment variables."
@@ -307,10 +297,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           credentials: "include",
         });
 
-        if (response.ok) {
-          // Refresh user data
-          await refreshUser();
-        } else {
+        if (!response.ok) {
           const errorData = await response.json();
           throw new Error(
             errorData.error?.message || "Session creation failed"
@@ -326,7 +313,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(false);
       }
     },
-    [refreshUser]
+    []
   );
 
   // Logout
@@ -341,12 +328,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         credentials: "include",
       });
 
+      // Sign out from Firebase
+      if (auth) {
+        await signOut(auth);
+      }
+
       // Clear user state
-      setUser(null);
+      setUserProfile(null);
     } catch (err) {
       console.error("Error during logout:", err);
       // Still clear user state even if server logout fails
-      setUser(null);
+      setUserProfile(null);
     } finally {
       setIsLoading(false);
     }
@@ -354,7 +346,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const contextValue: AuthContextType = {
     // Auth state
-    user,
+    user: userProfile,
     isAuthenticated,
     isLoading,
     error,

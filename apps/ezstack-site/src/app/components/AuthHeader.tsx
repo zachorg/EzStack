@@ -70,18 +70,18 @@ export default function AuthHeader() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-48 rounded border bg-background shadow"
+          className="absolute right-0 mt-2 w-48 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-50"
         >
           <a
             href="/account"
-            className="block px-4 py-2 text-sm hover:bg-gray-50"
+            className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200"
             role="menuitem"
           >
             Account Settings
           </a>
           <button
             onClick={handleSignOut}
-            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer"
+            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors duration-200"
             role="menuitem"
           >
             Sign out

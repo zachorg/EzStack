@@ -27,7 +27,7 @@ services:
     volumes:
       - ./secrets:/app/secrets:ro
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
     depends_on:
       ezstack:
         condition: service_started
@@ -55,7 +55,7 @@ services:
       AWS_SES_ENDPOINT: ${AWS_SES_ENDPOINT:-}
       APIKEY_CACHE_TTL_MS: ${APIKEY_CACHE_TTL_MS:-30000}
       APIKEY_REDIS_TTL_SEC: ${APIKEY_REDIS_TTL_SEC:-60}
-      NODE_ENV: production
+      NODE_ENV: development
       CORS_ORIGIN: ${CORS_ORIGIN:-https://ezstack.app}
     volumes:
       - ./scripts:/app/scripts:ro
@@ -98,7 +98,7 @@ services:
       RESEND_COOLDOWN_SEC: ${RESEND_COOLDOWN_SEC:-30}
       DEST_PER_MINUTE: ${DEST_PER_MINUTE:-5}
       RATE_ROUTE_MAX: ${RATE_ROUTE_MAX:-30}
-      NODE_ENV: production
+      NODE_ENV: development
       CORS_ORIGIN: ${CORS_ORIGIN:-https://ezstack.app}
     volumes:
       - ./scripts:/app/scripts:ro

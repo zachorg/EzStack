@@ -36,26 +36,18 @@ export type RevokeApiKeyResponse = { ok: true; deleted: true };
 
 export const apiKeys = {
   create(input: CreateApiKeyRequest) {
-    return api.post<CreateApiKeyResponse>(input.tenantId, "/api/keys", input, {
-      authorization: input.tenantId,
-      "x-tenant-id": input.tenantId,
-    });
+    return api.post<CreateApiKeyResponse>(input.tenantId, "/api/keys", input, { "x-tenant-id": input.tenantId });
   },
   list(tenantId: string) {
     console.log("apiKeys.list: tenantId", tenantId);
-    return api.get<ListApiKeysResponse>(tenantId, `/api/keys`, {
-      authorization: tenantId,
-      "x-tenant-id": tenantId,
-    });
+    return api.get<ListApiKeysResponse>(tenantId, `/api/keys`, { "x-tenant-id": tenantId });
   },
-  revoke(id: string, tenantId: string) {
+  revoke(id: string, tenantId?: string) {
     return api.delete<RevokeApiKeyResponse>(
-      tenantId,
-      "/api/keys",
-      { id },
-      tenantId
-        ? { authorization: tenantId, "x-tenant-id": tenantId }
-        : undefined
+      tenantId || "",
+      "/api/keys", 
+      { id }, 
+      tenantId ? { "x-tenant-id": tenantId } : undefined
     );
   },
 };
