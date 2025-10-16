@@ -27,7 +27,6 @@ services:
     volumes:
       - ./secrets:/app/secrets:ro
     environment:
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       NODE_ENV: production
     depends_on:
       ezstack:
@@ -48,7 +47,6 @@ services:
       SERVICE: ezstack
       PORT: ${PORT_EZSTACK:-8080}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZSTACK:-false}
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
@@ -81,7 +79,6 @@ services:
       SERVICE: ezauth
       PORT: ${PORT_EZAUTH:-8081}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       APIKEY_PEPPER: ${APIKEY_PEPPER:-}
       AUTH_FAIL_SAFE: ${AUTH_FAIL_SAFE_EZAUTH:-false}
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
