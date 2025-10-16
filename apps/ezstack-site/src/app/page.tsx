@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AuroraBackground } from "./components/aurora-background";
 import { CodeExample } from "./components/code-example";
@@ -9,24 +9,21 @@ import { BentoGrid } from "./components/bento-grid";
 import { Section } from "./components/section";
 import { CtaBand } from "./components/cta-band";
 import LoginDialog from "./components/LoginDialog";
-import { useLogin } from "./components/LoginContext";
 
 function HomeContent() {
-  const { isLoginDialogOpen, openLoginDialog, closeLoginDialog, setRedirect } = useLogin();
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Check for login query parameter to auto-open dialog
   useEffect(() => {
     if (searchParams.get("login") === "true") {
-      openLoginDialog();
+      setIsLoginDialogOpen(true);
       // Clear the URL parameters after opening the dialog
       router.replace("/");
     }
-    if (searchParams.get("redirect")) {
-      setRedirect(searchParams.get("redirect") || undefined);
-    }
-  }, [searchParams, openLoginDialog, setRedirect, router]);
+  }, [searchParams, router]);
+  
   return (
     <div className="relative font-sans space-y-16">
       <AuroraBackground />
@@ -40,7 +37,7 @@ function HomeContent() {
         </p>
         <div className="flex gap-3 justify-center sm:justify-start">
           <button
-            onClick={openLoginDialog}
+            onClick={() => setIsLoginDialogOpen(true)}
             className="rounded-full border border-transparent bg-foreground text-background px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Sign in
@@ -104,7 +101,7 @@ function HomeContent() {
       {/* Login Dialog */}
       <LoginDialog 
         isOpen={isLoginDialogOpen} 
-        onClose={closeLoginDialog}
+        onClose={() => setIsLoginDialogOpen(false)}
       />
     </div>
   );

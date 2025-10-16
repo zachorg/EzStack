@@ -10,6 +10,7 @@ type HttpMethod = "GET" | "POST";
 
 // Minimal proxy that forwards auth header to the external API and returns JSON responses.
 async function forward(method: HttpMethod, fnPath: string, req: NextRequest) {
+  console.log("forward", method, fnPath, req.headers.toString());
   const authz = req.headers.get("authorization");
   if (!authz) return NextResponse.json({ error: { code: "unauthorized", message: "Login required" } }, { status: 401 });
   try {

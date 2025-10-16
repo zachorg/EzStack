@@ -4,8 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { useEffect } from "react";
 import "./globals.css";
-import ProfileMenu from "./components/ProfileMenu";
-import { LoginProvider } from "./components/LoginContext";
+import AuthHeader from "./components/AuthHeader";
+import { AuthProvider } from "./components/AuthProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,7 +40,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
-        <LoginProvider>
+        <AuthProvider>
           <div className="p-4">
             <div className="max-w-6xl mx-auto flex items-center justify-between">
               <Link href="/" className="font-semibold">EzStack</Link>
@@ -59,12 +59,12 @@ export default function RootLayout({
                     Analytics
                   </Link> */}
                 </nav>
-                <ProfileMenu />
+                <AuthHeader />
               </div>
             </div>
           </div>
           <div className="max-w-6xl mx-auto p-6">{children}</div>
-        </LoginProvider>
+        </AuthProvider>
       </body>
     </html>
   );

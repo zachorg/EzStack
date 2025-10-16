@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { proxyGet, proxyPost } from "@/lib/functions-proxy";
 
 export async function GET(req: NextRequest) {
+  console.log("GET /api/keys");
   return proxyGet("/v1/apikeys/listApiKeys", req);
 }
 

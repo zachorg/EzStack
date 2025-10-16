@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { apiKeys, type CreateApiKeyRequest, type ListApiKeysResponse } from "@/lib/api/apikeys";
+import {
+  apiKeys,
+  type CreateApiKeyRequest,
+  type ListApiKeysResponse,
+} from "@/lib/api/apikeys";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/components/AuthProvider";
 
 type KeyItem = ListApiKeysResponse["items"][number];
 
@@ -34,64 +39,73 @@ function formatDate(value: KeyItem["createdAt"] | string | null) {
 }
 
 function useUserProfile() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isLoading, error } = useAuth();
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/user/profile", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-      } else {
-        setError("Failed to load profile");
+  // Map auth user to UserProfile format for compatibility
+  const profile: UserProfile | null = user
+    ? {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        lastSignInTime: user.lastSignInTime,
+        status: user.status,
+        planId: user.planId,
       }
-    } catch {
-      setError("Failed to load profile");
-    } finally {
-      setLoading(false);
-    }
+    : null;
+
+  return {
+    profile,
+    loading: isLoading,
+    error,
   };
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  return { profile, loading, error, refetch: fetchProfile };
 }
 
-function useKeys(tenantId: string | null) {
+function useKeys() {
   const [items, setItems] = useState<KeyItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { user, isAuthenticated } = useAuth();
+
   const reload = async () => {
-    if (!tenantId) return;
+    if (!isAuthenticated) {
+      console.warn("useKeys: not authenticated");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await apiKeys.list(tenantId);
+      const res = await apiKeys.list(user?.uid ?? "");
       setItems(res.items ?? []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load";
       setError(msg);
+      console.error(msg + " " + user?.uid);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (tenantId) void reload();
+    if (isAuthenticated) void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [isAuthenticated]);
 
   return { items, loading, error, reload };
 }
 
-function UserInfoSection({ profile, loading, error }: { profile: UserProfile | null; loading: boolean; error: string | null }) {
+function UserInfoSection({
+  profile,
+  loading,
+  error,
+}: {
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+}) {
   if (loading) {
     return (
       <section className="space-y-3">
@@ -105,7 +119,10 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Account Information</h2>
-        <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </div>
       </section>
@@ -113,6 +130,7 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
   }
 
   if (!profile) return null;
+  console.log("UserInfoSection: ", profile);
 
   return (
     <section className="space-y-3">
@@ -132,30 +150,46 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">Display Name</dt>
-            <dd className="mt-1 text-sm text-gray-900">{profile.displayName || "—"}</dd>
+            <dd className="mt-1 text-sm text-gray-900">
+              {profile.displayName || "—"}
+            </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Account Status</dt>
+            <dt className="text-sm font-medium text-gray-500">
+              Account Status
+            </dt>
             <dd className="mt-1 text-sm">
-              <span className={cn(
-                "inline-flex items-center rounded px-2 py-0.5 text-xs",
-                profile.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
-              )}>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded px-2 py-0.5 text-xs",
+                  profile.status === "active"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-200 text-gray-700"
+                )}
+              >
                 {profile.status}
               </span>
             </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">User ID</dt>
-            <dd className="mt-1 text-sm text-gray-900 font-mono">{profile.uid}</dd>
+            <dd className="mt-1 text-sm text-gray-900 font-mono">
+              {profile.uid}
+            </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Account Created</dt>
-            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.createdAt)}</dd>
+            <dt className="text-sm font-medium text-gray-500">
+              Account Created
+            </dt>
+            <dd className="mt-1 text-sm text-gray-900">
+              {formatDate(profile.createdAt)}
+            </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-gray-500">Last Sign In</dt>
-            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.lastSignInTime)}</dd>
+            <dd className="mt-1 text-sm text-gray-900">
+              {formatDate(profile.lastSignInTime)}
+            </dd>
           </div>
         </div>
       </div>
@@ -163,16 +197,29 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
   );
 }
 
-function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { tenantId: string | null; onCreated: (opts: { key: string; keyPrefix: string }) => void; disabled?: boolean; existingNames?: string[] }) {
+function CreateKeySection({
+  tenantId,
+  onCreated,
+  disabled,
+  existingNames,
+}: {
+  tenantId: string | null;
+  onCreated: (opts: { key: string; keyPrefix: string }) => void;
+  disabled?: boolean;
+  existingNames?: string[];
+}) {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizedExisting = (existingNames || []).map((n) => n.trim().toLowerCase()).filter(Boolean);
+  const normalizedExisting = (existingNames || [])
+    .map((n) => n.trim().toLowerCase())
+    .filter(Boolean);
   const trimmed = name.trim();
-  const isDuplicate = trimmed ? normalizedExisting.includes(trimmed.toLowerCase()) : false;
+  const isDuplicate = trimmed
+    ? normalizedExisting.includes(trimmed.toLowerCase())
+    : false;
   const canSubmit = !submitting && !disabled && !isDuplicate;
-
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +232,7 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
         try {
           const { auth } = await import("@/lib/firebase/client");
           const { onAuthStateChanged } = await import("firebase/auth");
-          
+
           // Get current user
           if (auth) {
             resolvedTenantId = await new Promise<string | null>((resolve) => {
@@ -210,7 +257,8 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
       onCreated({ key: res.key, keyPrefix: res.keyPrefix });
       setName("");
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to create key";
+      const msg =
+        err instanceof ApiError ? err.message : "Failed to create key";
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -219,15 +267,26 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
 
   return (
     <section aria-labelledby="create-key-heading" className="space-y-3">
-      <h2 id="create-key-heading" className="text-lg font-semibold">Create API key</h2>
+      <h2 id="create-key-heading" className="text-lg font-semibold">
+        Create API key
+      </h2>
       {error ? (
-        <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </div>
       ) : null}
-      <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <form
+        onSubmit={onSubmit}
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+      >
         <div className="sm:col-span-1">
-          <label htmlFor="key-name" className="block text-sm font-medium">Name (optional)</label>
+          <label htmlFor="key-name" className="block text-sm font-medium">
+            Name (optional)
+          </label>
           <input
             id="key-name"
             type="text"
@@ -235,11 +294,16 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
             onChange={(e) => setName(e.target.value)}
             maxLength={120}
             aria-invalid={isDuplicate}
-            className={cn("mt-1 w-full rounded border px-2 py-1", isDuplicate ? "border-red-500" : "")}
+            className={cn(
+              "mt-1 w-full rounded border px-2 py-1",
+              isDuplicate ? "border-red-500" : ""
+            )}
             placeholder="e.g., CI Deploy Key"
           />
           {isDuplicate ? (
-            <p className="mt-1 text-xs text-red-600">This name is already used</p>
+            <p className="mt-1 text-xs text-red-600">
+              This name is already used
+            </p>
           ) : null}
         </div>
         <div className="sm:col-span-2">
@@ -257,7 +321,15 @@ function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { te
   );
 }
 
-function KeysTable({ items, onRevoke, revokingId }: { items: KeyItem[]; onRevoke: (item: KeyItem) => void; revokingId?: string | null }) {
+function KeysTable({
+  items,
+  onRevoke,
+  revokingId,
+}: {
+  items: KeyItem[];
+  onRevoke: (item: KeyItem) => void;
+  revokingId?: string | null;
+}) {
   if (!items.length) {
     return (
       <div className="rounded border p-6 text-center">
@@ -284,11 +356,24 @@ function KeysTable({ items, onRevoke, revokingId }: { items: KeyItem[]; onRevoke
             return (
               <tr key={item.id} className="text-sm">
                 <td className="border-b px-3 py-2">{item.name || "—"}</td>
-                <td className="border-b px-3 py-2 font-mono">{item.keyPrefix}</td>
-                <td className="border-b px-3 py-2">{formatDate(item.createdAt)}</td>
-                <td className="border-b px-3 py-2">{formatDate(item.lastUsedAt)}</td>
+                <td className="border-b px-3 py-2 font-mono">
+                  {item.keyPrefix}
+                </td>
                 <td className="border-b px-3 py-2">
-                  <span className={cn("inline-flex items-center rounded px-2 py-0.5 text-xs", isRevoked ? "bg-gray-200 text-gray-700" : "bg-green-100 text-green-800")}>
+                  {formatDate(item.createdAt)}
+                </td>
+                <td className="border-b px-3 py-2">
+                  {formatDate(item.lastUsedAt)}
+                </td>
+                <td className="border-b px-3 py-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded px-2 py-0.5 text-xs",
+                      isRevoked
+                        ? "bg-gray-200 text-gray-700"
+                        : "bg-green-100 text-green-800"
+                    )}
+                  >
                     {isRevoked ? "Revoked" : "Active"}
                   </span>
                 </td>
@@ -312,27 +397,67 @@ function KeysTable({ items, onRevoke, revokingId }: { items: KeyItem[]; onRevoke
   );
 }
 
-function RevokeDialog({ open, keyPrefix, onConfirm, onCancel }: { open: boolean; keyPrefix: string | null; onConfirm: () => void; onCancel: () => void }) {
+function RevokeDialog({
+  open,
+  keyPrefix,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  keyPrefix: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   if (!open) return null;
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4"
+    >
       <div className="w-full max-w-md rounded bg-white p-4 shadow">
         <h3 className="text-base font-semibold">Revoke API key</h3>
-        <p className="mt-2 text-sm">Revoke key {keyPrefix ? <code className="font-mono">{keyPrefix}</code> : null}? This cannot be undone.</p>
+        <p className="mt-2 text-sm">
+          Revoke key{" "}
+          {keyPrefix ? <code className="font-mono">{keyPrefix}</code> : null}?
+          This cannot be undone.
+        </p>
         <div className="mt-4 flex justify-end gap-2">
-          <button className="rounded border px-3 py-2 text-sm" onClick={onCancel}>Cancel</button>
-          <button className="rounded bg-red-600 px-3 py-2 text-sm text-white" onClick={onConfirm}>Revoke</button>
+          <button
+            className="rounded border px-3 py-2 text-sm"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            className="rounded bg-red-600 px-3 py-2 text-sm text-white"
+            onClick={onConfirm}
+          >
+            Revoke
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function CreatedKeyPanel({ keyValue, keyPrefix, onDismiss }: { keyValue: string; keyPrefix: string; onDismiss: () => void }) {
+function CreatedKeyPanel({
+  keyValue,
+  keyPrefix,
+  onDismiss,
+}: {
+  keyValue: string;
+  keyPrefix: string;
+  onDismiss: () => void;
+}) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const display = useMemo(() => (revealed ? keyValue : "•".repeat(Math.min(keyValue.length, 24)) + " …"), [revealed, keyValue]);
+  const display = useMemo(
+    () =>
+      revealed ? keyValue : "•".repeat(Math.min(keyValue.length, 24)) + " …",
+    [revealed, keyValue]
+  );
 
   const onCopy = async () => {
     try {
@@ -345,76 +470,85 @@ function CreatedKeyPanel({ keyValue, keyPrefix, onDismiss }: { keyValue: string;
   return (
     <div className="rounded border border-amber-300 bg-amber-50 p-4">
       <h3 className="text-base font-semibold">New API key created</h3>
-      <p className="mt-1 text-sm text-amber-900">This key is shown once. Store it securely. We can&apos;t show it again.</p>
+      <p className="mt-1 text-sm text-amber-900">
+        This key is shown once. Store it securely. We can&apos;t show it again.
+      </p>
       <div className="mt-3 flex items-center gap-2">
-        <code className="block grow rounded border bg-white px-2 py-1 font-mono text-sm" aria-label="API key value">{display}</code>
-        <button className="rounded border px-2 py-1 text-sm" onClick={() => setRevealed((v) => !v)} aria-pressed={revealed} aria-label={revealed ? "Hide key" : "Show key"}>
+        <code
+          className="block grow rounded border bg-white px-2 py-1 font-mono text-sm"
+          aria-label="API key value"
+        >
+          {display}
+        </code>
+        <button
+          className="rounded border px-2 py-1 text-sm"
+          onClick={() => setRevealed((v) => !v)}
+          aria-pressed={revealed}
+          aria-label={revealed ? "Hide key" : "Show key"}
+        >
           {revealed ? "Hide" : "Show"}
         </button>
-        <button className="rounded border px-2 py-1 text-sm" onClick={onCopy} aria-live="polite">
+        <button
+          className="rounded border px-2 py-1 text-sm"
+          onClick={onCopy}
+          aria-live="polite"
+        >
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <p className="mt-2 text-xs text-gray-700">Key prefix: <code className="font-mono">{keyPrefix}</code></p>
+      <p className="mt-2 text-xs text-gray-700">
+        Key prefix: <code className="font-mono">{keyPrefix}</code>
+      </p>
       <div className="mt-3">
-        <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={onDismiss}>Done</button>
+        <button
+          className="rounded bg-black px-3 py-2 text-sm text-white"
+          onClick={onDismiss}
+        >
+          Done
+        </button>
       </div>
     </div>
   );
 }
 
 function useTenantSelection() {
+  const { user, isAuthenticated } = useAuth();
+
   // Simplified: tenant is the signed-in user by default.
-  const [tenantId, setTenantId] = useState<string | null>(null);
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-    (async () => {
-      try {
-        const { auth } = await import("@/lib/firebase/client");
-        const { onAuthStateChanged } = await import("firebase/auth");
-        
-        try { await fetch("/api/tenants/bootstrap", { method: "POST", cache: "no-store" }); } catch {}
-        
-        // Set up auth state listener
-        if (auth) {
-          unsub = onAuthStateChanged(auth, (user) => {
-            setTenantId(user?.uid ?? null);
-          });
-          
-          // Also check current user immediately
-          if (auth.currentUser) {
-            setTenantId(auth.currentUser.uid);
-          } else {
-            // If no client auth but we have a session cookie, try to get the user ID from the server
-            fetch("/api/session/status", { cache: "no-store" })
-              .then(res => res.json())
-              .then(data => {
-                if (data.loggedIn && data.uid) {
-                  // Use the server user ID as tenantId as a fallback
-                  setTenantId(data.uid);
-                }
-              })
-              .catch(() => {
-                // Ignore errors - user is probably not signed in
-              });
-          }
-        }
-      } catch (error) {
-        setTenantId(null);
-      }
-    })();
-    return () => { if (unsub) unsub(); };
-  }, []);
-  
+  const tenantId = isAuthenticated && user ? user.uid : null;
+
+  // useEffect(() => {
+  //   if (tenantId) {
+  //     // Bootstrap tenant if needed
+  //     fetch("/api/tenants/bootstrap", { method: "POST", cache: "no-store" }).catch(() => {});
+  //   }
+  // }, [tenantId]);
+
   return { tenantId };
 }
 
 export default function AccountPage() {
-  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { tenantId } = useTenantSelection();
-  const { items, loading, error, reload } = useKeys(tenantId);
-  const [created, setCreated] = useState<{ key: string; keyPrefix: string } | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; keyPrefix: string } | null>(null);
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUserProfile();
+
+  useEffect(() => {
+    console.log("AccountPage: profile", profile);
+    setTenantId(profile ? profile.uid : null);
+  }, [profile]);
+
+  const { items, loading, error, reload } = useKeys();
+  const [created, setCreated] = useState<{
+    key: string;
+    keyPrefix: string;
+  } | null>(null);
+  const [confirm, setConfirm] = useState<{
+    id: string;
+    keyPrefix: string;
+  } | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -428,11 +562,11 @@ export default function AccountPage() {
   };
 
   const doRevoke = async () => {
-    if (!confirm) return;
+    if (!confirm || !tenantId) return;
     setActionError(null);
     setRevokingId(confirm.id);
     try {
-      await apiKeys.revoke(confirm.id, tenantId ?? undefined);
+      await apiKeys.revoke(confirm.id, tenantId);
       setConfirm(null);
       await reload();
     } catch (err) {
@@ -450,10 +584,10 @@ export default function AccountPage() {
       </header>
 
       {/* User Information Section */}
-      <UserInfoSection 
-        profile={profile} 
-        loading={profileLoading} 
-        error={profileError} 
+      <UserInfoSection
+        profile={profile}
+        loading={profileLoading}
+        error={profileError}
       />
 
       {/* API Keys Section */}
@@ -462,7 +596,9 @@ export default function AccountPage() {
           tenantId={tenantId}
           onCreated={onCreated}
           disabled={!tenantId}
-          existingNames={(items || []).map((it) => (it.name || "").trim()).filter(Boolean)}
+          existingNames={(items || [])
+            .map((it) => (it.name || "").trim())
+            .filter(Boolean)}
         />
 
         {created ? (
@@ -478,19 +614,45 @@ export default function AccountPage() {
 
         <section aria-labelledby="keys-heading" className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 id="keys-heading" className="text-lg font-semibold">Your API Keys</h2>
-            <button className="rounded border px-3 py-2 text-sm" onClick={() => reload()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
+            <h2 id="keys-heading" className="text-lg font-semibold">
+              Your API Keys
+            </h2>
+            <button
+              className="rounded border px-3 py-2 text-sm"
+              onClick={() => reload()}
+              disabled={loading}
+            >
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
           </div>
           {error ? (
-            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {error}
+            </div>
           ) : null}
           {actionError ? (
-            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</div>
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {actionError}
+            </div>
           ) : null}
           {items ? (
-            <KeysTable items={items} onRevoke={onRevokeRequested} revokingId={revokingId} />
+            <KeysTable
+              items={items}
+              onRevoke={onRevokeRequested}
+              revokingId={revokingId}
+            />
           ) : (
-            <div className="text-sm text-gray-600">{loading ? "Loading…" : ""}</div>
+            <div className="text-sm text-gray-600">
+              {loading ? "Loading…" : ""}
+            </div>
           )}
         </section>
       </div>

@@ -1,6 +1,10 @@
 import { api } from "./client";
 
-export type TimestampLike = { seconds: number; nanos?: number } | string | number | null;
+export type TimestampLike =
+  | { seconds: number; nanos?: number }
+  | string
+  | number
+  | null;
 
 export type CreateApiKeyRequest = {
   tenantId: string;
@@ -32,15 +36,26 @@ export type RevokeApiKeyResponse = { ok: true; deleted: true };
 
 export const apiKeys = {
   create(input: CreateApiKeyRequest) {
-    return api.post<CreateApiKeyResponse>("/api/keys", input, { "x-tenant-id": input.tenantId });
+    return api.post<CreateApiKeyResponse>(input.tenantId, "/api/keys", input, {
+      authorization: input.tenantId,
+      "x-tenant-id": input.tenantId,
+    });
   },
   list(tenantId: string) {
-    const qs = new URLSearchParams({ tenantId }).toString();
-    return api.get<ListApiKeysResponse>(`/api/keys?${qs}`, { "x-tenant-id": tenantId });
+    console.log("apiKeys.list: tenantId", tenantId);
+    return api.get<ListApiKeysResponse>(tenantId, `/api/keys`, {
+      authorization: tenantId,
+      "x-tenant-id": tenantId,
+    });
   },
-  revoke(id: string, tenantId?: string) {
-    return api.delete<RevokeApiKeyResponse>("/api/keys", { id }, tenantId ? { "x-tenant-id": tenantId } : undefined);
+  revoke(id: string, tenantId: string) {
+    return api.delete<RevokeApiKeyResponse>(
+      tenantId,
+      "/api/keys",
+      { id },
+      tenantId
+        ? { authorization: tenantId, "x-tenant-id": tenantId }
+        : undefined
+    );
   },
 };
-
-

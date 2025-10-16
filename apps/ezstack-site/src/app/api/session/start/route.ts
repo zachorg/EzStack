@@ -44,11 +44,11 @@ export async function POST(req: Request) {
 			expiresIn: 60 * 60 * 24 * 5 * 1000, // 5 days
 		});
 
-		const response = NextResponse.json({ ok: true, uid });
+		const response = NextResponse.json({ ok: true });
 		response.cookies.set("session", sessionCookie, {
 			maxAge: 60 * 60 * 24 * 5, // 5 days
 			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
+			//secure: process.env.NODE_ENV === "production",
 			sameSite: "lax",
 		});
 

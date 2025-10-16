@@ -1,76 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { auth, googleProvider } from "@/lib/firebase/client";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithPopup } from "firebase/auth";
-import { useLogin } from "./LoginContext";
+import { useAuth } from "./AuthProvider";
 
-// Verbose logging utility
-const log = (level: 'info' | 'warn' | 'error' | 'debug', message: string, data?: Record<string, unknown>) => {
-  const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] [LOGIN] [${level.toUpperCase()}] ${message}`;
-  
-  if (data) {
-    console[level](logMessage, data);
-  } else {
-    console[level](logMessage);
-  }
-};
-
-// User-friendly error message mapping
-const getFirebaseErrorMessage = (error: unknown): string => {
-  if (error && typeof error === "object" && "code" in error) {
-    const firebaseError = error as { code: string };
-    
-    switch (firebaseError.code) {
-      // Authentication errors
-      case "auth/invalid-credential":
-        return "Invalid email or password. Please check your credentials and try again.";
-      case "auth/user-not-found":
-        return "Account not found. Please create a new account or check your email address.";
-      case "auth/wrong-password":
-        return "Incorrect password. Please try again.";
-      case "auth/invalid-email":
-        return "Please enter a valid email address.";
-      case "auth/user-disabled":
-        return "This account has been disabled. Please contact support.";
-      case "auth/too-many-requests":
-        return "Too many failed attempts. Please wait a moment and try again.";
-      case "auth/email-already-in-use":
-        return "An account with this email already exists. Please sign in instead.";
-      case "auth/weak-password":
-        return "Password is too weak. Please choose a stronger password.";
-      case "auth/operation-not-allowed":
-        return "This sign-in method is not enabled. Please try another method.";
-      
-      // Network and system errors
-      case "auth/network-request-failed":
-        return "Network error. Please check your connection and try again.";
-      case "auth/internal-error":
-        return "An internal error occurred. Please try again.";
-      case "auth/popup-closed-by-user":
-        return "Sign-in was cancelled. Please try again.";
-      case "auth/popup-blocked":
-        return "Pop-up was blocked by your browser. Please allow pop-ups and try again.";
-      case "auth/cancelled-popup-request":
-        return "Sign-in was cancelled. Please try again.";
-      case "auth/timeout":
-        return "Request timed out. Please try again.";
-      
-      // Default fallback
-      default:
-        return "An error occurred during authentication. Please try again.";
-    }
-  }
-  
-  // If it's a regular Error object, return its message
-  if (error instanceof Error) {
-    return error.message;
-  }
-  
-  // Final fallback
-  return "An unexpected error occurred. Please try again.";
-};
 
 interface LoginDialogProps {
   isOpen: boolean;
@@ -78,20 +10,19 @@ interface LoginDialogProps {
 }
 
 export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
-  const { redirect } = useLogin();
-  const [loading, setLoading] = useState(false);
+  const { login, loginWithGoogle, signup, isLoading, error, clearError } = useAuth();
   const [message, setMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Enhanced close handler that also clears redirect
+  // Enhanced close handler that also clears state
   const handleClose = useCallback(() => {
-    setLoading(false);
     setMessage(null);
     setEmail("");
     setPassword("");
+    clearError();
     onClose();
-  }, [onClose]);
+  }, [onClose, clearError]);
 
   // Handle escape key and click outside to close
   useEffect(() => {
@@ -115,161 +46,49 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
   // Reset dialog state when it closes
   useEffect(() => {
     if (!isOpen) {
-      setLoading(false);
       setMessage(null);
       setEmail("");
       setPassword("");
+      clearError();
     }
-  }, [isOpen]);
+  }, [isOpen, clearError]);
 
-  // Sign in with Google using Firebase Auth (popup flow).
+  // Sign in with Google using AuthProvider
   async function signInWithGoogleWithPopup() {
     try {
-      setLoading(true);
       setMessage(null);
-
-      if (!auth || !googleProvider) {
-        log("error", "Firebase authentication not configured", {
-          authAvailable: !!auth,
-          googleProviderAvailable: !!googleProvider,
-        });
-        setMessage("Firebase authentication not configured");
-        setLoading(false);
-        return;
-      }
-    
-      // Use popup instead of redirect for better reliability
-      const result = await signInWithPopup(auth, googleProvider);
-
-      if (result && result.user) {
-        const user = result.user;
-        const idToken = await user.getIdToken();
-        // Send token to our session endpoint
-        const response = await fetch("/api/session/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        
-        if (response.ok) {
-          // Sign out from Firebase to prevent persistent Google session
-          await signOut(auth);
-          
-          const redirectUrl = redirect || "/";
-          window.location.href = redirectUrl;
-        } else {
-          const error = await response.json();
-          log('error', 'Session creation failed', { 
-            status: response.status, 
-            error: error 
-          });
-          setMessage(error.message || "Session creation failed");
-        }
-      }
-    } catch (error: unknown) {
-      log('error', 'Google sign-in failed', { 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      setMessage(getFirebaseErrorMessage(error));
-    } finally {
-      setLoading(false);
+      await loginWithGoogle();
+      // Close dialog on successful login
+      handleClose();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
+      setMessage(errorMessage);
     }
   }
 
-  // Create an account with email/password and start a session.
+  // Create an account with email/password using AuthProvider
   async function signUpWithEmailPassword() {
-    setLoading(true);
-    setMessage(null);
-    
-    if (!auth) {
-      log('error', 'Firebase authentication not configured for sign-up');
-      setMessage("Firebase authentication not configured");
-      setLoading(false);
-      return;
-    }
-    
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      const user = userCredential.user;
-      
-      const idToken = await user.getIdToken();
-      // Send token to our session endpoint
-      const response = await fetch("/api/session/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      
-      
-      if (response.ok) {
-        const redirectUrl = redirect || "/";
-        window.location.href = redirectUrl;
-      } else {
-        const error = await response.json();
-        log('error', 'Session creation failed after account creation', { 
-          status: response.status, 
-          error: error 
-        });
-        setMessage(error.message || "Session creation failed");
-      }
-    } catch (e) {
-      log('error', 'Account creation failed', { 
-        error: e instanceof Error ? e.message : 'Unknown error',
-        stack: e instanceof Error ? e.stack : undefined,
-        email: email.trim()
-      });
-      setMessage(getFirebaseErrorMessage(e));
-    } finally {
-      setLoading(false);
+      setMessage(null);
+      await signup(email.trim(), password);
+      // Close dialog on successful signup
+      handleClose();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Signup failed";
+      setMessage(errorMessage);
     }
   }
 
-  // Sign in with email/password and start a session.
+  // Sign in with email/password using AuthProvider
   async function signInWithEmailPassword() {
-    setLoading(true);
-    setMessage(null);
-    
-    if (!auth) {
-      log('error', 'Firebase authentication not configured for sign-in');
-      setMessage("Firebase authentication not configured");
-      setLoading(false);
-      return;
-    }
-    
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
-      const user = userCredential.user;
-      
-      const idToken = await user.getIdToken();
-      // Send token to our session endpoint
-      const response = await fetch("/api/session/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      
-      
-      if (response.ok) {
-        const redirectUrl = redirect || "/";
-        window.location.href = redirectUrl;
-      } else {
-        const error = await response.json();
-        log('error', 'Session creation failed after sign-in', { 
-          status: response.status, 
-          error: error 
-        });
-        setMessage(error.message || "Session creation failed");
-      }
-    } catch (e) {
-      log('error', 'Sign-in failed', { 
-        error: e instanceof Error ? e.message : 'Unknown error',
-        stack: e instanceof Error ? e.stack : undefined,
-        email: email.trim()
-      });
-      setMessage(getFirebaseErrorMessage(e));
-    } finally {
-      setLoading(false);
+      setMessage(null);
+      await login(email.trim(), password);
+      // Close dialog on successful login
+      handleClose();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Sign-in failed";
+      setMessage(errorMessage);
     }
   }
 
@@ -313,7 +132,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                 onClick={() => {
                   signInWithGoogleWithPopup();
                 }}
-                disabled={loading}
+                disabled={isLoading}
                 className="group relative w-full flex justify-center items-center py-3 px-4 border border-gray-600 rounded-lg text-sm font-medium text-gray-200 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -353,7 +172,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                     setEmail(e.target.value);
                   }}
                   placeholder="Enter your email"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent focus:z-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -372,7 +191,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                     setPassword(e.target.value);
                   }}
                   placeholder="Enter your password"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="appearance-none relative block w-full px-4 py-3 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent focus:z-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
@@ -384,10 +203,10 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                   onClick={() => {
                     signUpWithEmailPassword();
                   }}
-                  disabled={loading || !email || !password}
+                  disabled={isLoading || !email || !password}
                   className="group relative w-full sm:w-auto flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -400,10 +219,10 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                   onClick={() => {
                     signInWithEmailPassword();
                   }}
-                  disabled={loading || !email || !password}
+                  disabled={isLoading || !email || !password}
                   className="group relative w-full sm:w-auto flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-600 hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  {loading ? (
+                  {isLoading ? (
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -415,7 +234,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
             </form>
 
             {/* Error Message */}
-            {message && (
+            {(message || error) && (
               <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -424,7 +243,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-200">{message}</p>
+                    <p className="text-sm text-red-200">{message || error}</p>
                   </div>
                 </div>
               </div>
