@@ -6,7 +6,7 @@ export default fp(async (app) => {
     // Allow unauthenticated health checks so uptime probes don't require auth.
     if (req.routeOptions.url === "/v1/otp/healthz" 
       || req.routeOptions.url === "/v1/ote/healthz" 
-      || req.routeOptions.url === "/v1/apikeys/healthz"
+      || req.routeOptions.url === "/v1/api/keys/healthz"
       || req.routeOptions.url === "/healthz") {
       return;
     }

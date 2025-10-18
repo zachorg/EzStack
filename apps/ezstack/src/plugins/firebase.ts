@@ -34,7 +34,8 @@ export default fp(async (app: any) => {
 
   app.decorate("introspectIdToken", async (token: string) => {
     try {
-      const decodedToken = await auth.verifyIdToken(token);
+      const authToken = token.startsWith("Bearer ") ? token.slice(7).trim() : token;
+      const decodedToken = await auth.verifyIdToken(authToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
       const emailVerified = decodedToken.email_verified || false;

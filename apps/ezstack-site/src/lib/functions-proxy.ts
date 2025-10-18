@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Resolve the API base URL for the Render-hosted service (or local dev).
 export function functionsBaseUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+  const base = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8080";
   return base.replace(/\/$/, "");
 }
 
