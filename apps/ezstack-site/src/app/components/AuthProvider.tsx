@@ -182,7 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         unsubscribe();
       }
     };
-  }, []);
+  }, [fetchUserProfile]);
 
   // Login with email/password
   const login = useCallback(
@@ -267,7 +267,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [refreshUser]);
+  }, []);
 
   // Sign up with email/password
   const signup = useCallback(

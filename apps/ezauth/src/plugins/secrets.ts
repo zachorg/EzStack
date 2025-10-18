@@ -4,7 +4,7 @@ import fp from "fastify-plugin";
 export default fp(async (app: any) => {
   const raw = (process.env.APIKEY_PEPPER || "").trim();
 
-  let pepper: string | undefined;
+  let pepper: string | undefined = raw;
 
   if (!pepper) {
     throw new Error(

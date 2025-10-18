@@ -243,7 +243,7 @@ export default function CreateApiKeyDialog({
                 <div className="space-y-4">
                   <div className="p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                     <p className="text-sm text-amber-200 mb-3">
-                      <strong>Important:</strong> This key is shown only once. Store it securely. We can't show it again.
+                      <strong>Important:</strong> This key is shown only once. Store it securely. We can&apos;t show it again.
                     </p>
                     
                     <div className="flex items-center gap-2">

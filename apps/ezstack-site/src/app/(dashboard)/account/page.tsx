@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   apiKeys,
-  type CreateApiKeyRequest,
   type ListApiKeysResponse,
 } from "@/lib/api/apikeys";
 import { ApiError } from "@/lib/api/client";
@@ -206,7 +205,6 @@ function KeyActionsDropdown({
   const updateDropdownPosition = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      const dropdownWidth = 192; // w-48 = 12rem = 192px
 
       // Position dropdown below the button, right-aligned
       const top = rect.bottom + 8;
@@ -553,7 +551,7 @@ export default function AccountPage() {
     return null;
   }
 
-  const onCreated = (k: { key: string; keyPrefix: string }) => {
+  const onCreated = () => {
     // Refresh the list after creating a key
     void reload();
   };
@@ -600,7 +598,7 @@ export default function AccountPage() {
             </h2>
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
-                These API keys allow privileged access to your project's APIs.
+                These API keys allow privileged access to your project&apos;s APIs.
                 Use in servers, functions, workers or other backend components
                 of your application.
               </p>
@@ -648,7 +646,7 @@ export default function AccountPage() {
       <CreateApiKeyDialog
         isOpen={createKeyDialogOpen}
         onClose={() => setCreateKeyDialogOpen(false)}
-        onCreated={onCreated}
+        onCreated={() => onCreated()}
         tenantId={tenantId}
         existingNames={(items || [])
           .map((it) => (it.name || "").trim())

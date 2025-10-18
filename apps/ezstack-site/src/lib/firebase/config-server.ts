@@ -26,7 +26,7 @@ export function getFirebaseClientConfig() {
       messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
       appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
     };
-  } catch (error) {
+  } catch {
     // Fall back to environment variables
     return {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
