@@ -40,7 +40,7 @@ await app.register(rl);
 await app.register(auth);
 
 // Business routes
-await app.register(apikeyRoutes, { prefix: "/v1/api/keys" });
+await app.register(apikeyRoutes, { prefix: "/api/v1/keys" });
 
 // Startup log to aid operational visibility
 app.log.info({
