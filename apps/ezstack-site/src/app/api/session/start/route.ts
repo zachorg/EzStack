@@ -39,19 +39,7 @@ export async function POST(req: Request) {
 			});
 		}
 
-		// Create session cookie (optional - you can also just rely on Firebase Auth state)
-		const sessionCookie = await adminAuth.createSessionCookie(idToken, {
-			expiresIn: 60 * 60 * 24 * 5 * 1000, // 5 days
-		});
-
-		const response = NextResponse.json({ ok: true, uid });
-		response.cookies.set("session", sessionCookie, {
-			maxAge: 60 * 60 * 24 * 5, // 5 days
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-		});
-
+		const response = NextResponse.json({ ok: true });
 		return response;
 	} catch (err) {
 		const isDev = process.env.NODE_ENV !== "production";

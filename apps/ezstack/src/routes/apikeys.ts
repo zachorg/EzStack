@@ -49,15 +49,14 @@ async function hashWithArgon2id(plaintext: string, saltB64: string, pepper: stri
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
 const routes: FastifyPluginAsync = async (app) => {
-  const firebase = (app as any).firebase;
+  const firebase = app.firebase;
   const db = firebase.db;
-  const pepper = (app as any).apikeyPepper as string;
 
   app.get("/healthz", async (_req, rep) => {
     return rep.send({ ok: true });
   });
 
-  app.post("/createApiKey", { preHandler: [app.rlPerRoute(10)] }, async (req: any, rep) => {
+  app.post("/create", { preHandler: [app.rlPerRoute(10)] }, async (req: any, rep) => {
     try {
       const userId = req.userId as string | undefined;
       if (!userId) {
@@ -67,28 +66,13 @@ const routes: FastifyPluginAsync = async (app) => {
       const body = req.body || {};
       const nameRaw: unknown = body.name;
       const demo: boolean = body.demo === true;
-      const tenantIdRaw: unknown = body.tenantId;
 
       const name = typeof nameRaw === "string" && nameRaw.trim() ? nameRaw.trim().slice(0, 120) : null;
-      const tenantId = typeof tenantIdRaw === "string" && tenantIdRaw.trim() ? tenantIdRaw.trim() : undefined;
-      if (!tenantId) {
-        return rep.status(400).send({ error: { message: "tenantId required" } });
-      }
-      const okRole = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev"]);
-      if (!okRole) {
-        return rep.status(403).send({ error: { message: "Forbidden" } });
-      }
-      const t = await (app as any).getTenant(tenantId);
-      if (!t || (t.status && t.status !== "active")) {
-        return rep.status(403).send({ error: { message: "Tenant suspended" } });
-      }
-      const effectiveTenantId: string = tenantId;
-
       const { key, prefix } = generatePlainApiKey();
 
       const salt = crypto.randomBytes(16).toString("base64");
-      const hashedKey = await hashWithArgon2id(key, salt, pepper);
-      const lookupHash = hashApiKey(key, pepper);
+      const hashedKey = await hashWithArgon2id(key, salt, app.apikeyPepper);
+      const lookupHash = hashApiKey(key, app.apikeyPepper);
 
       let keyMaterialEnc: string | undefined;
       if (demo && process.env.DEMO_ENCRYPT_ENABLED === "true") {
@@ -106,7 +90,6 @@ const routes: FastifyPluginAsync = async (app) => {
       const keyData = {
         id: keyDoc.id,
         user_id: userId,
-        tenant_id: effectiveTenantId,
         name,
         key_prefix: prefix,
         hashed_key: hashedKey,
@@ -129,7 +112,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const inserted = { id: keyDoc.id };
 
-      try { req.log.info({ tenantId: effectiveTenantId, userId, id: inserted.id }, "apikeys: created api key"); } catch {}
+      try { req.log.info({ userId, id: inserted.id }, "apikeys: created api key"); } catch {}
 
       return rep.send({
         id: inserted.id,
@@ -145,24 +128,14 @@ const routes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.get("/listApiKeys", { preHandler: [app.rlPerRoute(30)] }, async (req: any, rep) => {
+  app.get("/list", { preHandler: [app.rlPerRoute(30)] }, async (req: any, rep) => {
     try {
       const userId = req.userId as string | undefined;
       if (!userId) {
         return rep.status(401).send({ error: { message: "Unauthenticated" } });
       }
-      const tenantId = (req.query && (req.query as any).tenantId ? String((req.query as any).tenantId).trim() : "") || undefined;
-      if (!tenantId) {
-        return rep.status(400).send({ error: { message: "tenantId required" } });
-      }
-      const ok = await (app as any).hasTenantRole(userId, tenantId, ["owner", "admin", "dev", "viewer"]);
-      if (!ok) {
-        return rep.status(403).send({ error: { message: "Forbidden" } });
-      }
       try {
-        const querySnapshot = await db.collection("api_keys")
-          .where("tenant_id", "==", tenantId)
-          .get();
+        const querySnapshot = await db.collection("api_keys").where("user_id", "==", userId).get();
         
         const items = querySnapshot.docs.map((doc: any) => {
           const data = doc.data();
@@ -196,7 +169,7 @@ const routes: FastifyPluginAsync = async (app) => {
           return bm - am;
         });
 
-        try { req.log.debug({ tenantId, count: items.length }, "apikeys: listed keys"); } catch {}
+        try { req.log.debug({ userId, count: items.length }, "apikeys: listed keys"); } catch {}
         return rep.send({ items });
       } catch (error) {
         return rep.status(500).send({ error: { message: "Failed to list api keys" } });
@@ -207,7 +180,7 @@ const routes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/revokeApiKey", { preHandler: [app.rlPerRoute(20)] }, async (req: any, rep) => {
+  app.post("/revoke", { preHandler: [app.rlPerRoute(20)] }, async (req: any, rep) => {
     try {
       const userId = req.userId as string | undefined;
       if (!userId) {
@@ -225,18 +198,13 @@ const routes: FastifyPluginAsync = async (app) => {
           return rep.status(404).send({ error: { message: "Key not found" } });
         }
         const row = keyDoc.data();
-        if (row.tenant_id) {
-          const ok = await (app as any).hasTenantRole(userId, row.tenant_id, ["owner", "admin"]);
-          if (!ok) {
-            return rep.status(403).send({ error: { message: "Forbidden" } });
-          }
-        } else {
-          if (row.user_id !== userId) {
-            return rep.status(403).send({ error: { message: "Forbidden" } });
-          }
+        
+        if (row?.user_id !== userId) {
+          return rep.status(403).send({ error: { message: "Forbidden" } });
         }
         
         await db.collection("api_keys").doc(id).update({
+          status: "revoked",
           revoked_at: new Date(),
           updated_at: new Date()
         });
@@ -254,6 +222,3 @@ const routes: FastifyPluginAsync = async (app) => {
 };
 
 export default routes;
-
-
-

@@ -41,6 +41,8 @@ if (isFirebaseConfigured) {
       'prompt': 'consent',  // Request consent to avoid COOP issues
       'access_type': 'offline',
     });
+    
+    console.log("Firebase client initialized successfully");
   } catch (error) {
     console.error("Failed to initialize Firebase:", error);
     app = null;

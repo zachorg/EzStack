@@ -1,3 +1,5 @@
+"use client";
+
 export default function DocsPage() {
   return (
     <div className="prose max-w-3xl">
@@ -18,7 +20,7 @@ export default function DocsPage() {
       </p>
       <h2>Next steps</h2>
       <ul>
-        <li>Integrate OTP/OTE flows in your app’s backend using EzStack.</li>
+        <li>Integrate OTP/OTE flows in your app&apos;s backend using EzStack.</li>
         <li>Use Stripe or another provider for billing as needed.</li>
       </ul>
     </div>

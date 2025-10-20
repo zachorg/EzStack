@@ -21,8 +21,9 @@ export async function GET(req: NextRequest) {
     // Session verification failed, continue to login redirect
   }
   
-  // User is not authenticated, redirect to login
-  url.pathname = "/login";
+  // User is not authenticated, redirect to home with login dialog trigger
+  url.pathname = "/";
+  url.searchParams.set("login", "true");
   url.searchParams.set("redirect", "/account");
   return NextResponse.redirect(url);
 }

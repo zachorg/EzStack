@@ -6,30 +6,21 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 export default fp(async (app: any) => {
-  // Try environment variable first, then fall back to service account file
+  // Read Firebase service account from file
+  const serviceAccountPath = join(process.cwd(), 'secrets', 'ezstack-service-account.json');
   let serviceAccountJson;
   
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    try {
-      serviceAccountJson = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    } catch (error) {
-      throw new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON: ${error instanceof Error ? error.message : String(error)}. Please ensure it's a valid JSON string.`);
-    }
-  } else {
-    // Try to read from service account file
-    const serviceAccountPath = join(process.cwd(), 'secrets', 'ezstack-service-account.json');
-    try {
-      const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8');
-      serviceAccountJson = JSON.parse(serviceAccountFile);
-    } catch (error) {
-      throw new Error(`Failed to read Firebase service account from ${serviceAccountPath}: ${error instanceof Error ? error.message : String(error)}. Please ensure the file exists and contains valid JSON, or set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.`);
-    }
+  try {
+    const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8');
+    serviceAccountJson = JSON.parse(serviceAccountFile);
+  } catch (error) {
+    throw new Error(`Failed to read Firebase service account from ${serviceAccountPath}: ${error instanceof Error ? error.message : String(error)}. Please ensure the file exists and contains valid JSON.`);
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccountJson.project_id;
+  const projectId = serviceAccountJson.project_id;
   
   if (!projectId) {
-    throw new Error("FIREBASE_PROJECT_ID environment variable or project_id in service account file is required");
+    throw new Error("project_id not found in service account file");
   }
 
   // Initialize Firebase Admin (avoid duplicate initialization)

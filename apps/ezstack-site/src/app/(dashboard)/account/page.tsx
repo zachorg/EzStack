@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { apiKeys, type CreateApiKeyRequest, type ListApiKeysResponse } from "@/lib/api/apikeys";
+import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import {
+  apiKeys,
+  type ListApiKeysResponse,
+} from "@/lib/api/apikeys";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/app/components/AuthProvider";
+import CreateApiKeyDialog from "@/app/components/CreateApiKeyDialog";
 
 type KeyItem = ListApiKeysResponse["items"][number];
 
@@ -34,64 +40,73 @@ function formatDate(value: KeyItem["createdAt"] | string | null) {
 }
 
 function useUserProfile() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isLoading, error } = useAuth();
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/user/profile", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        setProfile(data);
-      } else {
-        setError("Failed to load profile");
+  // Map auth user to UserProfile format for compatibility
+  const profile: UserProfile | null = user
+    ? {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        lastSignInTime: user.lastSignInTime,
+        status: user.status,
+        planId: user.planId,
       }
-    } catch {
-      setError("Failed to load profile");
-    } finally {
-      setLoading(false);
-    }
+    : null;
+
+  return {
+    profile,
+    loading: isLoading,
+    error,
   };
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  return { profile, loading, error, refetch: fetchProfile };
 }
 
-function useKeys(tenantId: string | null) {
+function useKeys() {
   const [items, setItems] = useState<KeyItem[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { user, isAuthenticated } = useAuth();
+
   const reload = async () => {
-    if (!tenantId) return;
+    if (!isAuthenticated) {
+      console.warn("useKeys: not authenticated");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await apiKeys.list(tenantId);
+      const res = await apiKeys.list(user?.uid ?? "");
       setItems(res.items ?? []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load";
       setError(msg);
+      console.error(msg + " " + user?.uid);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (tenantId) void reload();
+    if (isAuthenticated) void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [isAuthenticated]);
 
   return { items, loading, error, reload };
 }
 
-function UserInfoSection({ profile, loading, error }: { profile: UserProfile | null; loading: boolean; error: string | null }) {
+function UserInfoSection({
+  profile,
+  loading,
+  error,
+}: {
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+}) {
   if (loading) {
     return (
       <section className="space-y-3">
@@ -105,7 +120,10 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
     return (
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Account Information</h2>
-        <div role="alert" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div
+          role="alert"
+          className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </div>
       </section>
@@ -113,15 +131,18 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
   }
 
   if (!profile) return null;
+  console.log("UserInfoSection: ", profile);
 
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold">Account Information</h2>
-      <div className="rounded border bg-gray-50 p-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-            <dt className="text-sm font-medium text-gray-500">Email</dt>
-            <dd className="mt-1 text-sm text-gray-900">
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Email
+            </dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
               {profile.email || "—"}
               {profile.emailVerified && (
                 <span className="ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs bg-green-100 text-green-800">
@@ -131,31 +152,29 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
             </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">Display Name</dt>
-            <dd className="mt-1 text-sm text-gray-900">{profile.displayName || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500">Account Status</dt>
-            <dd className="mt-1 text-sm">
-              <span className={cn(
-                "inline-flex items-center rounded px-2 py-0.5 text-xs",
-                profile.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
-              )}>
-                {profile.status}
-              </span>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Display Name
+            </dt>
+            <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+              {profile.displayName || "—"}
             </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-gray-500">User ID</dt>
-            <dd className="mt-1 text-sm text-gray-900 font-mono">{profile.uid}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500">Account Created</dt>
-            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.createdAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-sm font-medium text-gray-500">Last Sign In</dt>
-            <dd className="mt-1 text-sm text-gray-900">{formatDate(profile.lastSignInTime)}</dd>
+            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              Account Status
+            </dt>
+            <dd className="mt-1 text-sm">
+              <span
+                className={cn(
+                  "inline-flex items-center rounded px-2 py-0.5 text-xs",
+                  profile.status === "active"
+                    ? "bg-green-100 text-green-800"
+                    : "bg-gray-200 text-gray-700"
+                )}
+              >
+                {profile.status}
+              </span>
+            </dd>
           </div>
         </div>
       </div>
@@ -163,101 +182,139 @@ function UserInfoSection({ profile, loading, error }: { profile: UserProfile | n
   );
 }
 
-function CreateKeySection({ tenantId, onCreated, disabled, existingNames }: { tenantId: string | null; onCreated: (opts: { key: string; keyPrefix: string }) => void; disabled?: boolean; existingNames?: string[] }) {
-  const [name, setName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function KeyActionsDropdown({
+  item,
+  onRevoke,
+  revokingId,
+}: {
+  item: KeyItem;
+  onRevoke: (item: KeyItem) => void;
+  revokingId?: string | null;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    right: 0,
+  });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  const normalizedExisting = (existingNames || []).map((n) => n.trim().toLowerCase()).filter(Boolean);
-  const trimmed = name.trim();
-  const isDuplicate = trimmed ? normalizedExisting.includes(trimmed.toLowerCase()) : false;
-  const canSubmit = !submitting && !disabled && !isDuplicate;
+  const isRevoked = Boolean(item.revokedAt);
 
+  // Calculate dropdown position when opening
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canSubmit) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      let resolvedTenantId = tenantId;
-      if (!resolvedTenantId) {
-        try {
-          const { auth } = await import("@/lib/firebase/client");
-          const { onAuthStateChanged } = await import("firebase/auth");
-          
-          // Get current user
-          if (auth) {
-            resolvedTenantId = await new Promise<string | null>((resolve) => {
-              const unsubscribe = onAuthStateChanged(auth!, (user) => {
-                unsubscribe();
-                resolve(user?.uid ?? null);
-              });
-            });
-          }
-        } catch {}
-      }
-      if (!resolvedTenantId) {
-        setError("Sign in to create a key");
-        return;
-      }
-      const payload: CreateApiKeyRequest = {
-        tenantId: resolvedTenantId,
-        name: trimmed ? trimmed.slice(0, 120) : undefined,
-      };
-      const res = await apiKeys.create(payload);
-      // Do not log or persist res.key
-      onCreated({ key: res.key, keyPrefix: res.keyPrefix });
-      setName("");
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : "Failed to create key";
-      setError(msg);
-    } finally {
-      setSubmitting(false);
+      // Position dropdown below the button, right-aligned
+      const top = rect.bottom + 8;
+      const right = window.innerWidth - rect.right;
+
+      setDropdownPosition({ top, right });
     }
   };
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close dropdown on escape key
+  useEffect(() => {
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const handleToggle = () => {
+    if (!isOpen) {
+      updateDropdownPosition();
+    }
+    setIsOpen(!isOpen);
+  };
+
+  if (isRevoked) {
+    return null; // Don't show actions for revoked keys
+  }
+
   return (
-    <section aria-labelledby="create-key-heading" className="space-y-3">
-      <h2 id="create-key-heading" className="text-lg font-semibold">Create API key</h2>
-      {error ? (
-        <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+    <div className="relative">
+      <button
+        ref={buttonRef}
+        onClick={handleToggle}
+        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+        aria-label="More actions"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+      >
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          ref={dropdownRef}
+          role="menu"
+          className="fixed w-48 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-50"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            right: `${dropdownPosition.right}px`,
+          }}
+        >
+          <div className="py-1">
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => {
+                onRevoke(item);
+                setIsOpen(false);
+              }}
+              disabled={revokingId === item.id}
+              role="menuitem"
+            >
+              {revokingId === item.id ? "Revoking…" : "Revoke"}
+            </button>
+          </div>
         </div>
-      ) : null}
-      <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="sm:col-span-1">
-          <label htmlFor="key-name" className="block text-sm font-medium">Name (optional)</label>
-          <input
-            id="key-name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            aria-invalid={isDuplicate}
-            className={cn("mt-1 w-full rounded border px-2 py-1", isDuplicate ? "border-red-500" : "")}
-            placeholder="e.g., CI Deploy Key"
-          />
-          {isDuplicate ? (
-            <p className="mt-1 text-xs text-red-600">This name is already used</p>
-          ) : null}
-        </div>
-        <div className="sm:col-span-2">
-          <button
-            type="submit"
-            className="rounded bg-black px-3 py-2 text-white disabled:opacity-60"
-            disabled={!canSubmit}
-            aria-busy={submitting}
-          >
-            {submitting ? "Creating…" : "Create key"}
-          </button>
-        </div>
-      </form>
-    </section>
+      )}
+    </div>
   );
 }
 
-function KeysTable({ items, onRevoke, revokingId }: { items: KeyItem[]; onRevoke: (item: KeyItem) => void; revokingId?: string | null }) {
+function KeysTable({
+  items,
+  onRevoke,
+  revokingId,
+}: {
+  items: KeyItem[];
+  onRevoke: (item: KeyItem) => void;
+  revokingId?: string | null;
+}) {
   if (!items.length) {
     return (
       <div className="rounded border p-6 text-center">
@@ -266,161 +323,237 @@ function KeysTable({ items, onRevoke, revokingId }: { items: KeyItem[]; onRevoke
     );
   }
   return (
-    <div className="overflow-auto">
-      <table className="min-w-full border-collapse">
-        <thead>
-          <tr className="text-left text-sm">
-            <th className="border-b px-3 py-2 font-medium">Name</th>
-            <th className="border-b px-3 py-2 font-medium">Key Prefix</th>
-            <th className="border-b px-3 py-2 font-medium">Created</th>
-            <th className="border-b px-3 py-2 font-medium">Last Used</th>
-            <th className="border-b px-3 py-2 font-medium">Status</th>
-            <th className="border-b px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => {
-            const isRevoked = Boolean(item.revokedAt);
-            return (
-              <tr key={item.id} className="text-sm">
-                <td className="border-b px-3 py-2">{item.name || "—"}</td>
-                <td className="border-b px-3 py-2 font-mono">{item.keyPrefix}</td>
-                <td className="border-b px-3 py-2">{formatDate(item.createdAt)}</td>
-                <td className="border-b px-3 py-2">{formatDate(item.lastUsedAt)}</td>
-                <td className="border-b px-3 py-2">
-                  <span className={cn("inline-flex items-center rounded px-2 py-0.5 text-xs", isRevoked ? "bg-gray-200 text-gray-700" : "bg-green-100 text-green-800")}>
-                    {isRevoked ? "Revoked" : "Active"}
-                  </span>
-                </td>
-                <td className="border-b px-3 py-2 text-right">
-                  {!isRevoked ? (
-                    <button
-                      className="rounded border px-2 py-1 text-sm hover:bg-gray-50 disabled:opacity-60"
-                      onClick={() => onRevoke(item)}
-                      disabled={revokingId === item.id}
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+      <div className="overflow-auto">
+        <table className="min-w-full border-collapse">
+          <thead>
+            <tr className="text-left text-sm bg-gray-50 dark:bg-gray-900">
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 font-medium">
+                Name
+              </th>
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 font-medium">
+                Key Prefix
+              </th>
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 font-medium">
+                Created
+              </th>
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 font-medium">
+                Last Used
+              </th>
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 font-medium">
+                Status
+              </th>
+              <th className="border-b border-gray-200 dark:border-gray-700 px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => {
+              const isRevoked = Boolean(item.revokedAt);
+              return (
+                <tr
+                  key={item.id}
+                  className="text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+                    {item.name || "—"}
+                  </td>
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4 font-mono">
+                    {item.keyPrefix}
+                  </td>
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+                    {formatDate(item.createdAt)}
+                  </td>
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+                    {formatDate(item.lastUsedAt)}
+                  </td>
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded px-2 py-0.5 text-xs",
+                        isRevoked
+                          ? "bg-gray-200 text-gray-700"
+                          : "bg-green-100 text-green-800"
+                      )}
                     >
-                      {revokingId === item.id ? "Revoking…" : "Revoke"}
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                      {isRevoked ? "Revoked" : "Active"}
+                    </span>
+                  </td>
+                  <td className="border-b border-gray-200 dark:border-gray-700 px-4 py-4 text-right">
+                    <KeyActionsDropdown
+                      item={item}
+                      onRevoke={onRevoke}
+                      revokingId={revokingId}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-function RevokeDialog({ open, keyPrefix, onConfirm, onCancel }: { open: boolean; keyPrefix: string | null; onConfirm: () => void; onCancel: () => void }) {
+function RevokeDialog({
+  open,
+  keyPrefix,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  keyPrefix: string | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
   if (!open) return null;
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded bg-white p-4 shadow">
-        <h3 className="text-base font-semibold">Revoke API key</h3>
-        <p className="mt-2 text-sm">Revoke key {keyPrefix ? <code className="font-mono">{keyPrefix}</code> : null}? This cannot be undone.</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <button className="rounded border px-3 py-2 text-sm" onClick={onCancel}>Cancel</button>
-          <button className="rounded bg-red-600 px-3 py-2 text-sm text-white" onClick={onConfirm}>Revoke</button>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        onClick={onCancel}
+      />
+
+      {/* Dialog */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          className="relative bg-gray-800 rounded-xl shadow-xl border border-gray-700 w-full max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close button */}
+          <button
+            onClick={onCancel}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-200 transition-colors cursor-pointer"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          <div className="p-6">
+            {/* Header Section */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-white mb-2">
+                Revoke API Key
+              </h1>
+              <p className="text-gray-300">This action cannot be undone</p>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-4">
+              <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-200">
+                      Are you sure you want to revoke key{" "}
+                      {keyPrefix ? (
+                        <code className="font-mono text-red-100">
+                          {keyPrefix}
+                        </code>
+                      ) : (
+                        "this API key"
+                      )}
+                      ? This action cannot be undone and will immediately
+                      disable the key.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="group relative w-full sm:w-auto flex justify-center py-3 px-6 border border-gray-600 text-sm font-medium rounded-lg text-gray-200 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 focus:ring-offset-gray-800 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  className="group relative w-full sm:w-auto flex justify-center py-3 px-6 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 focus:ring-offset-gray-800 transition-all duration-200"
+                >
+                  Revoke Key
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function CreatedKeyPanel({ keyValue, keyPrefix, onDismiss }: { keyValue: string; keyPrefix: string; onDismiss: () => void }) {
-  const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const display = useMemo(() => (revealed ? keyValue : "•".repeat(Math.min(keyValue.length, 24)) + " …"), [revealed, keyValue]);
-
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(keyValue);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  };
-
-  return (
-    <div className="rounded border border-amber-300 bg-amber-50 p-4">
-      <h3 className="text-base font-semibold">New API key created</h3>
-      <p className="mt-1 text-sm text-amber-900">This key is shown once. Store it securely. We can&apos;t show it again.</p>
-      <div className="mt-3 flex items-center gap-2">
-        <code className="block grow rounded border bg-white px-2 py-1 font-mono text-sm" aria-label="API key value">{display}</code>
-        <button className="rounded border px-2 py-1 text-sm" onClick={() => setRevealed((v) => !v)} aria-pressed={revealed} aria-label={revealed ? "Hide key" : "Show key"}>
-          {revealed ? "Hide" : "Show"}
-        </button>
-        <button className="rounded border px-2 py-1 text-sm" onClick={onCopy} aria-live="polite">
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-      <p className="mt-2 text-xs text-gray-700">Key prefix: <code className="font-mono">{keyPrefix}</code></p>
-      <div className="mt-3">
-        <button className="rounded bg-black px-3 py-2 text-sm text-white" onClick={onDismiss}>Done</button>
-      </div>
-    </div>
-  );
-}
-
-function useTenantSelection() {
-  // Simplified: tenant is the signed-in user by default.
-  const [tenantId, setTenantId] = useState<string | null>(null);
-  useEffect(() => {
-    let unsub: (() => void) | undefined;
-    (async () => {
-      try {
-        const { auth } = await import("@/lib/firebase/client");
-        const { onAuthStateChanged } = await import("firebase/auth");
-        
-        try { await fetch("/api/tenants/bootstrap", { method: "POST", cache: "no-store" }); } catch {}
-        
-        // Set up auth state listener
-        if (auth) {
-          unsub = onAuthStateChanged(auth, (user) => {
-            setTenantId(user?.uid ?? null);
-          });
-          
-          // Also check current user immediately
-          if (auth.currentUser) {
-            setTenantId(auth.currentUser.uid);
-          } else {
-            // If no client auth but we have a session cookie, try to get the user ID from the server
-            fetch("/api/session/status", { cache: "no-store" })
-              .then(res => res.json())
-              .then(data => {
-                if (data.loggedIn && data.uid) {
-                  // Use the server user ID as tenantId as a fallback
-                  setTenantId(data.uid);
-                }
-              })
-              .catch(() => {
-                // Ignore errors - user is probably not signed in
-              });
-          }
-        }
-      } catch (error) {
-        setTenantId(null);
-      }
-    })();
-    return () => { if (unsub) unsub(); };
-  }, []);
-  
-  return { tenantId };
-}
-
 export default function AccountPage() {
-  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
-  const { tenantId } = useTenantSelection();
-  const { items, loading, error, reload } = useKeys(tenantId);
-  const [created, setCreated] = useState<{ key: string; keyPrefix: string } | null>(null);
-  const [confirm, setConfirm] = useState<{ id: string; keyPrefix: string } | null>(null);
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+  const [tenantId, setTenantId] = useState<string | null>(null);
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUserProfile();
+
+  // Redirect to homepage if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Set tenant ID when profile changes
+  useEffect(() => {
+    console.log("AccountPage: profile", profile);
+    setTenantId(profile ? profile.uid : null);
+  }, [profile]);
+
+  const { items, loading, error, reload } = useKeys();
+  const [createKeyDialogOpen, setCreateKeyDialogOpen] = useState(false);
+  const [confirm, setConfirm] = useState<{
+    id: string;
+    keyPrefix: string;
+  } | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const onCreated = (k: { key: string; keyPrefix: string }) => {
-    // Show the key panel first; refresh the list after user dismisses
-    setCreated(k);
+  // Show loading while checking authentication
+  if (isLoading) {
+    return <main className="mx-auto max-w-5xl space-y-8 p-4"></main>;
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  const onCreated = () => {
+    // Refresh the list after creating a key
+    void reload();
   };
 
   const onRevokeRequested = (item: KeyItem) => {
@@ -428,11 +561,11 @@ export default function AccountPage() {
   };
 
   const doRevoke = async () => {
-    if (!confirm) return;
+    if (!confirm || !tenantId) return;
     setActionError(null);
     setRevokingId(confirm.id);
     try {
-      await apiKeys.revoke(confirm.id, tenantId ?? undefined);
+      await apiKeys.revoke(confirm.id, tenantId);
       setConfirm(null);
       await reload();
     } catch (err) {
@@ -450,50 +583,75 @@ export default function AccountPage() {
       </header>
 
       {/* User Information Section */}
-      <UserInfoSection 
-        profile={profile} 
-        loading={profileLoading} 
-        error={profileError} 
+      <UserInfoSection
+        profile={profile}
+        loading={profileLoading}
+        error={profileError}
       />
 
       {/* API Keys Section */}
       <div className="space-y-6">
-        <CreateKeySection
-          tenantId={tenantId}
-          onCreated={onCreated}
-          disabled={!tenantId}
-          existingNames={(items || []).map((it) => (it.name || "").trim()).filter(Boolean)}
-        />
-
-        {created ? (
-          <CreatedKeyPanel
-            keyValue={created.key}
-            keyPrefix={created.keyPrefix}
-            onDismiss={() => {
-              void reload();
-              setCreated(null);
-            }}
-          />
-        ) : null}
-
         <section aria-labelledby="keys-heading" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 id="keys-heading" className="text-lg font-semibold">Your API Keys</h2>
-            <button className="rounded border px-3 py-2 text-sm" onClick={() => reload()} disabled={loading}>{loading ? "Refreshing…" : "Refresh"}</button>
+          <div className="space-y-3">
+            <h2 id="keys-heading" className="text-lg font-semibold">
+              API Keys
+            </h2>
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
+                These API keys allow privileged access to your project&apos;s APIs.
+                Use in servers, functions, workers or other backend components
+                of your application.
+              </p>
+              <button
+                className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out cursor-pointer disabled:opacity-60 flex-shrink-0"
+                onClick={() => setCreateKeyDialogOpen(true)}
+                disabled={!tenantId}
+              >
+                Create Key
+              </button>
+            </div>
           </div>
           {error ? (
-            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {error}
+            </div>
           ) : null}
           {actionError ? (
-            <div role="alert" aria-live="assertive" className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{actionError}</div>
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+            >
+              {actionError}
+            </div>
           ) : null}
           {items ? (
-            <KeysTable items={items} onRevoke={onRevokeRequested} revokingId={revokingId} />
+            <KeysTable
+              items={items}
+              onRevoke={onRevokeRequested}
+              revokingId={revokingId}
+            />
           ) : (
-            <div className="text-sm text-gray-600">{loading ? "Loading…" : ""}</div>
+            <div className="text-sm text-gray-600">
+              {loading ? "Loading…" : ""}
+            </div>
           )}
         </section>
       </div>
+
+      <CreateApiKeyDialog
+        isOpen={createKeyDialogOpen}
+        onClose={() => setCreateKeyDialogOpen(false)}
+        onCreated={onCreated}
+        tenantId={tenantId}
+        existingNames={(items || [])
+          .map((it) => (it.name || "").trim())
+          .filter(Boolean)}
+      />
 
       <RevokeDialog
         open={Boolean(confirm)}

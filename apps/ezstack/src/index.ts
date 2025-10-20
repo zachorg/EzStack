@@ -6,7 +6,6 @@ import redis from "./plugins/redis.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
-import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
 import apikeyRoutes from "./routes/apikeys.js";
 
@@ -35,14 +34,13 @@ await app.register(fastifyCors, {
 await app.register(redis);
 await app.register(errors);
 await app.register(tenantSettings);
-await app.register(secrets);
 await app.register(firebase);
 await app.register(fastifyRateLimit, { global: false });
 await app.register(rl);
 await app.register(auth);
 
 // Business routes
-await app.register(apikeyRoutes, { prefix: "/v1/apikeys" });
+await app.register(apikeyRoutes, { prefix: "/api/v1/keys" });
 
 // Startup log to aid operational visibility
 app.log.info({

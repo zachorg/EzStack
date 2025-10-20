@@ -1,3 +1,5 @@
+"use client";
+
 // Semantic wrapper for page sections to keep spacing and headings consistent.
 import { ReactNode } from "react";
 

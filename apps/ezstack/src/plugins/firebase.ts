@@ -1,56 +1,41 @@
 import fp from "fastify-plugin";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
 import { join } from "path";
 
 export default fp(async (app: any) => {
-  // Try environment variable first, then fall back to service account file
+  // Read Firebase service account from file
+  const serviceAccountPath = join(process.cwd(), 'secrets', 'ezstack-service-account.json');
   let serviceAccountJson;
   
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    try {
-      serviceAccountJson = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    } catch (error) {
-      throw new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_KEY JSON: ${error instanceof Error ? error.message : String(error)}. Please ensure it's a valid JSON string.`);
-    }
-  } else {
-    // Try to read from service account file
-    const serviceAccountPath = join(process.cwd(), 'secrets', 'ezstack-service-account.json');
-    try {
-      const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8');
-      serviceAccountJson = JSON.parse(serviceAccountFile);
-    } catch (error) {
-      throw new Error(`Failed to read Firebase service account from ${serviceAccountPath}: ${error instanceof Error ? error.message : String(error)}. Please ensure the file exists and contains valid JSON, or set FIREBASE_SERVICE_ACCOUNT_KEY environment variable.`);
-    }
+  try {
+    const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8');
+    serviceAccountJson = JSON.parse(serviceAccountFile);
+  } catch (error) {
+    throw new Error(`Failed to read Firebase service account from ${serviceAccountPath}: ${error instanceof Error ? error.message : String(error)}. Please ensure the file exists and contains valid JSON.`);
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccountJson.project_id;
-  
-  if (!projectId) {
-    throw new Error("FIREBASE_PROJECT_ID environment variable or project_id in service account file is required");
-  }
-
-  // Initialize Firebase Admin (avoid duplicate initialization)
-  let firebaseApp;
-  if (getApps().length === 0) {
-    firebaseApp = initializeApp({
-      credential: cert(serviceAccountJson),
-      projectId: projectId,
-    });
-  } else {
-    firebaseApp = getApps()[0];
-  }
+  // Initialize Firebase Admin with service account credentials
+  const firebaseApp = initializeApp({
+    credential: cert(serviceAccountJson),
+    projectId: serviceAccountJson.project_id,
+  });
 
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
 
-  app.decorate("firebase", { auth, db, app: firebaseApp });
+  if(!auth || !db) {
+    throw new Error("Failed to initialize Firebase Admin");
+  }
+
+  app.decorate("firebase", { auth, db });
 
   app.decorate("introspectIdToken", async (token: string) => {
     try {
-      const decodedToken = await auth.verifyIdToken(token);
+      const authToken = token.startsWith("Bearer ") ? token.slice(7).trim() : token;
+      const decodedToken = await auth.verifyIdToken(authToken);
       const uid = decodedToken.uid;
       const email = decodedToken.email;
       const emailVerified = decodedToken.email_verified || false;
@@ -91,7 +76,7 @@ export default fp(async (app: any) => {
 
       return { uid, email, emailVerified, user, plan };
     } catch (error) {
-      throw new Error(`Invalid Firebase ID token: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Invalid Firebase ID token (${token}): ${error instanceof Error ? error.message : String(error)}`);
     }
   });
 
