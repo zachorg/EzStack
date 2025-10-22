@@ -74,10 +74,12 @@ export default function CreateApiKeyDialog({
     .map((n) => n.trim().toLowerCase())
     .filter(Boolean);
   const trimmed = name.trim();
+  const hasSpaces = trimmed.includes(' ');
+  const isEmpty = trimmed.length === 0;
   const isDuplicate = trimmed
     ? normalizedExisting.includes(trimmed.toLowerCase())
     : false;
-  const canSubmit = !submitting && !isDuplicate && tenantId;
+  const canSubmit = !submitting && !isDuplicate && !hasSpaces && !isEmpty && tenantId;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,11 +163,21 @@ export default function CreateApiKeyDialog({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       maxLength={120}
-                      aria-invalid={isDuplicate}
+                      aria-invalid={isDuplicate || hasSpaces || isEmpty}
                       placeholder="e.g., CI Deploy Key"
                       disabled={submitting}
                       className="appearance-none relative block w-full px-4 py-3 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent focus:z-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     />
+                    {isEmpty && trimmed.length === 0 && name.length > 0 && (
+                      <p className="mt-1 text-xs text-red-400">
+                        Name cannot be empty
+                      </p>
+                    )}
+                    {hasSpaces && (
+                      <p className="mt-1 text-xs text-red-400">
+                        Name cannot contain spaces
+                      </p>
+                    )}
                     {isDuplicate && (
                       <p className="mt-1 text-xs text-red-400">
                         This name is already used
