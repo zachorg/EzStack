@@ -3,7 +3,8 @@ import fastifyCors from "@fastify/cors";
 import fastifyRateLimit from "@fastify/rate-limit";
 import auth from "./plugins/auth.js";
 import redis from "./plugins/redis.js";
-import sqs from "./plugins/sqs.js";
+// import sqs from "./plugins/sqs.js";
+import sns from "./plugins/sns.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
@@ -18,13 +19,13 @@ const app = Fastify({
     level: "info",
     redact: {
       paths: ["destination", "body.destination", "req.body.destination"],
-      censor: "[REDACTED]"
-    }
-  }
+      censor: "[REDACTED]",
+    },
+  },
 });
 
 await app.register(fastifyCors, {
-  origin: process.env.CORS_ORIGIN === "true" ? true : (process.env.CORS_ORIGIN || false),
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
@@ -36,21 +37,15 @@ await app.register(tenantSettings);
 await app.register(secrets);
 await app.register(firebase);
 await app.register(email);
+await app.register(sns);
 await app.register(fastifyRateLimit, { global: false });
 await app.register(rl);
 await app.register(auth);
 
-const SQS_ENABLE = process.env.SQS_ENABLE;
-if (SQS_ENABLE === "true" || (process.env.AWS_SQS_ENDPOINT && SQS_ENABLE !== "false")) {
-  await app.register(sqs);
-}
-
-await app.register(otpRoutes, { prefix: "/v1/otp" });
-await app.register(oteRoutes, { prefix: "/v1/ote" });
+await app.register(otpRoutes, { prefix: "api/v1/otp" });
+await app.register(oteRoutes, { prefix: "api/v1/ote" });
 
 // Start server
-const port = Number(process.env.PORT || 8080);
+const port = Number(process.env.PORT_EZAUTH || 8081);
 app.log.info({ port }, "Starting EzAuth service");
 await app.listen({ host: "0.0.0.0", port });
-
-

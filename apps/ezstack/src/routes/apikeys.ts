@@ -74,6 +74,8 @@ const routes: FastifyPluginAsync = async (app) => {
       const hashedKey = await hashWithArgon2id(key, salt, app.apikeyPepper);
       const lookupHash = hashApiKey(key, app.apikeyPepper);
 
+      console.log("key: ", key, " pepper: ", app.apikeyPepper, " lookupHash: ", lookupHash);
+
       let keyMaterialEnc: string | undefined;
       if (demo && process.env.DEMO_ENCRYPT_ENABLED === "true") {
         const kmsResource = process.env.KMS_KEY_RESOURCE;

@@ -520,11 +520,11 @@ export default function AccountPage() {
   } = useUserProfile();
 
   // Redirect to homepage if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // useEffect(() => {
+  //   if (!isLoading && !isAuthenticated) {
+  //     router.push("/");
+  //   }
+  // }, [isAuthenticated, isLoading, router]);
 
   // Set tenant ID when profile changes
   useEffect(() => {

@@ -22,8 +22,8 @@ const app = Fastify({
 });
 
 await app.register(fastifyCors, {
-  origin: process.env.CORS_ORIGIN === "true" ? true : (process.env.CORS_ORIGIN || false),
-  credentials: true,
+  origin: true, // Accept any origin
+  credentials: true, // Allow credentials
   allowedHeaders: ["Content-Type", "Authorization"],
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
 });
@@ -42,10 +42,15 @@ await app.register(auth);
 // Business routes
 await app.register(apikeyRoutes, { prefix: "/api/v1/keys" });
 
+app.apikeyPepper = (process.env.FASTIFY_PUBLIC_APIKEY_PEPPER || "").trim();
+if (!app.apikeyPepper) {
+  throw new Error("API key pepper not configured. Set FASTIFY_PUBLIC_APIKEY_PEPPER to a secret ID, a GSM resource (projects/.../secrets/...), or a dev literal.");
+}
+
 // Startup log to aid operational visibility
 app.log.info({
   env: process.env.NODE_ENV || "development",
-  port: Number(process.env.PORT || 8080),
+  port: Number(process.env.PORT_EZSTACK || 8080),
   cors: process.env.CORS_ORIGIN || false
 }, "Starting EzStack API server");
 

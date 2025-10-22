@@ -4,6 +4,21 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { readFileSync } from "fs";
 import { join } from "path";
+import argon2 from "argon2";
+import { hashApiKey } from "../utils/crypto.js";
+
+const ARGON_PARAMS = {
+  type: argon2.argon2id,
+  memoryCost: 19456,
+  timeCost: 2,
+  parallelism: 1,
+  hashLength: 32,
+};
+
+async function hashWithArgon2id(plaintext: string, saltB64: string, pepper: string): Promise<string> {
+  const salt = Buffer.from(saltB64, "base64");
+  return argon2.hash(`${pepper}${plaintext}`, { ...ARGON_PARAMS, salt });
+}
 
 export default fp(async (app: any) => {
   // Read Firebase service account from file
@@ -39,69 +54,29 @@ export default fp(async (app: any) => {
 
   app.decorate("firebase", { auth, db, app: firebaseApp });
 
-  app.decorate("introspectIdToken", async (token: string) => {
+  app.decorate("introspectApiKey", async (apiKey: string) => {
     try {
-      const decodedToken = await auth.verifyIdToken(token);
-      const uid = decodedToken.uid;
-      const email = decodedToken.email;
-      const emailVerified = decodedToken.email_verified || false;
-
-      let user: any;
-      let plan: any;
-
-      try {
-        // Get user document from Firestore
-        const userDoc = await db.collection("users").doc(uid).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          user = { 
-            uid: userData?.id || uid, 
-            status: userData?.status || "active", 
-            planId: userData?.plan_id, 
-            featureFlags: userData?.feature_flags || {} 
-          };
-
-          // Get plan if user has one
-          if (userData?.plan_id) {
-            const planDoc = await db.collection("plans").doc(userData.plan_id).get();
-            if (planDoc.exists) {
-              const planData = planDoc.data();
-              plan = { 
-                planId: planData?.id || userData.plan_id, 
-                name: planData?.name, 
-                limits: planData?.limits || {}, 
-                features: planData?.features || {} 
-              };
-            }
-          }
-        }
-      } catch (error) {
-        // Log error but don't fail authentication
-        app.log.warn({ error, uid }, "Failed to fetch user data from Firestore");
-      }
-
-      return { uid, email, emailVerified, user, plan };
-    } catch (error) {
-      throw new Error(`Invalid Firebase ID token: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  });
-
-  app.decorate("introspectApiKey", async (hash: string) => {
-    try {
+      const lookupHash = hashApiKey(apiKey, app.apikeyPepper);
+      
+      console.log("apiKey", apiKey, "app.apikeyPepper", app.apikeyPepper, "lookupHash", lookupHash);
       const keyDoc = await db.collection("api_keys")
-        .where("hash", "==", hash)
-        .where("status", "==", "active")
-        .limit(1)
-        .get();
-
+      .where("hash", "==", lookupHash)
+      .where("status", "==", "active")
+      .limit(1)
+      .get();
+      
       if (keyDoc.empty) {
         return null;
       }
-
+      
       const keyData = keyDoc.docs[0].data();
-      const userId = keyData.user_id;
-
+      const hashedKey = await hashWithArgon2id(apiKey, keyData.salt, app.apikeyPepper);
+      if (hashedKey !== keyData.hashed_key) {
+        return null;
+      }
+      
       // Get user data
+      const userId = keyData.user_id;
       const userDoc = await db.collection("users").doc(userId).get();
       if (!userDoc.exists) {
         return null;
@@ -109,10 +84,10 @@ export default fp(async (app: any) => {
 
       const userData = userDoc.data();
       const user = { 
-        uid: userData?.id || userId, 
-        status: userData?.status || "active", 
-        planId: userData?.plan_id, 
-        featureFlags: userData?.feature_flags || {} 
+        uid: userData?.id || null, 
+        status: userData?.status || "inactive", 
+        planId: userData?.plan_id || null, 
+        featureFlags: userData?.feature_flags || null
       };
 
       let plan: any;
@@ -138,7 +113,7 @@ export default fp(async (app: any) => {
         lastUsed: keyData.last_used
       };
     } catch (error) {
-      app.log.error({ error, hash }, "Failed to introspect API key");
+      app.log.error({ error, apiKey }, "Failed to introspect API key");
       return null;
     }
   });
