@@ -15,11 +15,7 @@ export default fp(async (app) => {
       return;
     }
 
-    const authzHeader = req.headers?.["authorization"] as string;
-    const apiKey = authzHeader.startsWith("Bearer ")
-      ? authzHeader.slice(7).trim()
-      : null;
-
+    const apiKey = req.headers ? req.headers["eza-api-key"] as string : null;
     if (apiKey !== null) {
       try {
         req.log.info(

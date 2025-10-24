@@ -2,7 +2,7 @@
 // NOTE: Do not log or persist plaintext API keys. Only use keyPrefix beyond creation.
 
 import { auth } from "@/lib/firebase/client";
-import { forward_api_keys } from "../functions-proxy";
+import { foward_req_to_ezstack_api } from "../functions-proxy";
 
 export type ApiErrorEnvelope = { error?: { message?: string } };
 
@@ -35,8 +35,7 @@ export async function getIdToken(): Promise<string | null> {
   }
 }
 
-async function apiFetch<T>(
-  tenantId: string,
+export async function ezstack_api_fetch<T>(
   reqPath: string,
   init?: RequestInit
 ): Promise<T> {
@@ -51,8 +50,8 @@ async function apiFetch<T>(
     },
     cache: "no-store",
   };
-  console.log("🔑 request: ", JSON.stringify(req, null, 2));
-  const res = await forward_api_keys(reqPath, req);
+  // console.log("🔑 request: ", JSON.stringify(req, null, 2));
+  const res = await foward_req_to_ezstack_api(reqPath, req);
   const text = await res.text();
   let data: unknown = undefined;
   try {
@@ -71,29 +70,27 @@ async function apiFetch<T>(
 }
 
 export const api = {
-  get<T>(tenantId: string, path: string, headers?: HeaderMap): Promise<T> {
-    return apiFetch<T>(tenantId, path, { method: "GET", headers });
+  get<T>(path: string, headers?: HeaderMap): Promise<T> {
+    return ezstack_api_fetch<T>(path, { method: "GET", headers });
   },
   post<T>(
-    tenantId: string,
     path: string,
     body?: Json,
     headers?: HeaderMap
   ): Promise<T> {
-    return apiFetch<T>(tenantId, path, {
+    return ezstack_api_fetch<T>(path, {
       method: "POST",
       body: JSON.stringify(body ?? {}),
       headers,
     });
   },
   delete<T>(
-    tenantId: string,
     path: string,
     body?: Json,
     headers?: HeaderMap
   ): Promise<T> {
     // Next.js route supports DELETE with a JSON body
-    return apiFetch<T>(tenantId, path, {
+    return ezstack_api_fetch<T>(path, {
       method: "DELETE",
       body: JSON.stringify(body ?? {}),
       headers,

@@ -7,7 +7,6 @@ export type TimestampLike =
   | null;
 
 export type CreateApiKeyRequest = {
-  tenantId: string;
   name?: string;
 };
 
@@ -36,14 +35,13 @@ export type RevokeApiKeyResponse = { ok: true; deleted: true };
 
 export const apiKeys = {
   create(input: CreateApiKeyRequest) {
-    return api.post<CreateApiKeyResponse>(input.tenantId, "/api/v1/keys/create", input);
+    return api.post<CreateApiKeyResponse>("/api/v1/keys/create", input);
   },
-  list(tenantId: string) {
-    return api.get<ListApiKeysResponse>(tenantId, `/api/v1/keys/list`);
+  list() {
+    return api.get<ListApiKeysResponse>(`/api/v1/keys/list`);
   },
-  revoke(id: string, tenantId?: string) {
+  revoke(id: string) {
     return api.post<RevokeApiKeyResponse>(
-      tenantId || "",
       "/api/v1/keys/revoke", 
       { id }
     );

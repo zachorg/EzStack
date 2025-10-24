@@ -2,27 +2,52 @@
 
 import Link from "next/link";
 import { useEffect, Suspense, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { AuroraBackground } from "./components/aurora-background";
-import { CodeExample } from "./components/code-example";
-import { BentoGrid } from "./components/bento-grid";
-import { Section } from "./components/section";
-import { CtaBand } from "./components/cta-band";
-import LoginDialog from "./components/LoginDialog";
+import { useRouter } from "next/navigation";
+import { useSidebar } from "../components/SidebarProvider";
+import { AuroraBackground } from "../components/aurora-background";
+import { CodeExample } from "../components/code-example";
+import { BentoGrid } from "../components/bento-grid";
+import { Section } from "../components/section";
+import { CtaBand } from "../components/cta-band";
+import { FeaturesBentoGrid } from "../components/features-bento-grid";
+import { useIsAuthenticated } from "../components/AuthProvider";
+import { useLoginDialog } from "../components/LoginDialogProvider";
 
 function HomeContent() {
-  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const isAuthenticated = useIsAuthenticated();
+  const { setSections } = useSidebar();
+  const { openDialog } = useLoginDialog();
 
-  // Check for login query parameter to auto-open dialog
+  // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (searchParams.get("login") === "true") {
-      setIsLoginDialogOpen(true);
-      // Clear the URL parameters after opening the dialog
-      router.replace("/");
+    if(isAuthenticated) {
+      router.push("/home");
     }
-  }, [searchParams, router]);
+  }, [router, isAuthenticated]);
+
+  // Set sidebar sections for main page
+  useEffect(() => {
+    const mainSections = [
+      {
+        title: "",
+        items: [
+          {
+            id: "home",
+            name: "Home",
+            href: "/",
+            icon: (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            ),
+          }
+        ],
+      },
+    ];
+    
+    setSections(mainSections);
+  }, [setSections]);
   
   return (
     <div className="relative font-sans space-y-16">
@@ -36,12 +61,12 @@ function HomeContent() {
           limits, and tenant-aware plans. Add EzPayments, EzAnalytics as you grow.
         </p>
         <div className="flex gap-3 justify-center sm:justify-start">
-          <button
-            onClick={() => setIsLoginDialogOpen(true)}
+        {!isAuthenticated && <button
+            onClick={openDialog}
             className="rounded-full border border-transparent bg-foreground text-background px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#383838] dark:hover:bg-[#ccc]"
           >
             Sign in
-          </button>
+          </button>}
           <Link
             href="/docs"
             className="rounded-full border border-black/[.08] dark:border-white/[.145] px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a]"
@@ -87,22 +112,12 @@ function HomeContent() {
       </Section>
 
       <Section title="Why EzStack">
-        <ul className="grid gap-2 sm:grid-cols-2 text-sm">
-          <li>OTP/OTE in one call</li>
-          <li>Idempotent sends</li>
-          <li>Per-destination rate limits</li>
-          <li>Standardized errors with Retry-After</li>
-          <li>Tenant-aware plans</li>
-        </ul>
+        <FeaturesBentoGrid />
       </Section>
 
-      <CtaBand />
+      {!isAuthenticated && <CtaBand />}
 
       {/* Login Dialog */}
-      <LoginDialog 
-        isOpen={isLoginDialogOpen} 
-        onClose={() => setIsLoginDialogOpen(false)}
-      />
     </div>
   );
 }
@@ -110,7 +125,9 @@ function HomeContent() {
 export default function Home() {
   return (
     <Suspense fallback={<div className="relative font-sans space-y-16"><AuroraBackground /></div>}>
-      <HomeContent />
+      <div className="min-h-full p-6">
+        <HomeContent />
+      </div>
     </Suspense>
   );
 }

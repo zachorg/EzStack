@@ -79,7 +79,7 @@ function useKeys() {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiKeys.list(user?.uid ?? "");
+      const res = await apiKeys.list();
       setItems(res.items ?? []);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load";
@@ -565,7 +565,7 @@ export default function AccountPage() {
     setActionError(null);
     setRevokingId(confirm.id);
     try {
-      await apiKeys.revoke(confirm.id, tenantId);
+      await apiKeys.revoke(confirm.id);
       setConfirm(null);
       await reload();
     } catch (err) {

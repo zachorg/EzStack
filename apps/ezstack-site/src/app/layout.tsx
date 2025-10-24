@@ -1,20 +1,19 @@
 "use client";
 
-import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
+import { Inter } from "next/font/google";
 import { useEffect } from "react";
 import "./globals.css";
-import AuthHeader from "./components/AuthHeader";
 import { AuthProvider } from "./components/AuthProvider";
+import { SidebarProvider } from "./components/SidebarProvider";
+import { Sidebar } from "./components/Sidebar";
+import { Taskbar } from "./components/Taskbar";
+import { TaskbarProvider } from "./components/TaskbarProvider";
+import { LoginDialogProvider } from "./components/LoginDialogProvider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export default function RootLayout({
@@ -27,7 +26,10 @@ export default function RootLayout({
     document.title = "EzStack Console";
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
-      metaDescription.setAttribute("content", "Manage EzAuth OTP/OTE and settings");
+      metaDescription.setAttribute(
+        "content",
+        "Manage EzAuth OTP/OTE and settings"
+      );
     } else {
       const meta = document.createElement("meta");
       meta.name = "description";
@@ -36,34 +38,41 @@ export default function RootLayout({
     }
   }, []);
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
+        className={`${inter.variable} font-sans antialiased h-full`}
+        style={{
+          background: "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
+        }}
       >
         <AuthProvider>
-          <div className="p-4">
-            <div className="max-w-6xl mx-auto flex items-center justify-between">
-              <Link href="/" className="font-semibold">EzStack</Link>
-              <div className="flex items-center gap-2">
-                <nav className="hidden sm:flex gap-2">
-                  <Link 
-                    href="/docs" 
-                    className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out"
-                  >
-                    Docs
-                  </Link>
-                  {/* <Link 
-                    href="/analytics" 
-                    className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out"
-                  >
-                    Analytics
-                  </Link> */}
-                </nav>
-                <AuthHeader />
-              </div>
-            </div>
-          </div>
-          <div className="max-w-6xl mx-auto p-6">{children}</div>
+          <LoginDialogProvider>
+            <SidebarProvider>
+              <TaskbarProvider>
+                <div className="flex h-full">
+                  {/* Sidebar */}
+                  <Sidebar />
+
+                  {/* Main Content Area */}
+                  <div className="flex-1 flex flex-col min-h-0 ml-12">
+                    {/* Taskbar */}
+                    <Taskbar />
+
+                    {/* Page Content */}
+                    <div
+                      className="flex-1 overflow-auto min-h-0 scrollbar-hide"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
+                      }}
+                    >
+                      {children}
+                    </div>
+                  </div>
+                </div>
+              </TaskbarProvider>
+            </SidebarProvider>
+          </LoginDialogProvider>
         </AuthProvider>
       </body>
     </html>

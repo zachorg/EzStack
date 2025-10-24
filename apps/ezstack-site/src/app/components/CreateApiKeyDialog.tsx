@@ -90,7 +90,6 @@ export default function CreateApiKeyDialog({
     
     try {
       const payload: CreateApiKeyRequest = {
-        tenantId: tenantId!,
         name: trimmed ? trimmed.slice(0, 120) : undefined,
       };
       

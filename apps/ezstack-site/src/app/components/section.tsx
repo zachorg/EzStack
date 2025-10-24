@@ -14,8 +14,8 @@ export function Section({ title, description, children, className }: SectionProp
   return (
     <section className={className}>
       <div className="space-y-2 mb-4">
-        <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
-        {description && <p className="text-foreground/75 max-w-2xl">{description}</p>}
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-200">{title}</h2>
+        {description && <p className="text-gray-400 max-w-2xl">{description}</p>}
       </div>
       {children}
     </section>
