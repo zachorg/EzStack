@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { UserProfileDescriptor } from "../types/user";
+import { UserProfileDocument } from "../__generated__/documentTypes";
 
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
@@ -35,15 +35,16 @@ const routes: FastifyPluginAsync = async (app) => {
           email: email,
           status: "active",
           projects: {},
-          created_at: new Date(),
-          updated_at: new Date(),
-        } as UserProfileDescriptor);
+          created_at: new Date().toLocaleDateString(),
+          updated_at: new Date().toLocaleDateString(),
+          last_login: new Date().toLocaleDateString(),
+        } as UserProfileDocument);
       } else {
         // Update existing user
         await userRef.update({
-          updated_at: new Date(),
-          last_login: new Date(),
-        });
+          updated_at: new Date().toLocaleDateString(),
+          last_login: new Date().toLocaleDateString(),
+        } as Pick<UserProfileDocument, 'updated_at' | 'last_login'>);
       }
 
       return rep.status(200).send({

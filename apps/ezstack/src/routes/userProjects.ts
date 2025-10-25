@@ -1,8 +1,13 @@
 import type { FastifyPluginAsync } from "fastify";
+import { CreateProjectRequest } from "../__generated__/requestTypes";
 import {
-  CreateProjectDescriptor,
-  ProjectDescriptor,
-} from "../types/user";
+  UserProfileDocument,
+  UserProjectDocument,
+} from "../__generated__/documentTypes";
+import {
+  ListUserProjectsResponse,
+  UserProjectResponse,
+} from "../__generated__/responseTypes";
 
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
@@ -30,34 +35,35 @@ const routes: FastifyPluginAsync = async (app) => {
         const userRef = db.collection("users").doc(userId);
         const userDoc = await userRef.get();
 
-        const body = req.body as CreateProjectDescriptor;
+        if (!userDoc.exists) {
+          return rep.status(404).send({ error: { message: "User not found" } });
+        }
+
+        const body = req.body as CreateProjectRequest;
         const projects =
-          userDoc.data()?.projects ?? ([] as string[]);
-        if (projects.includes(body.name)) {
+          userDoc.data()?.projects ?? ({} as Record<string, string>);
+        if (projects[body.name]) {
           return rep
             .status(400)
             .send({ error: { message: "Project already exists" } });
         }
         const projectId = crypto.randomUUID();
-        projects.push(projectId);
+        projects[body.name] = projectId;
 
         const projectDoc = db.collection("projects").doc(projectId);
         await projectDoc.set({
           id: projectId,
           name: body.name,
-          created_at: new Date(),
-          updated_at: new Date(),
-        } as ProjectDescriptor);
+          created_at: new Date().toLocaleDateString(),
+          updated_at: new Date().toLocaleDateString(),
+          api_keys: [],
+        } as UserProjectDocument);
 
-        if (!userDoc.exists) {
-          return rep.status(404).send({ error: { message: "User not found" } });
-        } else {
-          // Update existing user
-          await userRef.update({
-            updated_at: new Date(),
-            projects: projects,
-          });
-        }
+        // Update existing user
+        await userRef.update({
+          updated_at: new Date().toLocaleDateString(),
+          projects: projects,
+        } as Pick<UserProfileDocument, "updated_at" | "projects">);
 
         return rep.status(200).send({
           ok: true,
@@ -93,43 +99,38 @@ const routes: FastifyPluginAsync = async (app) => {
         const userRef = db.collection("users").doc(userId);
         const userDoc = await userRef.get();
 
-        const projects =
-          userDoc.data()?.projects ?? ([] as string[]);
+        const projects = userDoc.data()?.projects ?? ([] as string[]);
         // Fetch all project documents and await them
         const projectList = await Promise.all(
           projects.map(async (projectId: string) => {
-            const projectDoc = await db.collection("projects").doc(projectId).get();
-            return projectDoc.exists ? projectDoc.data() as ProjectDescriptor : null;
+            const projectDoc = await db
+              .collection("projects")
+              .doc(projectId)
+              .get();
+            return projectDoc.exists
+              ? (projectDoc.data() as UserProjectDocument)
+              : null;
           })
         );
-        
+
         // Filter out null values (projects that don't exist)
-        const validProjects = projectList.filter(p => p !== null) as ProjectDescriptor[];
+        const validProjects = projectList.filter(
+          (p) => p !== null
+        ) as UserProjectDocument[];
         const responseProjects = await Promise.all(
-            validProjects.map(async (project: ProjectDescriptor) => {
-              // Convert Firestore timestamps to formatted date strings
-              const formatDate = (date: any) => {
-                if (date instanceof Date) {
-                  return date.toLocaleDateString();
-                } else if (date && typeof date === 'object' && date.seconds) {
-                  return new Date(date.seconds * 1000).toLocaleDateString();
-                } else {
-                  return new Date().toLocaleDateString(); // fallback
-                }
-              };
-              
-              return { 
-                name: project.name, 
-                created_at: formatDate(project.created_at), 
-                updated_at: formatDate(project.updated_at) 
-              };
-            })
-          );
+          validProjects.map(async (project: UserProjectDocument) => {
+            return {
+              name: project.name,
+              created_at: project.created_at,
+              updated_at: project.updated_at,
+              api_keys: project.api_keys,
+            } as UserProjectResponse;
+          })
+        );
 
         return rep.status(200).send({
-          ok: true,
-          projects: responseProjects,
-        });
+          projects: responseProjects as UserProjectResponse[],
+        } as ListUserProjectsResponse);
       } catch (err: any) {
         const isDev = process.env.NODE_ENV !== "production";
         const detail = err instanceof Error ? err.message : String(err);

@@ -9,6 +9,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Taskbar } from "./components/Taskbar";
 import { TaskbarProvider } from "./components/TaskbarProvider";
 import { LoginDialogProvider } from "./components/LoginDialogProvider";
+import { ProjectsProvider } from "./components/ProjectsProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -47,31 +48,33 @@ export default function RootLayout({
       >
         <AuthProvider>
           <LoginDialogProvider>
-            <SidebarProvider>
-              <TaskbarProvider>
-                <div className="flex h-full">
-                  {/* Sidebar */}
-                  <Sidebar />
+            <ProjectsProvider>
+              <SidebarProvider>
+                <TaskbarProvider>
+                  <div className="flex h-full">
+                    {/* Sidebar */}
+                    <Sidebar />
 
-                  {/* Main Content Area */}
-                  <div className="flex-1 flex flex-col min-h-0 ml-12">
-                    {/* Taskbar */}
-                    <Taskbar />
+                    {/* Main Content Area */}
+                    <div className="flex-1 flex flex-col min-h-0 ml-12">
+                      {/* Taskbar */}
+                      <Taskbar />
 
-                    {/* Page Content */}
-                    <div
-                      className="flex-1 overflow-auto min-h-0 scrollbar-hide"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
-                      }}
-                    >
-                      {children}
+                      {/* Page Content */}
+                      <div
+                        className="flex-1 overflow-auto min-h-0 scrollbar-hide"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
+                        }}
+                      >
+                        {children}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </TaskbarProvider>
-            </SidebarProvider>
+                </TaskbarProvider>
+              </SidebarProvider>
+            </ProjectsProvider>
           </LoginDialogProvider>
         </AuthProvider>
       </body>

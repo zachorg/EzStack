@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, Suspense, useState } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "../components/SidebarProvider";
 import { AuroraBackground } from "../components/aurora-background";

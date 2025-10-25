@@ -7,7 +7,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 export default function ApiKeysPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [apiKeys, setApiKeys] = useState([
+  const [apiKeys] = useState([
     {
       id: 1,
       name: "Production Key",

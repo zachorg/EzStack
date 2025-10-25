@@ -18,7 +18,7 @@ try {
     try {
       const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8');
       serviceAccountJson = JSON.parse(serviceAccountFile);
-    } catch (error) {
+    } catch (_error) {
       // If file doesn't exist, continue with mock objects for build-time
       const errorString = `Firebase Admin configuration not found at ${serviceAccountPath}. Some features may not work.`;
       console.error(errorString);

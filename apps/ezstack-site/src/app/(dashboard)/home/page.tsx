@@ -1,26 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useSidebar } from "@/app/components/SidebarProvider";
 import CreateProjectDialog from "@/app/components/CreateProjectDialog";
 import { ezstack_api_fetch } from "@/lib/api/client";
-import { NextResponse } from "next/server";
-
-interface ProjectDescriptor {
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ProjectsResponse {
-  ok: boolean;
-  projects: ProjectDescriptor[];
-}
+import { UserProjectResponse } from "@/__generated__/responseTypes";
+import { useProjects } from "@/app/components/ProjectsProvider";
 
 // Project Card Component
-function ProjectCard({ project }: { project: ProjectDescriptor }) {
+function ProjectCard({ project }: { project: UserProjectResponse }) {
   return (
     <button className="w-full h-24 p-4 bg-gray-800/50 hover:bg-gray-800/70 rounded-lg border border-gray-700/50 transition-all duration-300 text-left group hover:scale-105 hover:shadow-lg">
       <div className="flex flex-col justify-between h-full">
@@ -42,45 +32,26 @@ function ProjectCard({ project }: { project: ProjectDescriptor }) {
 // Document Components
 function ProjectDocument() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [projects, setProjects] = useState<ProjectDescriptor[]>([]);
+  const [projects, setProjects] = useState<UserProjectResponse[]>([]);
+  const { fetchedProjects } = useProjects();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch projects when user is authenticated - only once when page loads
   useEffect(() => {
     const fetchProjects = async () => {  
-      try {
-        setIsLoading(true);
-        setError(null);
-  
-        const response = await ezstack_api_fetch<ProjectsResponse>(
-          "/api/v1/userProjects/list",
-          {
-            method: "POST",
-            body: JSON.stringify({}),
-          }
-        );
-  
-        if (response.ok && response.projects) {
-          console.log("response.projects", JSON.stringify(response.projects));
-          setProjects(response.projects as ProjectDescriptor[]);
-        } else {
-          setError("Failed to fetch projects");
-        }
-      } catch (err) {
-        console.error("Error fetching projects:", err);
-        setError("Failed to fetch projects");
-      } finally {
+      if (fetchedProjects) {
+        setProjects(fetchedProjects.projects);
         setIsLoading(false);
       }
     };
 
     fetchProjects();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [fetchedProjects]); // Empty dependency array ensures this runs only once on mount
 
   const handleCreateProject = async (projectData: { name: string }) => {
     try {
-      const response = await ezstack_api_fetch<ProjectsResponse>(
+      await ezstack_api_fetch<null>(
         "/api/v1/userProjects/create",
         {
           method: "POST",
@@ -88,19 +59,15 @@ function ProjectDocument() {
         }
       );
 
-      if (response.ok) {
-        setProjects([
-          ...projects,
-          {
-            name: projectData.name,
-            created_at: new Date().toLocaleDateString(),
-            updated_at: new Date().toLocaleDateString(),
-          },
-        ]);
-      } else {
-        console.error("Failed to create project:", response);
-        setError("Failed to create project");
-      }
+      setProjects([
+        ...projects,
+        {
+          name: projectData.name,
+          api_keys: [],
+          created_at: new Date().toLocaleDateString(),
+          updated_at: new Date().toLocaleDateString(),
+        },
+      ]);
     } catch (err) {
       console.error("Error creating project:", err);
       setError("Failed to create project");
