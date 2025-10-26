@@ -121,15 +121,15 @@ echo ""
 echo "=== Checking for Errors in Logs ==="
 error_count=0
 
-if docker logs ezstack 2>&1 | grep -i "error" | grep -v "ErrorHandler" | head -5; then
+if docker logs ezstack 2>&1 | grep -i "error" | grep -v "ErrorHandler" | head -5 | grep .; then
     error_count=$((error_count + 1))
 fi
 
-if docker logs ezauth 2>&1 | grep -i "error" | grep -v "ErrorHandler" | head -5; then
+if docker logs ezauth 2>&1 | grep -i "error" | grep -v "ErrorHandler" | head -5 | grep .; then
     error_count=$((error_count + 1))
 fi
 
-if docker logs ezstack-site 2>&1 | grep -i "error" | head -5; then
+if docker logs ezstack-site 2>&1 | grep -i "error" | head -5 | grep .; then
     error_count=$((error_count + 1))
 fi
 

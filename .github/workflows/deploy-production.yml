@@ -114,7 +114,7 @@ jobs:
         run: |
           # Use production images with production tag
           sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.test.yaml
-          docker-compose -f docker-compose.test.yaml up -d --wait
+          docker compose -f docker-compose.test.yaml up -d --wait
         env:
           COMPOSE_FILE: docker-compose.test.yaml
 
@@ -124,7 +124,7 @@ jobs:
           sleep 15
           
           # Check if containers are running
-          docker-compose -f docker-compose.test.yaml ps
+          docker compose -f docker-compose.test.yaml ps
 
       - name: Run health check tests
         run: |
@@ -146,7 +146,7 @@ jobs:
       - name: Stop test services
         if: always()
         run: |
-          docker-compose -f docker-compose.test.yaml down -v
+          docker compose -f docker-compose.test.yaml down -v
 
       - name: Set up SSH key
         run: |
@@ -174,19 +174,19 @@ jobs:
             echo "${{ secrets.DO_ACCESS_TOKEN }}" | docker login registry.digitalocean.com -u ${{ secrets.DO_ACCESS_TOKEN }} --password-stdin
             
             # Pull latest images
-            docker-compose -f docker-compose.prod.yaml pull
+            docker compose -f docker-compose.prod.yaml pull
             
             # Stop and remove old containers
-            docker-compose -f docker-compose.prod.yaml down
+            docker compose -f docker-compose.prod.yaml down
             
             # Start new containers
-            docker-compose -f docker-compose.prod.yaml up -d
+            docker compose -f docker-compose.prod.yaml up -d
             
             # Wait for services to start
             sleep 10
             
             # Show running containers
-            docker-compose -f docker-compose.prod.yaml ps
+            docker compose -f docker-compose.prod.yaml ps
             
             # Clean up old images
             docker image prune -f
@@ -198,11 +198,11 @@ jobs:
             cd /srv/ezstack
             
             # Check if all containers are running
-            if [ $(docker-compose -f docker-compose.prod.yaml ps -q | wc -l) -eq 4 ]; then
+            if [ $(docker compose -f docker-compose.prod.yaml ps -q | wc -l) -eq 4 ]; then
               echo "All containers are running"
             else
               echo "Some containers failed to start"
-              docker-compose -f docker-compose.prod.yaml ps
+              docker compose -f docker-compose.prod.yaml ps
               exit 1
             fi
           EOF
