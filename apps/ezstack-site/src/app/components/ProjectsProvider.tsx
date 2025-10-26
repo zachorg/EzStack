@@ -115,7 +115,7 @@ export function ProjectsProvider({ children }: ProjectsProviderProps) {
       addNewProject,
       isLoading,
     }),
-    [fetchedProjects, selectedProject, isLoading]
+    [fetchedProjects, selectedProject, setSelectedProject, addNewProject, isLoading]
   );
 
   return (

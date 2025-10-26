@@ -37,10 +37,6 @@ function ProjectDocument() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  if(fetchedProjects) {
-    setIsLoading(false);
-  }
-
   // Fetch projects when user is authenticated - only once when page loads
   useEffect(() => {
     const fetchProjects = async () => {  
@@ -51,7 +47,7 @@ function ProjectDocument() {
     };
 
     fetchProjects();
-  }, [fetchedProjects]); // Empty dependency array ensures this runs only once on mount
+  }, [fetchedProjects]);
 
   const handleCreateProject = async (projectData: { name: string }) => {
     try {

@@ -130,8 +130,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch (err) {
         console.error("Error initializing auth:", err);
         setError("Failed to initialize authentication");
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -169,6 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               setUserProfile(null);
               setIsAuthenticated(false);
             }
+            setIsLoading(false);
           });
         }
       } catch (error) {
