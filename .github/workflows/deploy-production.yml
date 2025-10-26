@@ -1,0 +1,220 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  REGISTRY: registry.digitalocean.com/ezstack
+  DO_HOST: ${{ secrets.DO_HOST }}
+  DO_USER: root
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DigitalOcean Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.digitalocean.com
+          username: ${{ secrets.DO_ACCESS_TOKEN }}
+          password: ${{ secrets.DO_ACCESS_TOKEN }}
+
+      - name: Set version tag
+        id: version
+        run: |
+          VERSION=$(date +%Y%m%d-%H%M%S)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      # Build and tag ezstack-site
+      - name: Build and push ezstack-site
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/ezstack-site
+          file: ./apps/ezstack-site/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/ezstack-site:production
+            ${{ env.REGISTRY }}/ezstack-site:${{ steps.version.outputs.VERSION }}
+          build-args: |
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/ezstack-site:production
+          cache-to: type=inline
+
+      # Build and tag ezstack
+      - name: Build and push ezstack
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/ezstack
+          file: ./apps/ezstack/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/ezstack:production
+            ${{ env.REGISTRY }}/ezstack:${{ steps.version.outputs.VERSION }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/ezstack:production
+          cache-to: type=inline
+
+      # Build and tag ezauth
+      - name: Build and push ezauth
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/ezauth
+          file: ./apps/ezauth/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/ezauth:production
+            ${{ env.REGISTRY }}/ezauth:${{ steps.version.outputs.VERSION }}
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/ezauth:production
+          cache-to: type=inline
+
+      - name: Create test environment file
+        run: |
+          cat > .env.test << EOF
+          PORT_EZSTACK=8080
+          PORT_EZAUTH=8081
+          REDIS_URL=redis://redis:6379
+          NEXT_PUBLIC_FIREBASE_API_KEY=test-key
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID=test-project
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=test.appspot.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456
+          NEXT_PUBLIC_FIREBASE_APP_ID=test-app-id
+          FASTIFY_PUBLIC_APIKEY_PEPPER=test-pepper
+          EMAIL_FROM=test@example.com
+          EMAIL_DRY_RUN=true
+          OTP_DRY_RUN=true
+          NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+          NEXT_PUBLIC_SITE_URL=http://localhost:3000
+          CORS_ORIGIN=http://localhost:3000
+          EOF
+
+      - name: Create minimal test secrets directory
+        run: |
+          mkdir -p secrets
+          echo '{"type":"service_account","project_id":"test"}' > secrets/ezstack-service-account.json
+
+      - name: Start services for testing
+        run: |
+          # Use production images with production tag
+          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.test.yaml
+          docker-compose -f docker-compose.test.yaml up -d --wait
+        env:
+          COMPOSE_FILE: docker-compose.test.yaml
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          sleep 15
+          
+          # Check if containers are running
+          docker-compose -f docker-compose.test.yaml ps
+
+      - name: Run health check tests
+        run: |
+          chmod +x ./scripts/health-check.sh
+          ./scripts/health-check.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== EzStack Logs ==="
+          docker logs ezstack || true
+          echo "=== EzAuth Logs ==="
+          docker logs ezauth || true
+          echo "=== EzStack-Site Logs ==="
+          docker logs ezstack-site || true
+          echo "=== Redis Logs ==="
+          docker logs redis || true
+
+      - name: Stop test services
+        if: always()
+        run: |
+          docker-compose -f docker-compose.test.yaml down -v
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment package
+        run: |
+          # Update docker-compose.prod.yaml to use production tag
+          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.prod.deploy.yaml
+
+      - name: Copy files to server
+        run: |
+          # Copy docker-compose file
+          scp docker-compose.prod.deploy.yaml ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/docker-compose.prod.yaml
+
+      - name: Deploy on server
+        run: |
+          ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
+            cd /srv/ezstack
+            
+            # Log in to DigitalOcean Container Registry
+            echo "${{ secrets.DO_ACCESS_TOKEN }}" | docker login registry.digitalocean.com -u ${{ secrets.DO_ACCESS_TOKEN }} --password-stdin
+            
+            # Pull latest images
+            docker-compose -f docker-compose.prod.yaml pull
+            
+            # Stop and remove old containers
+            docker-compose -f docker-compose.prod.yaml down
+            
+            # Start new containers
+            docker-compose -f docker-compose.prod.yaml up -d
+            
+            # Wait for services to start
+            sleep 10
+            
+            # Show running containers
+            docker-compose -f docker-compose.prod.yaml ps
+            
+            # Clean up old images
+            docker image prune -f
+          EOF
+
+      - name: Verify deployment
+        run: |
+          ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
+            cd /srv/ezstack
+            
+            # Check if all containers are running
+            if [ $(docker-compose -f docker-compose.prod.yaml ps -q | wc -l) -eq 4 ]; then
+              echo "All containers are running"
+            else
+              echo "Some containers failed to start"
+              docker-compose -f docker-compose.prod.yaml ps
+              exit 1
+            fi
+          EOF
+
+      - name: Send deployment notification
+        if: success()
+        run: |
+          echo "Deployment successful! Version: ${{ steps.version.outputs.VERSION }}"
+          echo "Images tagged with: production and ${{ steps.version.outputs.VERSION }}"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
+
