@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { apiKeys, type CreateApiKeyRequest } from "@/lib/api/apikeys";
+import { apiKeys } from "@/lib/api/apikeys";
+import { CreateApiKeyRequest } from "@/__generated__/requestTypes";
 import { ApiError } from "@/lib/api/client";
 
 interface CreateApiKeyDialogProps {
@@ -90,13 +91,13 @@ export default function CreateApiKeyDialog({
     
     try {
       const payload: CreateApiKeyRequest = {
-        tenantId: tenantId!,
-        name: trimmed ? trimmed.slice(0, 120) : undefined,
+        name: trimmed ? trimmed.slice(0, 120) : "",
+        project_name: "@TODO: project name",
       };
       
       const res = await apiKeys.create(payload);
-      setCreatedKey({ key: res.key, keyPrefix: res.keyPrefix });
-      onCreated({ key: res.key, keyPrefix: res.keyPrefix });
+      setCreatedKey({ key: res.id, keyPrefix: res.key_prefix });
+      onCreated({ key: res.id, keyPrefix: res.key_prefix });
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to create key";
       setError(msg);

@@ -1,0 +1,74 @@
+networks:
+  internal:
+    external: false
+
+volumes:
+  redisdata:
+
+services:
+  ezstack-site:
+    image: registry.digitalocean.com/ezstack/ezstack-site:latest
+    container_name: ezstack-site
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Exposed for Cloudflare Tunnel
+    volumes:
+      - ./secrets:/app/secrets:ro
+    environment:
+      NODE_ENV: production
+    depends_on:
+      ezstack:
+        condition: service_started
+    networks:
+      - internal
+  
+  ezstack:
+    image: registry.digitalocean.com/ezstack/ezstack:latest
+    container_name: ezstack
+    restart: unless-stopped
+    ports:
+      - "8080:8080"  # Exposed for Cloudflare Tunnel
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./secrets:/app/secrets:ro
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  ezauth:
+    image: registry.digitalocean.com/ezstack/ezauth:latest
+    container_name: ezauth
+    restart: unless-stopped
+    ports:
+      - "8081:8081"  # Exposed for Cloudflare Tunnel
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./secrets:/app/secrets:ro
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - internal

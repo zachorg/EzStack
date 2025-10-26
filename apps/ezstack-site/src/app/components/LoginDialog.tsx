@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 
 
@@ -11,6 +12,7 @@ interface LoginDialogProps {
 
 export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
   const { login, loginWithGoogle, signup, isLoading, error, clearError } = useAuth();
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,8 +60,9 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
     try {
       setMessage(null);
       await loginWithGoogle();
-      // Close dialog on successful login
+      // Close dialog and redirect to dashboard on successful login
       handleClose();
+      router.push("/home");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
       setMessage(errorMessage);
@@ -71,8 +74,9 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
     try {
       setMessage(null);
       await signup(email.trim(), password);
-      // Close dialog on successful signup
+      // Close dialog and redirect to dashboard on successful signup
       handleClose();
+      router.push("/home");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Signup failed";
       setMessage(errorMessage);
@@ -84,8 +88,9 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
     try {
       setMessage(null);
       await login(email.trim(), password);
-      // Close dialog on successful login
+      // Close dialog and redirect to dashboard on successful login
       handleClose();
+      router.push("/home");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Sign-in failed";
       setMessage(errorMessage);

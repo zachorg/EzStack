@@ -4,7 +4,7 @@ import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 export default fp(async (app) => {
   const fromDefault = process.env.EMAIL_FROM;
   const dryRun = String(process.env.EMAIL_DRY_RUN || "").toLowerCase() === "true"
-    || (!process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_SECRET_ACCESS_KEY && !process.env.AWS_SES_ENDPOINT);
+    || (!process.env.FASTIFY_PUBLIC_AWS_ACCESS_KEY_ID && !process.env.FASTIFY_PUBLIC_AWS_SECRET_ACCESS_KEY && !process.env.AWS_SES_ENDPOINT);
 
   if (dryRun) {
     app.log.warn({ dryRun: true }, "Email dry-run mode: emails will not be sent");
@@ -18,7 +18,7 @@ export default fp(async (app) => {
     return;
   }
 
-  const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
+  const region = process.env.FASTIFY_PUBLIC_AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
   const ses = new SESClient({
     region,
     endpoint: process.env.AWS_SES_ENDPOINT || undefined

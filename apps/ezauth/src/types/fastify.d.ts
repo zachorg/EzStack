@@ -18,6 +18,11 @@ declare module "fastify" {
     }>;
     sqs?: SQSClient;
     sqsQueueName?: string;
+    sqsService?: {
+      isReady(): boolean;
+      getStatus(): { configured: boolean; region?: string; queueName?: string; hasCredentials: boolean; endpoint?: string };
+      testConnection(): Promise<{ success: boolean; error?: string }>;
+    };
     sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
     firebase: {
       auth: import("firebase-admin/auth").Auth;
@@ -25,11 +30,14 @@ declare module "fastify" {
       app: import("firebase-admin/app").App;
     };
     apikeyPepper: string;
-    introspectApiKey: (hash: string) => Promise<{
-      key?: { keyId: string; tenantId: string; status: string; createdAt?: string | number };
-      tenant?: { tenantId: string; name?: string; status?: string; planId?: string; featureFlags?: Record<string, boolean> };
+    introspectApiKey: (apiKey: string) => Promise<{
+      keyId: string;
+      userId: string;
+      user?: { uid: string | null; status?: string; planId?: string | null; featureFlags?: Record<string, boolean> | null };
       plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
-    }>;
+      createdAt?: string | number;
+      lastUsed?: string | number;
+    } | null>;
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;
       email?: string;

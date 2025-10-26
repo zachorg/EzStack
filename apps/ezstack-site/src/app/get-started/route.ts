@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
     if (sessionCookie) {
       // Verify the session cookie
       await adminAuth.verifySessionCookie(sessionCookie, true);
-      // User is authenticated, redirect to account
-      url.pathname = "/account";
+      // User is authenticated, redirect to dashboard
+      url.pathname = "/home";
       url.searchParams.delete("redirect");
       return NextResponse.redirect(url);
     }
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   // User is not authenticated, redirect to home with login dialog trigger
   url.pathname = "/";
   url.searchParams.set("login", "true");
-  url.searchParams.set("redirect", "/account");
+  url.searchParams.set("redirect", "/home");
   return NextResponse.redirect(url);
 }
 

@@ -1,9 +1,14 @@
 "use client";
 
-
 const { auth, googleProvider } = await import("@/lib/firebase/client");
-const { signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("firebase/auth");
+const {
+  signInWithPopup,
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} = await import("firebase/auth");
 
+import { foward_req_to_ezstack_api } from "@/lib/functions-proxy";
 import { User } from "firebase/auth";
 import React, {
   createContext,
@@ -184,52 +189,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, []);
 
+  const tryUserLogin = async (userId: string) => {
+    const req: RequestInit = {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${userId}`,
+      },
+      body: JSON.stringify({}),
+      cache: "no-store",
+    };
+
+    const response = await foward_req_to_ezstack_api(
+      "/api/v1/userProfile/loginin",
+      req
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || "Session creation failed");
+    }
+  };
+
   // Login with email/password
-  const login = useCallback(
-    async (email: string, password: string) => {
-      setIsLoading(true);
-      setError(null);
+  const login = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        if (!auth) {
-          throw new Error(
-            "Firebase authentication not configured. Please check your environment variables."
-          );
-        }
-
-        const userCredential = await signInWithEmailAndPassword(
-          auth,
-          email.trim(),
-          password
+    try {
+      if (!auth) {
+        throw new Error(
+          "Firebase authentication not configured. Please check your environment variables."
         );
-        const idToken = await userCredential.user.getIdToken();
-
-        // Send token to our session endpoint
-        const response = await fetch("/api/session/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error?.message || "Session creation failed"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Login failed";
-        setError(errorMessage);
-        console.error("Login error:", err);
-        throw err;
-      } finally {
-        setIsLoading(false);
       }
-    },
-    []
-  );
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+      const idToken = await userCredential.user.getIdToken();
+
+      // Send token to our session endpoint
+      await tryUserLogin(idToken);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Login failed";
+      setError(errorMessage);
+      console.error("Login error:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Login with Google
   const loginWithGoogle = useCallback(async () => {
@@ -247,17 +257,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const idToken = await result.user.getIdToken();
 
       // Send token to our session endpoint
-      const response = await fetch("/api/session/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Session creation failed");
-      }
+      await tryUserLogin(idToken);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Google login failed";
@@ -270,51 +270,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [refreshUser]);
 
   // Sign up with email/password
-  const signup = useCallback(
-    async (email: string, password: string) => {
-      setIsLoading(true);
-      setError(null);
+  const signup = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        if (!auth) {
-          throw new Error(
-            "Firebase authentication not configured. Please check your environment variables."
-          );
-        }
-
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email.trim(),
-          password
+    try {
+      if (!auth) {
+        throw new Error(
+          "Firebase authentication not configured. Please check your environment variables."
         );
-        const idToken = await userCredential.user.getIdToken();
-
-        // Send token to our session endpoint
-        const response = await fetch("/api/session/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error?.message || "Session creation failed"
-          );
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Signup failed";
-        setError(errorMessage);
-        console.error("Signup error:", err);
-        throw err;
-      } finally {
-        setIsLoading(false);
       }
-    },
-    []
-  );
+
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+      const idToken = await userCredential.user.getIdToken();
+
+      // Send token to our session endpoint
+      await tryUserLogin(idToken);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Signup failed";
+      setError(errorMessage);
+      console.error("Signup error:", err);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Logout
   const logout = useCallback(async () => {
@@ -323,10 +307,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       // Clear server session
-      await fetch("/api/session/end", {
-        method: "POST",
-        credentials: "include",
-      });
+      // await fetch("/api/session/end", {
+      //   method: "POST",
+      //   credentials: "include",
+      // });
 
       // Sign out from Firebase
       if (auth) {
