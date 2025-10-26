@@ -11,23 +11,7 @@ export default fp(async (app) => {
       return;
     }
 
-    // const authzHeader = req.headers?.["authorization"] as string;
-    // const bearer = authzHeader.toLowerCase().startsWith("bearer ")
-    //   ? authzHeader.slice(7).trim()
-    //   : undefined;
-    const idToken = req.headers?.["x-ezstack-id-token"] as string;
-
-    // Diagnostics: log which credential types are present (not their values).
-    // try {
-    //   req.log.info(
-    //     {
-    //       route: req.routeOptions?.url,
-    //       hasAuthorizationHeader: typeof authzHeader === "string",
-    //       hasBearer: typeof bearer === "string",
-    //     },
-    //     "auth: credential presence"
-    //   );
-    // } catch {}
+    const idToken = req.headers?.["authorization"] as string;
 
     // Branch: Firebase Auth JWT
     if (idToken) {

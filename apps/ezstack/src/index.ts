@@ -8,6 +8,8 @@ import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
 import firebase from "./plugins/firebase.js";
 import apikeyRoutes from "./routes/apikeys.js";
+import userProfileRoutes from "./routes/userProfile.js";
+import userProjectsRoutes from "./routes/userProjects.js";
 
 // Fastify app with structured logging enabled. We redact sensitive fields by
 // default to avoid leaking destinations/PII in application logs.
@@ -22,9 +24,9 @@ const app = Fastify({
 });
 
 await app.register(fastifyCors, {
-  origin: process.env.CORS_ORIGIN === "true" ? true : (process.env.CORS_ORIGIN || false),
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
+  origin: true, // Accept any origin
+  credentials: true, // Allow credentials
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
 });
 
@@ -41,11 +43,18 @@ await app.register(auth);
 
 // Business routes
 await app.register(apikeyRoutes, { prefix: "/api/v1/keys" });
+await app.register(userProfileRoutes, { prefix: "/api/v1/userProfile" });
+await app.register(userProjectsRoutes, { prefix: "/api/v1/userProjects" });
+
+app.apikeyPepper = (process.env.FASTIFY_PUBLIC_APIKEY_PEPPER || "").trim();
+if (!app.apikeyPepper) {
+  throw new Error("API key pepper not configured. Set FASTIFY_PUBLIC_APIKEY_PEPPER to a secret ID, a GSM resource (projects/.../secrets/...), or a dev literal.");
+}
 
 // Startup log to aid operational visibility
 app.log.info({
   env: process.env.NODE_ENV || "development",
-  port: Number(process.env.PORT || 8080),
+  port: Number(process.env.PORT_EZSTACK || 8080),
   cors: process.env.CORS_ORIGIN || false
 }, "Starting EzStack API server");
 

@@ -1,19 +1,163 @@
 @import "tailwindcss";
 
+/* Hide scrollbars but allow scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
 :root {
-  --background: #181818;
-  --foreground: #ededed;
+  /* Modern Subtle Dark Theme */
+  --background: #0D0D0D; /* Primary background */
+  --foreground: #EAEAEA; /* Primary text */
+  --muted: #141414; /* Elevated cards/panels */
+  --muted-foreground: #A1A1A1; /* Secondary text */
+  --border: #262626; /* Borders */
+  --input: #141414;
+  --primary: #3B82F6; /* Accent blue */
+  --primary-foreground: #EAEAEA;
+  --secondary: #141414; /* Hover state */
+  --secondary-foreground: #EAEAEA;
+  --accent: #3B82F6;
+  --accent-foreground: #EAEAEA;
+  --destructive: #EF4444;
+  --destructive-foreground: #EAEAEA;
+  --ring: #3B82F6;
+  --radius: 0.75rem; /* 12px rounded corners */
+  
+  /* Modern design system */
+  --bg-primary: #0D0D0D;
+  --bg-elevated: #141414;
+  --bg-hover: #1A1A1A;
+  --border-subtle: #262626;
+  --text-primary: #EAEAEA;
+  --text-secondary: #A1A1A1;
+  --text-disabled: #5A5A5A;
+  --accent-primary: #3B82F6;
+  --accent-hover: #60A5FA;
+  --success: #22C55E;
+  --warning: #EAB308;
+  --error: #EF4444;
+  
+  /* Frosted glass effect */
+  --glass-bg: rgba(20, 20, 20, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Focus styles */
+.focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Modern design utilities */
+.glass-effect {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.modern-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-card:hover {
+  background: var(--bg-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.modern-button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 10px 16px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.modern-button-primary {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.modern-button-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }

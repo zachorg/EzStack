@@ -2,16 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  apiKeys,
-  type ListApiKeysResponse,
-} from "@/lib/api/apikeys";
+import { apiKeys } from "@/lib/api/apikeys";
 import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/components/AuthProvider";
 import CreateApiKeyDialog from "@/app/components/CreateApiKeyDialog";
+import { useProjects } from "@/app/components/ProjectsProvider";
 
-type KeyItem = ListApiKeysResponse["items"][number];
+type KeyItem = {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  createdAt: string;
+  lastUsedAt: string;
+  revokedAt: string;
+};
 
 type UserProfile = {
   uid: string;
@@ -25,15 +30,20 @@ type UserProfile = {
   planId: string | null;
 };
 
-function formatDate(value: KeyItem["createdAt"] | string | null) {
+function formatDate(value: string | null) {
   if (!value) return "—";
   try {
     if (typeof value === "string" || typeof value === "number") {
       const d = new Date(Number(value));
       if (!isNaN(d.getTime())) return d.toLocaleString();
-    } else if (typeof value === "object" && value && "seconds" in value) {
-      const secs = Number((value as { seconds: number }).seconds) * 1000;
-      if (!isNaN(secs)) return new Date(secs).toLocaleString();
+    } else if (typeof value === "object" && value) {
+      if ("seconds" in value) {
+        const secs = Number((value as { seconds: number }).seconds) * 1000;
+        if (!isNaN(secs)) return new Date(secs).toLocaleString();
+      } else if ("_seconds" in value) {
+        const secs = Number((value as { _seconds: number })._seconds) * 1000;
+        if (!isNaN(secs)) return new Date(secs).toLocaleString();
+      }
     }
   } catch {}
   return "—";
@@ -69,6 +79,8 @@ function useKeys() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { selectedProject, fetchedProjects } = useProjects();
+
   const { user, isAuthenticated } = useAuth();
 
   const reload = async () => {
@@ -76,11 +88,26 @@ function useKeys() {
       console.warn("useKeys: not authenticated");
       return;
     }
+    if (!selectedProject) {
+      console.warn("useKeys: no selected project");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await apiKeys.list(user?.uid ?? "");
-      setItems(res.items ?? []);
+      const project = fetchedProjects?.projects?.find(
+        (p) => p.name === selectedProject
+      );
+      setItems(
+        project?.api_keys?.map((k) => ({
+          id: "",
+          name: k.name,
+          keyPrefix: k.key_prefix,
+          createdAt: "",
+          lastUsedAt: "",
+          revokedAt: "",
+        })) ?? []
+      );
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to load";
       setError(msg);
@@ -520,11 +547,11 @@ export default function AccountPage() {
   } = useUserProfile();
 
   // Redirect to homepage if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, isLoading, router]);
+  // useEffect(() => {
+  //   if (!isLoading && !isAuthenticated) {
+  //     router.push("/");
+  //   }
+  // }, [isAuthenticated, isLoading, router]);
 
   // Set tenant ID when profile changes
   useEffect(() => {
@@ -565,7 +592,7 @@ export default function AccountPage() {
     setActionError(null);
     setRevokingId(confirm.id);
     try {
-      await apiKeys.revoke(confirm.id, tenantId);
+      await apiKeys.revoke(confirm.id);
       setConfirm(null);
       await reload();
     } catch (err) {
@@ -598,9 +625,9 @@ export default function AccountPage() {
             </h2>
             <div className="flex items-start justify-between gap-4">
               <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl">
-                These API keys allow privileged access to your project&apos;s APIs.
-                Use in servers, functions, workers or other backend components
-                of your application.
+                These API keys allow privileged access to your project&apos;s
+                APIs. Use in servers, functions, workers or other backend
+                components of your application.
               </p>
               <button
                 className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border border-white dark:border-white hover:border-gray-300 dark:hover:border-gray-400 rounded-md transition-all duration-200 ease-in-out cursor-pointer disabled:opacity-60 flex-shrink-0"

@@ -5,18 +5,14 @@ export const sendSchema = {
     properties: {
         destination: { 
             type: "string", 
-            minLength: 3 
+            minLength: 3,
+            maxLength: 254
         },
         channel: { 
             type: "string", 
             enum: ["sms", "email"] 
         },
-        idempotencyKey: { 
-            type: "string", 
-            minLength: 8, 
-            maxLength: 128 
-        },
-        contextId: { 
+        contextDescription: { 
             type: "string" 
         }
     }
@@ -26,7 +22,7 @@ export const sendHeadersSchema = {
     type: "object",
     additionalProperties: true,
     properties: {
-        "idempotency-key": {
+        "api-key": {
             type: "string",
             minLength: 8,
             maxLength: 128
