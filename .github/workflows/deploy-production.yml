@@ -149,7 +149,9 @@ jobs:
         run: |
           docker compose -f docker-compose.test.yaml down -v
 
+      # Only proceed with deployment if all previous steps (including health checks) succeeded
       - name: Set up SSH key
+        if: success()
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -157,11 +159,13 @@ jobs:
           ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
 
       - name: Create deployment package
+        if: success()
         run: |
           # Update docker-compose.prod.yaml to use production tag
           sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.prod.deploy.yaml
 
       - name: Create production .env file from secrets
+        if: success()
         run: |
           cat > .env << EOF
           # Service Ports
@@ -216,6 +220,7 @@ jobs:
           EOF
 
       - name: Copy files to server
+        if: success()
         run: |
           # Copy docker-compose file
           scp docker-compose.prod.deploy.yaml ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/docker-compose.prod.yaml
@@ -227,6 +232,7 @@ jobs:
           scp -r ./secrets ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/
 
       - name: Deploy on server
+        if: success()
         run: |
           ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
             cd /srv/ezstack
@@ -254,6 +260,7 @@ jobs:
           EOF
 
       - name: Verify deployment
+        if: success()
         run: |
           ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
             cd /srv/ezstack
@@ -273,6 +280,15 @@ jobs:
         run: |
           echo "Deployment successful! Version: ${{ steps.version.outputs.VERSION }}"
           echo "Images tagged with: production and ${{ steps.version.outputs.VERSION }}"
+          echo "All services are running on production server."
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          echo "::error::Deployment FAILED or health checks did not pass!"
+          echo "::error::The production server was NOT updated."
+          echo "::notice::Images were built and pushed to registry with version: ${{ steps.version.outputs.VERSION }}"
+          echo "::notice::Review the health check logs above to diagnose the issue."
 
       - name: Cleanup SSH key
         if: always()
