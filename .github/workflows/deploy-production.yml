@@ -335,6 +335,48 @@ jobs:
             fi
           EOF
 
+      - name: Cleanup old registry images
+        if: success()
+        run: |
+          echo "Cleaning up old images from DigitalOcean registry..."
+          
+          # Install doctl
+          cd /tmp
+          wget -q https://github.com/digitalocean/doctl/releases/download/v1.98.1/doctl-1.98.1-linux-amd64.tar.gz
+          tar xf doctl-*.tar.gz
+          sudo mv doctl /usr/local/bin
+          
+          # Authenticate
+          doctl auth init -t ${{ secrets.DO_ACCESS_TOKEN }}
+          
+          # For each repository, keep last 3 versions (plus production tag), delete older
+          for repo in ezstack-site ezstack ezauth; do
+            echo "Cleaning up $repo repository..."
+            
+            # Get all tags sorted by update time (newest first), excluding 'production' tag
+            TAGS=$(doctl registry repository list-tags $repo --format Tag,UpdatedAt --no-header \
+              | grep -v "^production " \
+              | sort -k2 -r \
+              | awk '{print $1}')
+            
+            # Count total tags
+            TAG_COUNT=$(echo "$TAGS" | wc -l)
+            echo "  Found $TAG_COUNT version tags"
+            
+            # If more than 3 tags, delete the older ones
+            if [ $TAG_COUNT -gt 3 ]; then
+              echo "  Keeping newest 3 versions, deleting $(($TAG_COUNT - 3)) old versions..."
+              echo "$TAGS" | tail -n +4 | while read tag; do
+                echo "    Deleting old tag: $tag"
+                doctl registry repository delete-tag $repo $tag --force || echo "    Failed to delete $tag"
+              done
+            else
+              echo "  Only $TAG_COUNT version tags, nothing to delete"
+            fi
+          done
+          
+          echo "Registry cleanup complete!"
+
       - name: Send deployment notification
         if: success()
         run: |
@@ -342,6 +384,7 @@ jobs:
           echo "Images tagged with: production and ${{ steps.version.outputs.VERSION }}"
           echo "All services are running on production server."
           echo "Cloudflared tunnel has been updated and restarted."
+          echo "Old registry images have been cleaned up (keeping last 3 versions)."
 
       - name: Send failure notification
         if: failure()
