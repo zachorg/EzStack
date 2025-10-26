@@ -354,7 +354,7 @@ jobs:
             echo "Cleaning up $repo repository..."
             
             # Get all tags sorted by update time (newest first), excluding 'production' tag
-            TAGS=$(doctl registry repository list-tags ezstack/$repo --format Tag,UpdatedAt --no-header \
+            TAGS=$(doctl registry repository list-tags $repo --format Tag,UpdatedAt --no-header \
               | grep -v "^production " \
               | sort -k2 -r \
               | awk '{print $1}')
@@ -368,7 +368,7 @@ jobs:
               echo "  Keeping newest 3 versions, deleting $(($TAG_COUNT - 3)) old versions..."
               echo "$TAGS" | tail -n +4 | while read tag; do
                 echo "    Deleting old tag: $tag"
-                doctl registry repository delete-tag ezstack/$repo $tag --force || echo "    Failed to delete $tag"
+                doctl registry repository delete-tag $repo $tag --force || echo "    Failed to delete $tag"
               done
             else
               echo "  Only $TAG_COUNT version tags, nothing to delete"
