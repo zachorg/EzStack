@@ -86,7 +86,7 @@ jobs:
 
       - name: Create test environment file
         run: |
-          cat > .env.test << EOF
+          cat > .env << EOF
           PORT_EZSTACK=8080
           PORT_EZAUTH=8081
           REDIS_URL=redis://redis:6379
@@ -103,6 +103,7 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
           NEXT_PUBLIC_SITE_URL=http://localhost:3000
           CORS_ORIGIN=http://localhost:3000
+          NODE_ENV=development
           EOF
 
       - name: Create minimal test secrets directory
@@ -159,6 +160,24 @@ jobs:
         run: |
           # Update docker-compose.prod.yaml to use production tag
           sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.prod.deploy.yaml
+
+      - name: Create production .env file from secrets
+        run: |
+          cat > .env << EOF
+          PORT_EZSTACK=${{ secrets.PROD_PORT_EZSTACK }}
+          PORT_EZAUTH=${{ secrets.PROD_PORT_EZAUTH }}
+          REDIS_URL=${{ secrets.PROD_REDIS_URL }}
+          FASTIFY_PUBLIC_APIKEY_PEPPER=${{ secrets.PROD_FASTIFY_PUBLIC_APIKEY_PEPPER }}
+          EMAIL_FROM=${{ secrets.PROD_EMAIL_FROM }}
+          EMAIL_DRY_RUN=${{ secrets.PROD_EMAIL_DRY_RUN }}
+          OTP_DRY_RUN=${{ secrets.PROD_OTP_DRY_RUN }}
+          FASTIFY_PUBLIC_AWS_REGION=${{ secrets.PROD_AWS_REGION }}
+          FASTIFY_PUBLIC_AWS_ACCESS_KEY_ID=${{ secrets.PROD_FASTIFY_PUBLIC_AWS_ACCESS_KEY_ID }}
+          FASTIFY_PUBLIC_AWS_SECRET_ACCESS_KEY=${{ secrets.PROD_FASTIFY_PUBLIC_AWS_SECRET_ACCESS_KEY }}
+          CORS_ORIGIN=${{ secrets.PROD_CORS_ORIGIN }}
+          NODE_ENV=production
+          # Add all your environment variables here
+          EOF
 
       - name: Copy files to server
         run: |
