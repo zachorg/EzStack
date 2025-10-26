@@ -48,13 +48,13 @@ jobs:
             ${{ env.REGISTRY }}/ezstack-site:${{ steps.version.outputs.VERSION }}
           build-args: |
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-            NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-            NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
-            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ vars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+            NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/ezstack-site:production
           cache-to: type=inline
 
@@ -164,25 +164,67 @@ jobs:
       - name: Create production .env file from secrets
         run: |
           cat > .env << EOF
-          PORT_EZSTACK=${{ secrets.PROD_PORT_EZSTACK }}
-          PORT_EZAUTH=${{ secrets.PROD_PORT_EZAUTH }}
-          REDIS_URL=${{ secrets.PROD_REDIS_URL }}
+          # Service Ports
+          PORT_EZSTACK=${{ vars.PROD_PORT_EZSTACK }}
+          PORT_EZAUTH=${{ vars.PROD_PORT_EZAUTH }}
+          
+          # Redis
+          REDIS_URL=${{ vars.PROD_REDIS_URL }}
+          
+          # API Security
           FASTIFY_PUBLIC_APIKEY_PEPPER=${{ secrets.PROD_FASTIFY_PUBLIC_APIKEY_PEPPER }}
-          EMAIL_FROM=${{ secrets.PROD_EMAIL_FROM }}
-          EMAIL_DRY_RUN=${{ secrets.PROD_EMAIL_DRY_RUN }}
-          OTP_DRY_RUN=${{ secrets.PROD_OTP_DRY_RUN }}
-          FASTIFY_PUBLIC_AWS_REGION=${{ secrets.PROD_AWS_REGION }}
+          APIKEY_CACHE_TTL_MS=30000
+          APIKEY_REDIS_TTL_SEC=60
+          AUTH_FAIL_SAFE_EZSTACK=true
+          AUTH_FAIL_SAFE_EZAUTH=true
+          
+          # Email & OTP
+          EMAIL_FROM=${{ vars.PROD_EMAIL_FROM }}
+          EMAIL_DRY_RUN=${{ vars.PROD_EMAIL_DRY_RUN }}
+          OTP_DRY_RUN=${{ vars.PROD_OTP_DRY_RUN }}
+          
+          # OTP/OTE Configuration
+          OTP_TTL_SECONDS=300
+          OTP_LENGTH=6
+          OTP_MAX_ATTEMPTS=5
+          OTE_TTL_SECONDS=300
+          OTE_LENGTH=6
+          OTE_MAX_ATTEMPTS=5
+          RESEND_COOLDOWN_SEC=30
+          DEST_PER_MINUTE=5
+          RATE_ROUTE_MAX=30
+          
+          # AWS Configuration
+          FASTIFY_PUBLIC_AWS_REGION=${{ vars.PROD_AWS_REGION }}
           FASTIFY_PUBLIC_AWS_ACCESS_KEY_ID=${{ secrets.PROD_FASTIFY_PUBLIC_AWS_ACCESS_KEY_ID }}
           FASTIFY_PUBLIC_AWS_SECRET_ACCESS_KEY=${{ secrets.PROD_FASTIFY_PUBLIC_AWS_SECRET_ACCESS_KEY }}
-          CORS_ORIGIN=${{ secrets.PROD_CORS_ORIGIN }}
+          AWS_SES_ENDPOINT=
+          
+          # CORS
+          CORS_ORIGIN=${{ vars.PROD_CORS_ORIGIN }}
+          
+          # Next.js Environment
           NODE_ENV=production
-          # Add all your environment variables here
+          NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ vars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
           EOF
 
       - name: Copy files to server
         run: |
           # Copy docker-compose file
           scp docker-compose.prod.deploy.yaml ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/docker-compose.prod.yaml
+          
+          # Copy .env file (was created from GitHub Secrets in previous step)
+          scp .env ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/.env
+          
+          # Copy secrets directory (was created from GitHub Secrets in previous step)
+          scp -r ./secrets ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/
 
       - name: Deploy on server
         run: |
