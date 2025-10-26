@@ -26,7 +26,7 @@ export interface ApiKeyDocument {
   // Version of the config
   config_version: number;
   // Key: Service name. Value: JSON string of config.
-  config: Record<string, any>;
+  config: Record<string, string>;
 }
 
 export interface UserProjectDocument {
@@ -50,7 +50,7 @@ export interface UserProfileDocument {
   // Status of the user
   status: "active" | "inactive";
   // List of projects
-  projects: string[];
+  projects: Record<string, string>;
   // Date created
   created_at: string;
   // Date updated

@@ -39,7 +39,7 @@ interface ApiKeyDescriptor {
   config_version: number;
   // Key: Service name. Value: JSON string of config.
   /** @ApiKeyDocument */
-  config: Record<string, any>;
+  config: Record<string, string>;
   // Name of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
@@ -90,7 +90,7 @@ interface UserProfileDescriptor {
 
   // List of projects
   /** @UserProfileDocument */
-  projects: string[];
+  projects: Record<string, string>;
 
   // Date created
   /** @UserProfileDocument */

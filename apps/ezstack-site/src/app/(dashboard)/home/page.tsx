@@ -33,9 +33,13 @@ function ProjectCard({ project }: { project: UserProjectResponse }) {
 function ProjectDocument() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [projects, setProjects] = useState<UserProjectResponse[]>([]);
-  const { fetchedProjects } = useProjects();
+  const { fetchedProjects, addNewProject } = useProjects();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  if(fetchedProjects) {
+    setIsLoading(false);
+  }
 
   // Fetch projects when user is authenticated - only once when page loads
   useEffect(() => {
@@ -58,6 +62,13 @@ function ProjectDocument() {
           body: JSON.stringify(projectData),
         }
       );
+
+      addNewProject({
+        name: projectData.name,
+        api_keys: [],
+        created_at: new Date().toLocaleDateString(),
+        updated_at: new Date().toLocaleDateString(),
+      });
 
       setProjects([
         ...projects,

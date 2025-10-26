@@ -11,13 +11,14 @@ import React, {
 } from "react";
 import { ezstack_api_fetch } from "@/lib/api/client";
 import { useAuth } from "./AuthProvider";
-import { ListUserProjectsResponse } from "@/__generated__/responseTypes";
+import { ListUserProjectsResponse, UserProjectResponse } from "@/__generated__/responseTypes";
 
 interface ProjectsContextType {
   fetchedProjects: ListUserProjectsResponse | null;
   // _internalSetFetchedProjects: (projects: ListUserProjectsResponse) => void;
   selectedProject: string | null;
   setSelectedProject: (name: string | null) => boolean;
+  addNewProject: (project: UserProjectResponse) => void;
 }
 
 const ProjectsContext = createContext<ProjectsContextType | undefined>(
@@ -96,11 +97,22 @@ export function ProjectsProvider({ children }: ProjectsProviderProps) {
     [fetchedProjects]
   );
 
+  const addNewProject = useCallback(
+    (project: UserProjectResponse): void => {
+      _internalSetFetchedProjects(prev => ({
+        ...prev,
+        projects: [...prev?.projects || [], project],
+      }));
+    },
+    [_internalSetFetchedProjects]
+  );
+
   const value = useMemo(
     () => ({
       fetchedProjects,
       selectedProject,
       setSelectedProject,
+      addNewProject,
       isLoading,
     }),
     [fetchedProjects, selectedProject, isLoading]

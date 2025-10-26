@@ -40,8 +40,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         const body = req.body as CreateProjectRequest;
-        const projects =
-          userDoc.data()?.projects ?? ({} as Record<string, string>);
+        const projects: Record<string, string> = (userDoc.data()?.projects as Record<string, string>) ?? {};
         if (projects[body.name]) {
           return rep
             .status(400)
@@ -99,10 +98,10 @@ const routes: FastifyPluginAsync = async (app) => {
         const userRef = db.collection("users").doc(userId);
         const userDoc = await userRef.get();
 
-        const projects = userDoc.data()?.projects ?? ([] as string[]);
+        const projects: Record<string, string> = (userDoc.data()?.projects as Record<string, string>) ?? {};
         // Fetch all project documents and await them
         const projectList = await Promise.all(
-          projects.map(async (projectId: string) => {
+          Object.values(projects).map(async (projectId: string) => {
             const projectDoc = await db
               .collection("projects")
               .doc(projectId)

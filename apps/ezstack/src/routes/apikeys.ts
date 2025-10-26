@@ -84,7 +84,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         const projects =
-          userDoc.data()?.projects ?? ({} as Record<string, string>);
+          userDoc.data()?.projects ?? ({} as Map<string, string>);
         if (projects[body.project_name]) {
           return rep
             .status(400)

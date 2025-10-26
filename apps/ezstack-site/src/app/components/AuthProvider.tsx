@@ -109,8 +109,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshUser = useCallback(async () => {
     try {
       const userProfile = await fetchUserProfile();
-      setUserProfile(userProfile);
-      setIsAuthenticated(!!userProfile);
+      console.log("AuthProvider: Refresh: userProfile", userProfile);
+      console.log("AuthProvider: Refresh: isAuthenticated", !!userProfile);
     } catch (err) {
       console.error("Error refreshing user:", err);
       setError("Failed to refresh user data");
@@ -125,14 +125,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const userProfile = await fetchUserProfile();
 
-        console.log("AuthProvider: userProfile", userProfile);
-        console.log("AuthProvider: isAuthenticated", !!userProfile);
-        setUserProfile(userProfile);
-        setIsAuthenticated(!!userProfile);
+        console.log("AuthProvider: Initialize: userProfile", userProfile);
+        console.log("AuthProvider: Initialize: isAuthenticated", !!userProfile);
       } catch (err) {
         console.error("Error initializing auth:", err);
         setError("Failed to initialize authentication");
-        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
