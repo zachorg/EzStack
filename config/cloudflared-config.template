@@ -1,0 +1,46 @@
+# Cloudflared Tunnel Configuration Template
+# This file serves as documentation for the cloudflared tunnel configuration.
+# The actual production config is generated in .github/workflows/deploy-production.yml
+# 
+# When modifying tunnel configuration:
+# 1. Update this template for documentation
+# 2. Update .github/workflows/deploy-production.yml in the "Generate Cloudflared configuration" step
+# 3. Update the root cloudflared-config.yml for local development
+
+# Tunnel Configuration
+tunnel: ${CLOUDFLARE_TUNNEL_NAME}
+credentials-file: /root/.cloudflared/${CLOUDFLARE_TUNNEL_ID}.json
+
+# Ingress rules - order matters!
+# Routes are matched from top to bottom, first match wins
+ingress:
+  # Main site - Next.js application
+  - hostname: ${PROD_SITE_DOMAIN}
+    service: http://localhost:3000
+    originRequest:
+      httpHostHeader: ${PROD_SITE_DOMAIN}
+  
+  # API service - EzStack backend
+  - hostname: ${PROD_API_DOMAIN}
+    service: http://localhost:${PROD_PORT_EZSTACK}
+    originRequest:
+      httpHostHeader: ${PROD_API_DOMAIN}
+  
+  # Auth service - EzAuth backend
+  - hostname: ${PROD_AUTH_DOMAIN}
+    service: http://localhost:${PROD_PORT_EZAUTH}
+    originRequest:
+      httpHostHeader: ${PROD_AUTH_DOMAIN}
+  
+  # Catch-all rule (required as last rule)
+  - service: http_status:404
+
+# GitHub Variables Required:
+# - CLOUDFLARE_TUNNEL_NAME: Your tunnel name (e.g., "ezstack-prod")
+# - CLOUDFLARE_TUNNEL_ID: Your tunnel UUID from Cloudflare
+# - PROD_SITE_DOMAIN: Main site domain (e.g., "ezstack.app")
+# - PROD_API_DOMAIN: API domain (e.g., "api.ezstack.app")
+# - PROD_AUTH_DOMAIN: Auth domain (e.g., "auth.ezstack.app")
+# - PROD_PORT_EZSTACK: EzStack service port (e.g., "8080")
+# - PROD_PORT_EZAUTH: EzAuth service port (e.g., "8081")
+
