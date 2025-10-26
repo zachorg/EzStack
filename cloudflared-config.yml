@@ -1,3 +1,11 @@
+# Cloudflared Tunnel Configuration - Local Development
+# This file is for local development only.
+# 
+# Production config is generated automatically in .github/workflows/deploy-production.yml
+# Template reference: config/cloudflared-config.template
+#
+# For production deployment, configure GitHub Variables as documented in the template.
+
 tunnel: ezstack-dev
 credentials-file: /Users/[YourUsername]/.cloudflared/[tunnel-id].json
 

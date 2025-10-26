@@ -84,85 +84,14 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/ezauth:production
           cache-to: type=inline
 
-      - name: Create test environment file
-        run: |
-          cat > .env << EOF
-          PORT_EZSTACK=8080
-          PORT_EZAUTH=8081
-          REDIS_URL=redis://redis:6379
-          NEXT_PUBLIC_FIREBASE_API_KEY=test-key
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=test.firebaseapp.com
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID=test-project
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=test.appspot.com
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456
-          NEXT_PUBLIC_FIREBASE_APP_ID=test-app-id
-          FASTIFY_PUBLIC_APIKEY_PEPPER=test-pepper
-          EMAIL_FROM=test@example.com
-          EMAIL_DRY_RUN=true
-          OTP_DRY_RUN=true
-          NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
-          NEXT_PUBLIC_SITE_URL=http://localhost:3000
-          CORS_ORIGIN=http://localhost:3000
-          NODE_ENV=development
-          EOF
-
       - name: Create secrets directory with Firebase service account
         run: |
           mkdir -p secrets
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > secrets/ezstack-service-account.json
 
-      - name: Start services for testing
+      - name: Generate production environment file
         run: |
-          # Use production images with production tag
-          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.test.yaml
-          docker compose -f docker-compose.test.yaml up -d --wait
-        env:
-          COMPOSE_FILE: docker-compose.test.yaml
-
-      - name: Wait for services to be ready
-        run: |
-          echo "Waiting for services to start..."
-          sleep 15
-          
-          # Check if containers are running
-          docker compose -f docker-compose.test.yaml ps
-
-      - name: Run health check tests
-        run: |
-          chmod +x ./scripts/health-check.sh
-          ./scripts/health-check.sh
-
-      - name: Show logs on failure
-        if: failure()
-        run: |
-          echo "=== EzStack Logs ==="
-          docker logs ezstack || true
-          echo "=== EzAuth Logs ==="
-          docker logs ezauth || true
-          echo "=== EzStack-Site Logs ==="
-          docker logs ezstack-site || true
-          echo "=== Redis Logs ==="
-          docker logs redis || true
-
-      - name: Stop test services
-        if: always()
-        run: |
-          docker compose -f docker-compose.test.yaml down -v
-
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Create deployment package
-        run: |
-          # Update docker-compose.prod.yaml to use production tag
-          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.prod.deploy.yaml
-
-      - name: Create production .env file from secrets
-        run: |
+          # This .env file will be used for both testing and production deployment
           cat > .env << EOF
           # Service Ports
           PORT_EZSTACK=${{ vars.PROD_PORT_EZSTACK }}
@@ -215,18 +144,109 @@ jobs:
           NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
           EOF
 
+      - name: Start services for testing
+        run: |
+          # Use production images with production tag
+          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.test.yaml
+          docker compose -f docker-compose.test.yaml up -d --wait
+        env:
+          COMPOSE_FILE: docker-compose.test.yaml
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          sleep 15
+          
+          # Check if containers are running
+          docker compose -f docker-compose.test.yaml ps
+
+      - name: Run health check tests
+        run: |
+          chmod +x ./scripts/health-check.sh
+          ./scripts/health-check.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== EzStack Logs ==="
+          docker logs ezstack || true
+          echo "=== EzAuth Logs ==="
+          docker logs ezauth || true
+          echo "=== EzStack-Site Logs ==="
+          docker logs ezstack-site || true
+          echo "=== Redis Logs ==="
+          docker logs redis || true
+
+      - name: Stop test services
+        if: always()
+        run: |
+          docker compose -f docker-compose.test.yaml down -v
+
+      # Only proceed with deployment if all previous steps (including health checks) succeeded
+      - name: Set up SSH key
+        if: success()
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Create deployment package
+        if: success()
+        run: |
+          # Update docker-compose.prod.yaml to use production tag
+          sed 's/:latest/:production/g' docker-compose.prod.yaml > docker-compose.prod.deploy.yaml
+
+      - name: Generate Cloudflared configuration
+        if: success()
+        run: |
+          # Generate production cloudflared config from variables
+          # Template reference: config/cloudflared-config.template
+          cat > cloudflared-config.yml << EOF
+          tunnel: ${{ vars.CLOUDFLARE_TUNNEL_NAME }}
+          credentials-file: /root/.cloudflared/${{ vars.CLOUDFLARE_TUNNEL_ID }}.json
+          
+          # Ingress rules - order matters!
+          ingress:
+            # Main site
+            - hostname: ${{ vars.PROD_SITE_DOMAIN }}
+              service: http://localhost:3000
+              originRequest:
+                httpHostHeader: ${{ vars.PROD_SITE_DOMAIN }}
+            
+            # API service
+            - hostname: ${{ vars.PROD_API_DOMAIN }}
+              service: http://localhost:${{ vars.PROD_PORT_EZSTACK }}
+              originRequest:
+                httpHostHeader: ${{ vars.PROD_API_DOMAIN }}
+            
+            # Auth service  
+            - hostname: ${{ vars.PROD_AUTH_DOMAIN }}
+              service: http://localhost:${{ vars.PROD_PORT_EZAUTH }}
+              originRequest:
+                httpHostHeader: ${{ vars.PROD_AUTH_DOMAIN }}
+            
+            # Catch-all (required)
+            - service: http_status:404
+          EOF
+
       - name: Copy files to server
+        if: success()
         run: |
           # Copy docker-compose file
           scp docker-compose.prod.deploy.yaml ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/docker-compose.prod.yaml
           
-          # Copy .env file (was created from GitHub Secrets in previous step)
+          # Copy .env file (same file used for testing)
           scp .env ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/.env
           
-          # Copy secrets directory (was created from GitHub Secrets in previous step)
+          # Copy secrets directory
           scp -r ./secrets ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/
+          
+          # Copy cloudflared configuration
+          scp cloudflared-config.yml ${{ env.DO_USER }}@${{ env.DO_HOST }}:/srv/ezstack/cloudflared-config.yml
 
       - name: Deploy on server
+        if: success()
         run: |
           ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
             cd /srv/ezstack
@@ -254,6 +274,7 @@ jobs:
           EOF
 
       - name: Verify deployment
+        if: success()
         run: |
           ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
             cd /srv/ezstack
@@ -268,14 +289,69 @@ jobs:
             fi
           EOF
 
+      - name: Update and restart Cloudflared tunnel
+        if: success()
+        run: |
+          ssh ${{ env.DO_USER }}@${{ env.DO_HOST }} << 'EOF'
+            cd /srv/ezstack
+            
+            echo "Updating Cloudflared tunnel configuration..."
+            
+            # Check if cloudflared service exists and stop it
+            if systemctl is-active --quiet cloudflared; then
+              echo "Stopping existing cloudflared service..."
+              systemctl stop cloudflared
+            fi
+            
+            # Update cloudflared to latest version
+            # echo "Updating cloudflared to latest version..."
+            # wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O /usr/local/bin/cloudflared || true
+            # chmod +x /usr/local/bin/cloudflared
+            
+            # Validate the configuration
+            echo "Validating cloudflared configuration..."
+            cloudflared tunnel ingress validate --config /srv/ezstack/cloudflared-config.yml
+            
+            # Start or restart the tunnel
+            if systemctl is-enabled --quiet cloudflared; then
+              echo "Restarting cloudflared service..."
+              systemctl restart cloudflared
+            else
+              echo "Starting cloudflared tunnel..."
+              # Start in background (if no systemd service is configured)
+              nohup cloudflared tunnel --config /srv/ezstack/cloudflared-config.yml run > /var/log/cloudflared.log 2>&1 &
+            fi
+            
+            # Wait a moment for tunnel to start
+            sleep 5
+            
+            # Check tunnel status
+            if systemctl is-active --quiet cloudflared; then
+              echo "Cloudflared service is running"
+              systemctl status cloudflared --no-pager || true
+            else
+              echo "Cloudflared started in background mode"
+              ps aux | grep cloudflared | grep -v grep || echo "Warning: Could not verify cloudflared process"
+            fi
+          EOF
+
       - name: Send deployment notification
         if: success()
         run: |
           echo "Deployment successful! Version: ${{ steps.version.outputs.VERSION }}"
           echo "Images tagged with: production and ${{ steps.version.outputs.VERSION }}"
+          echo "All services are running on production server."
+          echo "Cloudflared tunnel has been updated and restarted."
+
+      - name: Send failure notification
+        if: failure()
+        run: |
+          echo "::error::Deployment FAILED or health checks did not pass!"
+          echo "::error::The production server was NOT updated."
+          echo "::notice::Images were built and pushed to registry with version: ${{ steps.version.outputs.VERSION }}"
+          echo "::notice::Review the health check logs above to diagnose the issue."
 
       - name: Cleanup SSH key
         if: always()
         run: |
           rm -f ~/.ssh/id_rsa
-
