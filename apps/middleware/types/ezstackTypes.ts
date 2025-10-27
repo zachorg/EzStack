@@ -9,6 +9,7 @@ interface ApiKeyDescriptor {
   project_id: string;
   // Name of project 
   /** @CreateApiKeyRequest */
+  /** @ListApiKeysRequest */
   project_name: string;
   // Foreign key to user
   /** @ApiKeyDocument */
@@ -27,6 +28,7 @@ interface ApiKeyDescriptor {
   alg: string;
   // Status of the key
   /** @ApiKeyDocument */
+  /** @ListApiKeysResponse */
   status: "active" | "inactive";
   // Date created
   /** @ApiKeyDocument */
@@ -44,6 +46,7 @@ interface ApiKeyDescriptor {
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
   /** @CreateApiKeyRequest */
+  /** @ApiKeyDocument */
   name: string;
   // Prefix of the key
   /** @ListApiKeysResponse */
@@ -68,10 +71,6 @@ interface ProjectDescriptor {
   /** @UserProjectDocument */
   /** @UserProjectResponse */
   updated_at: string;
-  // List of API keys
-  /** @UserProjectDocument */
-  /** @UserProjectResponse */
-  api_keys: ListApiKeysResponse[];
   // List of projects
   /** @ListUserProjectsResponse */
   projects: UserProjectResponse[];

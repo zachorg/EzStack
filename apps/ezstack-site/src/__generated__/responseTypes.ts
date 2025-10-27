@@ -11,6 +11,8 @@ export interface CreateApiKeyResponse {
 }
 
 export interface ListApiKeysResponse {
+  // Status of the key
+  status: "active" | "inactive";
   // Name of the key
   name: string;
   // Prefix of the key
@@ -24,8 +26,6 @@ export interface UserProjectResponse {
   created_at: string;
   // Date updated
   updated_at: string;
-  // List of API keys
-  api_keys: ListApiKeysResponse[];
 }
 
 export interface ListUserProjectsResponse {

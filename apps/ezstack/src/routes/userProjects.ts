@@ -122,7 +122,6 @@ const routes: FastifyPluginAsync = async (app) => {
               name: project.name,
               created_at: project.created_at,
               updated_at: project.updated_at,
-              api_keys: project.api_keys,
             } as UserProjectResponse;
           })
         );

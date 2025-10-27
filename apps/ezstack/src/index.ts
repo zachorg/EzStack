@@ -26,7 +26,7 @@ const app = Fastify({
 await app.register(fastifyCors, {
   origin: true, // Accept any origin
   credentials: true, // Allow credentials
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin", "project_name"],
   methods: ["GET", "POST", "DELETE", "OPTIONS"],
 });
 

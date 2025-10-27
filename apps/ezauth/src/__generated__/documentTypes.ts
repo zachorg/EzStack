@@ -1,6 +1,5 @@
 // Generated Document Types
 
-import * as ResponseTypes from "./responseTypes"
 
 export interface ApiKeyDocument {
   // Primary key
@@ -27,6 +26,8 @@ export interface ApiKeyDocument {
   config_version: number;
   // Key: Service name. Value: JSON string of config.
   config: Record<string, string>;
+  // Name of the key
+  name: string;
 }
 
 export interface UserProjectDocument {
@@ -38,8 +39,6 @@ export interface UserProjectDocument {
   created_at: string;
   // Date updated
   updated_at: string;
-  // List of API keys
-  api_keys: ResponseTypes.ListApiKeysResponse[];
 }
 
 export interface UserProfileDocument {

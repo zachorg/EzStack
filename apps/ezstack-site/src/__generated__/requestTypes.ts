@@ -8,6 +8,11 @@ export interface CreateApiKeyRequest {
   name: string;
 }
 
+export interface ListApiKeysRequest {
+  // Name of project
+  project_name: string;
+}
+
 export interface CreateProjectRequest {
   // Name of the project
   name: string;

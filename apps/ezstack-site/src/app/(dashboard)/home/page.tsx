@@ -11,8 +11,16 @@ import { useProjects } from "@/app/components/ProjectsProvider";
 
 // Project Card Component
 function ProjectCard({ project }: { project: UserProjectResponse }) {
+  const router = useRouter();
+  const handleClick = () => {
+    router.push(`/project/${encodeURIComponent(project.name)}`);
+  };
+
   return (
-    <button className="w-full h-24 p-4 bg-gray-800/50 hover:bg-gray-800/70 rounded-lg border border-gray-700/50 transition-all duration-300 text-left group hover:scale-105 hover:shadow-lg">
+    <button 
+      onClick={handleClick}
+      className="w-full h-24 p-4 bg-gray-800/50 hover:bg-gray-800/70 rounded-lg border border-gray-700/50 transition-all duration-300 text-left group hover:scale-105 hover:shadow-lg"
+    >
       <div className="flex flex-col justify-between h-full">
         <div className="text-left">
           <h3 className="text-sm font-semibold text-gray-200 group-hover:text-white transition-colors">
@@ -28,23 +36,6 @@ function ProjectCard({ project }: { project: UserProjectResponse }) {
     </button>
   );
 }
-
-// function ProjectCard({ project }: { project: UserProjectResponse }) {
-//   const router = useRouter();
-  
-//   const handleClick = () => {
-//     router.push(`/project/${encodeURIComponent(project.name)}`);
-//   };
-
-//   return (
-//     <button 
-//       onClick={handleClick}
-//       className="w-full h-24 p-4 bg-gray-800/50 hover:bg-gray-800/70 rounded-lg border border-gray-700/50 transition-all duration-300 text-left group hover:scale-105 hover:shadow-lg"
-//     >
-//       {/* ... rest of the component stays the same */}
-//     </button>
-//   );
-// }
 
 // Document Components
 function ProjectDocument() {
@@ -78,7 +69,6 @@ function ProjectDocument() {
 
       addNewProject({
         name: projectData.name,
-        api_keys: [],
         created_at: new Date().toLocaleDateString(),
         updated_at: new Date().toLocaleDateString(),
       });
@@ -87,7 +77,6 @@ function ProjectDocument() {
         ...projects,
         {
           name: projectData.name,
-          api_keys: [],
           created_at: new Date().toLocaleDateString(),
           updated_at: new Date().toLocaleDateString(),
         },

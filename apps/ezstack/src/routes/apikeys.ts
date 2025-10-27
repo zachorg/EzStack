@@ -2,9 +2,9 @@ import type { FastifyPluginAsync } from "fastify";
 import argon2 from "argon2";
 import crypto from "node:crypto";
 import { hashApiKey } from "../utils/crypto.js";
-import { CreateApiKeyRequest } from "../__generated__/requestTypes";
+import { CreateApiKeyRequest, ListApiKeysRequest } from "../__generated__/requestTypes";
 import { ApiKeyDocument } from "../__generated__/documentTypes";
-import { CreateApiKeyResponse } from "../__generated__/responseTypes";
+import { CreateApiKeyResponse, ListApiKeysResponse } from "../__generated__/responseTypes";
 
 const ARGON_PARAMS = {
   type: argon2.argon2id,
@@ -85,39 +85,39 @@ const routes: FastifyPluginAsync = async (app) => {
 
         const projects =
           userDoc.data()?.projects ?? ({} as Map<string, string>);
-        if (projects[body.project_name]) {
+        if (!projects[body.project_name]) {
           return rep
             .status(400)
-            .send({ error: { message: "Project already exists" } });
+            .send({ error: { message: "Project not found" } });
         }
 
-        const nameRaw: unknown = body.name;
-        const name =
-          typeof nameRaw === "string" && nameRaw.trim()
-            ? nameRaw.trim().slice(0, 120)
-            : null;
+        const projectRef = db.collection("projects").doc(projects[body.project_name]);
+        const projectDoc = await projectRef.get();
+        if (!projectDoc.exists) {
+          return rep.status(404).send({ error: { message: "Project not found" } });
+        }
+
         const { key, prefix } = generatePlainApiKey();
-
-        const salt = crypto.randomBytes(16).toString("base64");
-        const hashedKey = await hashWithArgon2id(key, salt, app.apikeyPepper);
-        const lookupHash = hashApiKey(key, app.apikeyPepper);
-
-        // Insert directly into Firestore;
         const keyDoc = db.collection("api_keys").doc();
-        const keyData = {
-          id: keyDoc.id,
-          project_id: projects[body.project_name],
-          user_id: userId,
-          hashed_key: hashedKey,
-          lookup_hash: lookupHash,
-          salt,
-          alg: "argon2id",
-          status: "active",
-          created_at: new Date().toLocaleDateString(),
-          updated_at: new Date().toLocaleDateString(),
-        } as ApiKeyDocument;
 
         try {
+          const salt = crypto.randomBytes(16).toString("base64");
+          const hashedKey = await hashWithArgon2id(key, salt, app.apikeyPepper);
+          const lookupHash = hashApiKey(key, app.apikeyPepper);
+          // Insert directly into Firestore;
+          const keyData = {
+            name: body.name,
+            id: keyDoc.id,
+            project_id: projects[body.project_name],
+            user_id: userId,
+            hashed_key: hashedKey,
+            lookup_hash: lookupHash,
+            salt,
+            alg: "argon2id",
+            status: "active",
+            created_at: new Date().toLocaleDateString(),
+            updated_at: new Date().toLocaleDateString(),
+          } as ApiKeyDocument;
           await keyDoc.set(keyData);
         } catch (error) {
           return rep
@@ -125,16 +125,10 @@ const routes: FastifyPluginAsync = async (app) => {
             .send({ error: { message: "Failed to create api key" } });
         }
 
-        const inserted = { id: keyDoc.id };
-
-        try {
-          req.log.info({ userId, id: inserted.id }, "apikeys: created api key");
-        } catch {}
-
-        return rep.send({
+        return rep.status(200).send({
           id: key,
+          name: body.name,
           key_prefix: prefix,
-          name,
         } as CreateApiKeyResponse);
       } catch (err: any) {
         req.log?.error({ err }, "createApiKey failed");
@@ -154,52 +148,48 @@ const routes: FastifyPluginAsync = async (app) => {
             .status(401)
             .send({ error: { message: "Unauthenticated" } });
         }
+        const request = (req.body as ListApiKeysRequest) || {};
+
+        const userRef = db.collection("users").doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+          return rep.status(404).send({ error: { message: "User not found" } });
+        }
+
+        const projects =
+          userDoc.data()?.projects ?? ({} as Map<string, string>);
+        if (!projects[request.project_name]) {
+          return rep
+            .status(400)
+            .send({ error: { message: "Project not found" } });
+        }
+
         try {
           const querySnapshot = await db
             .collection("api_keys")
             .where("user_id", "==", userId)
+            .where("project_id", "==", projects[request.project_name])
             .get();
 
-          const items = querySnapshot.docs.map((doc: any) => {
+            console.log("querySnapshot: ", querySnapshot.docs.length, "api keys found");
+
+          const items : ListApiKeysResponse[] = querySnapshot.docs.map((doc: any) => {
             const data = doc.data();
             return {
-              id: data.id || doc.id,
               name: data.name ?? null,
-              keyPrefix: data.key_prefix,
-              createdAt: data.created_at ?? null,
-              lastUsedAt: data.last_used_at ?? null,
-              revokedAt: data.revoked_at ?? null,
-            };
+              key_prefix: data.key_prefix,
+              status: data.status,
+            } as ListApiKeysResponse;
           });
 
-          const toMillis = (t: any): number | null => {
-            if (!t) return null;
-            if (typeof t.toMillis === "function") return t.toMillis();
-            if (typeof t === "number") return t;
-            if (typeof t === "object" && typeof t._seconds === "number") {
-              const ns =
-                typeof t._nanoseconds === "number" ? t._nanoseconds : 0;
-              return t._seconds * 1000 + ns / 1e6;
-            }
-            return null;
-          };
-
-          items.sort((a: { createdAt: any }, b: { createdAt: any }) => {
-            const am = toMillis(a.createdAt);
-            const bm = toMillis(b.createdAt);
-            if (am === null && bm === null) return 0;
-            if (am === null) return 1;
-            if (bm === null) return -1;
-            return bm - am;
+          items.sort((a: ListApiKeysResponse, b: ListApiKeysResponse) => {
+            // Sort active first, then inactive
+            if (a.status === 'active' && b.status !== 'active') return -1;
+            if (a.status !== 'active' && b.status === 'active') return 1;
+            return 0;
           });
 
-          try {
-            req.log.debug(
-              { userId, count: items.length },
-              "apikeys: listed keys"
-            );
-          } catch {}
-          return rep.send({ items });
+          return rep.status(200).send({ api_keys: items });
         } catch (error) {
           return rep
             .status(500)
@@ -250,7 +240,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
           try {
             req.log.info({ id, userId }, "apikeys: revoked api key");
-          } catch {}
+          } catch { }
           return rep.send({ ok: true, deleted: true });
         } catch (error) {
           return rep

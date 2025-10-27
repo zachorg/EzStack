@@ -9,16 +9,16 @@ interface CreateApiKeyDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated: (opts: { key: string; keyPrefix: string }) => void;
-  tenantId: string | null;
   existingNames?: string[];
+  projectName?: string;
 }
 
 export default function CreateApiKeyDialog({ 
   isOpen, 
   onClose, 
   onCreated, 
-  tenantId, 
-  existingNames = [] 
+  existingNames = [],
+  projectName
 }: CreateApiKeyDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -80,7 +80,7 @@ export default function CreateApiKeyDialog({
   const isDuplicate = trimmed
     ? normalizedExisting.includes(trimmed.toLowerCase())
     : false;
-  const canSubmit = !submitting && !isDuplicate && !hasSpaces && !isEmpty && tenantId;
+  const canSubmit = !submitting && !isDuplicate && !hasSpaces && !isEmpty;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +92,7 @@ export default function CreateApiKeyDialog({
     try {
       const payload: CreateApiKeyRequest = {
         name: trimmed ? trimmed.slice(0, 120) : "",
-        project_name: "@TODO: project name",
+        project_name: projectName || "",
       };
       
       const res = await apiKeys.create(payload);
