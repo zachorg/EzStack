@@ -13,6 +13,13 @@ export interface ListApiKeysRequest {
   project_name: string;
 }
 
+export interface RevokeApiKeyRequest {
+  // Name of project
+  project_name: string;
+  // Name of the key
+  name: string;
+}
+
 export interface CreateProjectRequest {
   // Name of the project
   name: string;

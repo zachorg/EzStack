@@ -5,11 +5,13 @@ import { hashApiKey } from "../utils/crypto.js";
 import {
   CreateApiKeyRequest,
   ListApiKeysRequest,
+  RevokeApiKeyRequest,
 } from "../__generated__/requestTypes";
 import { ApiKeyDocument } from "../__generated__/documentTypes";
 import {
   CreateApiKeyResponse,
   ListApiKeysResponse,
+  RevokeApiKeyResponse,
 } from "../__generated__/responseTypes";
 
 const ARGON_PARAMS = {
@@ -193,11 +195,6 @@ const routes: FastifyPluginAsync = async (app) => {
             }
           );
 
-          console.log(
-            "listApiKeys: ",
-            items,
-          );
-
           items.sort((a: ListApiKeysResponse, b: ListApiKeysResponse) => {
             // Sort active first, then inactive
             if (a.status === "active" && b.status !== "active") return -1;
@@ -230,34 +227,43 @@ const routes: FastifyPluginAsync = async (app) => {
             .send({ error: { message: "Unauthenticated" } });
         }
 
-        const id = req.body?.id as string | undefined;
-        if (!id) {
-          return rep.status(400).send({ error: { message: "Missing id" } });
+        const request = (req.body as RevokeApiKeyRequest) || {};
+
+        const userRef = db.collection("users").doc(userId);
+        const userDoc = await userRef.get();
+        if (!userDoc.exists) {
+          return rep.status(404).send({ error: { message: "User not found" } });
         }
 
-        try {
-          const keyDoc = await db.collection("api_keys").doc(id).get();
-          if (!keyDoc.exists) {
+        const projects: Record<string, string> =
+          (userDoc.data()?.projects as Record<string, string>) ?? {};
+        if (!projects[request.project_name]) {
+          return rep
+            .status(400)
+            .send({ error: { message: "Project not found" } });
+        }
+        
+        const foundKey = await db
+          .collection("api_keys")
+          .where("user_id", "==", userId)
+          .where("project_id", "==", projects[request.project_name])
+          .where("name", "==", request.name)
+          .get();
+
+          if(!foundKey.docs || foundKey.docs.length === 0) {
             return rep
               .status(404)
               .send({ error: { message: "Key not found" } });
           }
-          const row = keyDoc.data();
 
-          if (row?.user_id !== userId) {
-            return rep.status(403).send({ error: { message: "Forbidden" } });
-          }
-
-          await db.collection("api_keys").doc(id).update({
+        try {
+          await foundKey.docs[0].ref.update({
             status: "revoked",
-            revoked_at: new Date(),
-            updated_at: new Date(),
+            revoked_at: new Date().toLocaleDateString(),
+            updated_at: new Date().toLocaleTimeString(),
           });
 
-          try {
-            req.log.info({ id, userId }, "apikeys: revoked api key");
-          } catch {}
-          return rep.send({ ok: true, deleted: true });
+          return rep.status(200).send({ ok: true } as RevokeApiKeyResponse);
         } catch (error) {
           return rep
             .status(500)

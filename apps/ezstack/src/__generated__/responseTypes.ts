@@ -19,6 +19,11 @@ export interface ListApiKeysResponse {
   key_prefix: string;
 }
 
+export interface RevokeApiKeyResponse {
+  // 
+  ok: boolean;
+}
+
 export interface UserProjectResponse {
   // Name of the project
   name: string;

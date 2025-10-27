@@ -10,6 +10,7 @@ interface ApiKeyDescriptor {
   // Name of project 
   /** @CreateApiKeyRequest */
   /** @ListApiKeysRequest */
+  /** @RevokeApiKeyRequest */
   project_name: string;
   // Foreign key to user
   /** @ApiKeyDocument */
@@ -45,6 +46,7 @@ interface ApiKeyDescriptor {
   // Name of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
+  /** @RevokeApiKeyRequest */
   /** @CreateApiKeyRequest */
   /** @ApiKeyDocument */
   name: string;
@@ -53,6 +55,11 @@ interface ApiKeyDescriptor {
   /** @CreateApiKeyResponse */
   /** @ApiKeyDocument */
   key_prefix: string;
+}
+
+interface DefaultDescriptor {
+  /** @RevokeApiKeyResponse */
+  ok: boolean;
 }
 
 interface ProjectDescriptor {

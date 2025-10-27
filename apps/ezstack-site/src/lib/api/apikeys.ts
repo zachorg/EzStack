@@ -1,9 +1,6 @@
-import { CreateApiKeyRequest, ListApiKeysRequest } from "@/__generated__/requestTypes";
-import { CreateApiKeyResponse, ListApiKeysResponse } from "@/__generated__/responseTypes";
+import { CreateApiKeyRequest, ListApiKeysRequest, RevokeApiKeyRequest } from "@/__generated__/requestTypes";
+import { CreateApiKeyResponse, ListApiKeysResponse, RevokeApiKeyResponse } from "@/__generated__/responseTypes";
 import { api } from "./client";
-
-export type RevokeApiKeyRequest = { id: string };
-export type RevokeApiKeyResponse = { ok: true; deleted: true };
 
 export const apiKeys = {
   create(input: CreateApiKeyRequest) {
@@ -12,10 +9,10 @@ export const apiKeys = {
   list(input: ListApiKeysRequest) {
     return api.get<{api_keys: ListApiKeysResponse[]}>(`/api/v1/keys/list`, JSON.parse(JSON.stringify(input)));
   },
-  revoke(id: string) {
+  revoke(input: RevokeApiKeyRequest) {
     return api.post<RevokeApiKeyResponse>(
-      "/api/v1/keys/revoke", 
-      { id }
+      "/api/v1/keys/revoke",
+      JSON.parse(JSON.stringify(input))
     );
   },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
@@ -8,12 +8,13 @@ import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
 
 interface ProjectPageProps {
-  params: {
+  params: Promise<{
     projectname: string;
-  };
+  }>;
 }
 
 export default function ProjectPage({ params }: ProjectPageProps) {
+  const resolvedParams = use(params);
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { fetchedProjects, setSelectedProject } = useProjects();
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
           {
             id: "API Keys",
             name: "API Keys",
-            href: `/project/${params.projectname}/api-keys`,
+            href: `/project/${resolvedParams.projectname}/api-keys`,
             icon: (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -58,7 +59,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     ];
 
     setSections(dashboardSections);
-  }, [setSections]);
+  }, [setSections, resolvedParams]);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -74,7 +75,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
 
     // Find the project by name
     const foundProject = fetchedProjects.projects.find(
-      (p) => p.name === params.projectname
+      (p) => p.name === resolvedParams.projectname
     );
 
     if (foundProject) {
@@ -86,7 +87,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     }
 
     setIsLoading(false);
-  }, [authLoading, isAuthenticated, fetchedProjects, router, setSelectedProject]);
+  }, [authLoading, isAuthenticated, fetchedProjects, router, setSelectedProject, resolvedParams]);
 
   // Loading state
   if (authLoading || isLoading) {
