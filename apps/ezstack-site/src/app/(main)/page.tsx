@@ -10,21 +10,46 @@ import { BentoGrid } from "../components/bento-grid";
 import { Section } from "../components/section";
 import { CtaBand } from "../components/cta-band";
 import { FeaturesBentoGrid } from "../components/features-bento-grid";
-import { useIsAuthenticated } from "../components/AuthProvider";
+import { useIsAuthenticated, useAuth } from "../components/AuthProvider";
 import { useLoginDialog } from "../components/LoginDialogProvider";
 
 function HomeContent() {
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
+  const { isLoading } = useAuth();
   const { setSections } = useSidebar();
   const { openDialog } = useLoginDialog();
+
+  // Show loading state until auth is resolved
+  if (isLoading) {
+    return (
+      <div className="relative font-sans space-y-16">
+        <AuroraBackground />
+        <section className="relative text-center space-y-6 pt-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Loading...
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if(isAuthenticated) {
+    router.push("/home");
+    return;
+  }
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if(isAuthenticated) {
       router.push("/home");
     }
-  }, [router, isAuthenticated]);
+  }, [router, isAuthenticated, isLoading]);
 
   // Set sidebar sections for main page
   useEffect(() => {
