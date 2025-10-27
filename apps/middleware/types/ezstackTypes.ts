@@ -51,6 +51,7 @@ interface ApiKeyDescriptor {
   // Prefix of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
+  /** @ApiKeyDocument */
   key_prefix: string;
 }
 

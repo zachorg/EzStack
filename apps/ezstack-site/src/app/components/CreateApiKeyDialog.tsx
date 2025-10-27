@@ -4,11 +4,12 @@ import React, { useEffect, useState, useCallback } from "react";
 import { apiKeys } from "@/lib/api/apikeys";
 import { CreateApiKeyRequest } from "@/__generated__/requestTypes";
 import { ApiError } from "@/lib/api/client";
+import { CreateApiKeyResponse } from "@/__generated__/responseTypes";
 
 interface CreateApiKeyDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (opts: { key: string; keyPrefix: string }) => void;
+  onCreated: (opts: { newKey: CreateApiKeyResponse }) => void;
   existingNames?: string[];
   projectName?: string;
 }
@@ -97,7 +98,7 @@ export default function CreateApiKeyDialog({
       
       const res = await apiKeys.create(payload);
       setCreatedKey({ key: res.id, keyPrefix: res.key_prefix });
-      onCreated({ key: res.id, keyPrefix: res.key_prefix });
+      onCreated({ newKey: res });
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to create key";
       setError(msg);

@@ -28,6 +28,8 @@ export interface ApiKeyDocument {
   config: Record<string, string>;
   // Name of the key
   name: string;
+  // Prefix of the key
+  key_prefix: string;
 }
 
 export interface UserProjectDocument {

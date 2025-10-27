@@ -2,9 +2,15 @@ import type { FastifyPluginAsync } from "fastify";
 import argon2 from "argon2";
 import crypto from "node:crypto";
 import { hashApiKey } from "../utils/crypto.js";
-import { CreateApiKeyRequest, ListApiKeysRequest } from "../__generated__/requestTypes";
+import {
+  CreateApiKeyRequest,
+  ListApiKeysRequest,
+} from "../__generated__/requestTypes";
 import { ApiKeyDocument } from "../__generated__/documentTypes";
-import { CreateApiKeyResponse, ListApiKeysResponse } from "../__generated__/responseTypes";
+import {
+  CreateApiKeyResponse,
+  ListApiKeysResponse,
+} from "../__generated__/responseTypes";
 
 const ARGON_PARAMS = {
   type: argon2.argon2id,
@@ -91,10 +97,14 @@ const routes: FastifyPluginAsync = async (app) => {
             .send({ error: { message: "Project not found" } });
         }
 
-        const projectRef = db.collection("projects").doc(projects[body.project_name]);
+        const projectRef = db
+          .collection("projects")
+          .doc(projects[body.project_name]);
         const projectDoc = await projectRef.get();
         if (!projectDoc.exists) {
-          return rep.status(404).send({ error: { message: "Project not found" } });
+          return rep
+            .status(404)
+            .send({ error: { message: "Project not found" } });
         }
 
         const { key, prefix } = generatePlainApiKey();
@@ -110,6 +120,7 @@ const routes: FastifyPluginAsync = async (app) => {
             id: keyDoc.id,
             project_id: projects[body.project_name],
             user_id: userId,
+            key_prefix: prefix,
             hashed_key: hashedKey,
             lookup_hash: lookupHash,
             salt,
@@ -139,7 +150,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
   app.get(
     "/list",
-    { preHandler: [app.rlPerRoute(30)] },
+    { preHandler: [app.rlPerRoute(10)] },
     async (req: any, rep) => {
       try {
         const userId = req.userId as string | undefined;
@@ -148,7 +159,7 @@ const routes: FastifyPluginAsync = async (app) => {
             .status(401)
             .send({ error: { message: "Unauthenticated" } });
         }
-        const request = (req.body as ListApiKeysRequest) || {};
+        const request = (req.headers as ListApiKeysRequest) || {};
 
         const userRef = db.collection("users").doc(userId);
         const userDoc = await userRef.get();
@@ -156,8 +167,8 @@ const routes: FastifyPluginAsync = async (app) => {
           return rep.status(404).send({ error: { message: "User not found" } });
         }
 
-        const projects =
-          userDoc.data()?.projects ?? ({} as Map<string, string>);
+        const projects: Record<string, string> =
+          (userDoc.data()?.projects as Record<string, string>) ?? {};
         if (!projects[request.project_name]) {
           return rep
             .status(400)
@@ -171,21 +182,26 @@ const routes: FastifyPluginAsync = async (app) => {
             .where("project_id", "==", projects[request.project_name])
             .get();
 
-            console.log("querySnapshot: ", querySnapshot.docs.length, "api keys found");
+          const items: ListApiKeysResponse[] = querySnapshot.docs.map(
+            (doc: any) => {
+              const data = doc.data();
+              return {
+                name: data.name ?? null,
+                key_prefix: data.key_prefix,
+                status: data.status,
+              } as ListApiKeysResponse;
+            }
+          );
 
-          const items : ListApiKeysResponse[] = querySnapshot.docs.map((doc: any) => {
-            const data = doc.data();
-            return {
-              name: data.name ?? null,
-              key_prefix: data.key_prefix,
-              status: data.status,
-            } as ListApiKeysResponse;
-          });
+          console.log(
+            "listApiKeys: ",
+            items,
+          );
 
           items.sort((a: ListApiKeysResponse, b: ListApiKeysResponse) => {
             // Sort active first, then inactive
-            if (a.status === 'active' && b.status !== 'active') return -1;
-            if (a.status !== 'active' && b.status === 'active') return 1;
+            if (a.status === "active" && b.status !== "active") return -1;
+            if (a.status !== "active" && b.status === "active") return 1;
             return 0;
           });
 
@@ -240,7 +256,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
           try {
             req.log.info({ id, userId }, "apikeys: revoked api key");
-          } catch { }
+          } catch {}
           return rep.send({ ok: true, deleted: true });
         } catch (error) {
           return rep

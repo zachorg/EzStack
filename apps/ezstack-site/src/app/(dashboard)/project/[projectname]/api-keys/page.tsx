@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
-import { ListApiKeysResponse, UserProjectResponse } from "@/__generated__/responseTypes";
+import { CreateApiKeyResponse, ListApiKeysResponse, UserProjectResponse } from "@/__generated__/responseTypes";
 import CreateApiKeyDialog from "@/app/components/CreateApiKeyDialog";
 import { apiKeys as apiKeysApi } from "@/lib/api/apikeys";
 import { ListApiKeysRequest } from "@/__generated__/requestTypes";
@@ -57,10 +57,10 @@ export default function ApiKeysPage() {
     setIsLoading(false);
   }, [authLoading, isAuthenticated, fetchedProjects, router]);
 
-  const handleKeyCreated = () => {
+  const handleKeyCreated = (opts: { newKey: CreateApiKeyResponse }) => {
     // Refresh the API keys list or handle the newly created key
     setShowCreateDialog(false);
-    // TODO: Fetch updated API keys list
+    setApiKeys([...apiKeys, { ...opts.newKey, status: "active" } as ListApiKeysResponse]);
   };
 
   // Loading state
