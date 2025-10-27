@@ -26,7 +26,9 @@ export default fp(async (app) => {
           err.code = "unauthorized";
           throw err;
         }
-        req.userId = res.userId;
+        req.user_id = res.userId;
+        req.key_id = res.keyId;
+        req.project_id = res.projectId;
         try {
           req.log.debug({ userId: res.userId }, "auth: firebase token verified");
         } catch {}

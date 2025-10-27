@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync } from "fastify";
 // import { verifySchema } from "../schemas/otp.js";
 import * as OTP from "../services/otp.js";
+import { hashApiKey } from "../utils/crypto.js";
 
 const routes: FastifyPluginAsync = async (app) => {
+  const db = app.firebase.db;
   // Health/readiness check. Unauthenticated by auth plugin exemption.
   app.get("/healthz", async (_req, rep) => {
     let redisOk = false;
@@ -39,6 +41,111 @@ const routes: FastifyPluginAsync = async (app) => {
     return rep.code(ok ? 200 : 503).send(payload);
   });
 
+  async function check_and_increment_otp_usage_by_project(
+    trySendOtp: () => Promise<string>,
+    userId: string,
+    projectId: string
+  ): Promise<string | undefined> {
+    const usage_project_lookup_id = hashApiKey(
+      `${userId}:${projectId}`,
+      app.apikeyPepper
+    );
+    return check_and_increment_otp_send_usage(
+      trySendOtp,
+      usage_project_lookup_id,
+      {
+        max_requests_per_month: 2,
+      }
+    );
+  }
+
+  async function check_and_increment_otp_usage_by_key(
+    trySendOtp: () => Promise<string>,
+    userId: string,
+    projectId: string,
+    keyId: string
+  ): Promise<string | undefined> {
+    const usage_key_lookup_id = hashApiKey(
+      `${userId}:${projectId}:${keyId}`,
+      app.apikeyPepper
+    );
+    return check_and_increment_otp_send_usage(trySendOtp, usage_key_lookup_id);
+  }
+
+  async function check_and_increment_otp_send_usage(
+    trySendOtp: () => Promise<string>,
+    usage_key_lookup_id: string,
+    request_limits?: {
+      max_requests_per_month?: number;
+      max_requests?: number;
+    }
+  ): Promise<string | undefined> {
+    if (!db) {
+      throw new Error("Firebase firestore not initialized");
+    }
+
+    const usageRef = db.doc(`analytics/ezauth/send-otp/${usage_key_lookup_id}`);
+
+    const result: string | undefined = await db.runTransaction(
+      async (transaction) => {
+        const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
+
+        const usageDoc = await transaction.get(usageRef);
+
+        // Initialize document if it doesn't exist
+        if (!usageDoc.exists) {
+          transaction.set(usageRef, {
+            completed_requests: 1,
+            completed_monthly_requests: {
+              [dateKey]: 1,
+            },
+          });
+        }
+
+        const data = usageDoc.data();
+        const completed_requests = data?.completed_requests || 0;
+        const completed_monthly_requests =
+          data?.completed_monthly_requests || {};
+        const currentCount = completed_monthly_requests[dateKey] || 0;
+
+        if (
+          request_limits?.max_requests_per_month &&
+          currentCount >= request_limits.max_requests_per_month
+        ) {
+          throw new Error("OTP Send limit per month exceeded");
+        }
+        if (
+          request_limits?.max_requests &&
+          completed_requests >= request_limits.max_requests
+        ) {
+          throw new Error("OTP Send limit per request exceeded");
+        }
+
+        try {
+          const requestId = await trySendOtp();
+
+          transaction.set(
+            usageRef,
+            {
+              completed_requests: completed_requests + 1,
+              completed_monthly_requests: {
+                ...completed_monthly_requests,
+                [dateKey]: currentCount + 1,
+              },
+            },
+            { merge: true }
+          );
+
+          return requestId;
+        } catch (error) {
+          throw new Error("Failed to send OTP");
+        }
+      }
+    );
+
+    return result;
+  }
+
   // Issue an OTP and queue a send (if SQS configured). Returns requestId.
   app.post(
     "/send",
@@ -47,9 +154,13 @@ const routes: FastifyPluginAsync = async (app) => {
       preHandler: [app.rlPerRoute()],
     },
     async (req: any, rep: any) => {
-      const userId = req.userId as string | undefined;
-      if (!userId) {
-        return rep.status(401).send({ error: { message: "Unauthenticated" } });
+      const userId = req.user_id as string | undefined;
+      const keyId = req.key_id as string | undefined;
+      const projectId = req.project_id as string | undefined;
+      if (!userId || !keyId || !projectId) {
+        return rep.status(401).send({
+          error: { message: "Unauthenticated or missing keyId / projectId" },
+        });
       }
 
       const destination = req.body["destination"];
@@ -61,18 +172,39 @@ const routes: FastifyPluginAsync = async (app) => {
         // Validate phone number format (10 digits for US)
         const phoneRegex = /^\d{10}$/;
         if (!phoneRegex.test(destination)) {
-          return rep
-            .status(400)
-            .send({
-              error: {
-                message: "Invalid phone number format. Must be 10 digits.",
-              },
-            });
+          return rep.status(400).send({
+            error: {
+              message: "Invalid phone number format. Must be 10 digits.",
+            },
+          });
         }
 
-        const requestId = await OTP.send(app, payload);
-        req.log.info({ requestId }, "otp/send: issued");
-        return rep.send({ requestId });
+        try {
+          const trySendOtp = async (): Promise<string> => {
+            return await OTP.send(app, payload);
+          };
+
+          // update analytics for the user after successfully sending the OTP
+          const requestId = await check_and_increment_otp_usage_by_project(
+            trySendOtp,
+            userId,
+            projectId
+          );
+          if (requestId === undefined) {
+            throw new Error("OTP Send Failed");
+          }
+          await check_and_increment_otp_usage_by_key(
+            () => Promise.resolve(""),
+            userId,
+            projectId,
+            keyId
+          );
+
+          return rep.status(200).send({ requestId });
+        } catch (error: any) {
+          req.log.error({ message: error.message }, "otp/send: error");
+          return rep.status(500).send({ error: error.message });
+        }
       } else if (channel === "email") {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -2,6 +2,7 @@ import "fastify";
 import type { preHandlerHookHandler } from "fastify";
 import type Redis from "ioredis";
 import type { SQSClient } from "@aws-sdk/client-sqs";
+import { Firestore } from "firebase/firestore";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -27,16 +28,14 @@ declare module "fastify" {
     firebase: {
       auth: import("firebase-admin/auth").Auth;
       db: import("firebase-admin/firestore").Firestore;
+      firestore: Firestore;
       app: import("firebase-admin/app").App;
     };
     apikeyPepper: string;
     introspectApiKey: (apiKey: string) => Promise<{
       keyId: string;
       userId: string;
-      user?: { uid: string | null; status?: string; planId?: string | null; featureFlags?: Record<string, boolean> | null };
-      plan?: { planId: string; name?: string; limits?: Record<string, number>; features?: Record<string, boolean> };
-      createdAt?: string | number;
-      lastUsed?: string | number;
+      projectId: string;
     } | null>;
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;

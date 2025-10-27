@@ -52,8 +52,9 @@ export default fp(async (app: any) => {
 
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
+  const firestore = getFirestore(firebaseApp);
 
-  app.decorate("firebase", { auth, db, app: firebaseApp });
+  app.decorate("firebase", { auth, db, firestore, app: firebaseApp });
 
   app.decorate("introspectApiKey", async (apiKey: string) => {
     try {
@@ -65,8 +66,8 @@ export default fp(async (app: any) => {
       .limit(1)
       .get();
 
-      const data = keyDoc.docs[0].data() as ApiKeyDocument;
-      if (data.status !== "active") {
+      const keyData = keyDoc.docs[0].data() as ApiKeyDocument;
+      if (keyData.status !== "active") {
         throw new Error("API key is not active");
       }
       
@@ -74,7 +75,6 @@ export default fp(async (app: any) => {
         return null;
       }
       
-      const keyData = keyDoc.docs[0].data();
       const hashedKey = await hashWithArgon2id(apiKey, keyData.salt, app.apikeyPepper);
       if (hashedKey !== keyData.hashed_key) {
         return null;
@@ -87,35 +87,10 @@ export default fp(async (app: any) => {
         return null;
       }
 
-      const userData = userDoc.data();
-      const user = { 
-        uid: userData?.id || null, 
-        status: userData?.status || "inactive", 
-        planId: userData?.plan_id || null, 
-        featureFlags: userData?.feature_flags || null
-      };
-
-      let plan: any;
-      if (userData?.plan_id) {
-        const planDoc = await db.collection("plans").doc(userData.plan_id).get();
-        if (planDoc.exists) {
-          const planData = planDoc.data();
-          plan = { 
-            planId: planData?.id || userData.plan_id, 
-            name: planData?.name, 
-            limits: planData?.limits || {}, 
-            features: planData?.features || {} 
-          };
-        }
-      }
-
       return { 
         keyId: keyData.id,
+        projectId: keyData.project_id,
         userId: userId,
-        user: user,
-        plan: plan,
-        createdAt: keyData.created_at,
-        lastUsed: keyData.last_used
       };
     } catch (error) {
       app.log.error( error );

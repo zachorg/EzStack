@@ -109,6 +109,18 @@ const routes: FastifyPluginAsync = async (app) => {
             .send({ error: { message: "Project not found" } });
         }
 
+        const querySnapshot = await db
+          .collection("api_keys")
+          .where("user_id", "==", userId)
+          .where("project_id", "==", projects[body.project_name])
+          .where("name", "==", body.name.toLowerCase())
+          .get();
+        if (!querySnapshot.empty) {
+          return rep
+            .status(400)
+            .send({ error: { message: "Key with this name already exists" } });
+        }
+
         const { key, prefix } = generatePlainApiKey();
         const keyDoc = db.collection("api_keys").doc();
 
@@ -242,19 +254,17 @@ const routes: FastifyPluginAsync = async (app) => {
             .status(400)
             .send({ error: { message: "Project not found" } });
         }
-        
+
         const foundKey = await db
           .collection("api_keys")
           .where("user_id", "==", userId)
           .where("project_id", "==", projects[request.project_name])
-          .where("name", "==", request.name)
+          .where("name", "==", request.name.toLowerCase())
           .get();
 
-          if(!foundKey.docs || foundKey.docs.length === 0) {
-            return rep
-              .status(404)
-              .send({ error: { message: "Key not found" } });
-          }
+        if (!foundKey.docs || foundKey.docs.length === 0) {
+          return rep.status(404).send({ error: { message: "Key not found" } });
+        }
 
         try {
           await foundKey.docs[0].ref.update({

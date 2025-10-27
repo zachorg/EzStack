@@ -62,7 +62,7 @@ export async function send(app: any, body: any) {
           { requestId, destination, error: result.error },
           "Failed to send OTP via SNS"
         );
-        // Don't throw error - OTP is still generated and stored, just delivery failed
+        throw new Error(`Failed to send OTP via SNS: ${result.error}`);
       } else {
         const redisKey = kOtp(userId, requestId);
         await redis.set(
@@ -79,21 +79,13 @@ export async function send(app: any, body: any) {
       }
     } catch (error) {
       log.error({ requestId, destination, error }, "SNS send error");
-      // Don't throw error - OTP is still generated and stored, just delivery failed
+      throw new Error(`Failed to send OTP via SNS: ${ error }`);
     }
   } else {
     log.warn(
       { requestId, destination },
       "SNS not configured - OTP generated but not sent"
     );
-  }
-
-  // Avoid logging OTP unless explicitly enabled via LOG_CODES or OTP for debugging/local dev
-  const shouldLogCode = process.env.LOG_CODES === "true";
-  if (shouldLogCode) {
-    log.info({ requestId, otp, destination }, "OTP generated");
-  } else {
-    log.info({ requestId }, "OTP generated");
   }
   return requestId;
 }

@@ -301,6 +301,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
           onClose={() => setShowCreateDialog(false)}
           onCreated={handleKeyCreated}
           projectName={project.name}
+          existingNames={apiKeys.map(key => key.name).filter(Boolean)}
         />
       )}
 

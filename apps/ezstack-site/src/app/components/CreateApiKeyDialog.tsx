@@ -157,7 +157,7 @@ export default function CreateApiKeyDialog({
                 <form className="space-y-4" onSubmit={onSubmit}>
                   <div>
                     <label htmlFor="key-name" className="block text-sm font-medium text-gray-200 mb-2">
-                      Name (optional)
+                      Name
                     </label>
                     <input
                       id="key-name"
