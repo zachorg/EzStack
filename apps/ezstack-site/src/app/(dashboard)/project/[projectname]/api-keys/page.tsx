@@ -118,12 +118,14 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   }, [authLoading, isAuthenticated, fetchedProjects, router, resolvedParams]);
 
   const handleKeyCreated = (opts: { newKey: CreateApiKeyResponse }) => {
-    // Refresh the API keys list or handle the newly created key
-    setShowCreateDialog(false);
+    // Add the new key to the list but don't close the dialog yet
+    // The dialog will remain open so user can copy the key
     setApiKeys([
       ...apiKeys,
       { ...opts.newKey, status: "active" } as ListApiKeysResponse,
     ]);
+    // Note: Dialog will stay open until user clicks "Done" button
+    // The CreateApiKeyDialog will close itself when user clicks the close/Done button
   };
 
   const handleKeyRevoked = async () => {

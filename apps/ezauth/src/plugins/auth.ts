@@ -18,12 +18,6 @@ export default fp(async (app) => {
     const apiKey = req.headers ? req.headers["eza-api-key"] as string : null;
     if (apiKey !== null) {
       try {
-        req.log.info(
-          { route: req.routeOptions?.url },
-          "auth: using firebase jwt"
-        );
-      } catch {}
-      try {
         const res = await app.introspectApiKey(apiKey);
 
         if (res === null) {
@@ -37,14 +31,8 @@ export default fp(async (app) => {
           req.log.debug({ userId: res.userId }, "auth: firebase token verified");
         } catch {}
         return;
-      } catch (e) {
-        try {
-          req.log.warn(
-            { err: e && (e as any).message },
-            "auth: api key verification failed"
-          );
-        } catch {}
-        const err: any = new Error(`Missing or invalid api key ${apiKey}`);
+      } catch (e: any) {
+        const err: any = new Error(e?.message);
         err.statusCode = 401;
         err.code = "unauthorized";
         throw err;

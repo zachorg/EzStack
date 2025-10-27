@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import argon2 from "argon2";
 import { hashApiKey } from "../utils/crypto.js";
+import { ApiKeyDocument } from "../__generated__/documentTypes.js";
 
 const ARGON_PARAMS = {
   type: argon2.argon2id,
@@ -60,10 +61,14 @@ export default fp(async (app: any) => {
       
       console.log("apiKey", apiKey, "app.apikeyPepper", app.apikeyPepper, "lookupHash", lookupHash);
       const keyDoc = await db.collection("api_keys")
-      .where("hash", "==", lookupHash)
-      .where("status", "==", "active")
+      .where("lookup_hash", "==", lookupHash)
       .limit(1)
       .get();
+
+      const data = keyDoc.docs[0].data() as ApiKeyDocument;
+      if (data.status !== "active") {
+        throw new Error("API key is not active");
+      }
       
       if (keyDoc.empty) {
         return null;
@@ -113,8 +118,8 @@ export default fp(async (app: any) => {
         lastUsed: keyData.last_used
       };
     } catch (error) {
-      app.log.error({ error, apiKey }, "Failed to introspect API key");
-      return null;
+      app.log.error( error );
+      throw new Error(error instanceof Error ? error.message : "Unknown error");
     }
   });
 

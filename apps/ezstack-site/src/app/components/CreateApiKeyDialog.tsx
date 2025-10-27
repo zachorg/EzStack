@@ -98,6 +98,7 @@ export default function CreateApiKeyDialog({
       
       const res = await apiKeys.create(payload);
       setCreatedKey({ key: res.id, keyPrefix: res.key_prefix });
+      setRevealed(true); // Automatically show the key so user can save it
       onCreated({ newKey: res });
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Failed to create key";
