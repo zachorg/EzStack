@@ -1,61 +1,94 @@
 "use client";
 
 import { useState } from "react";
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import bash from 'react-syntax-highlighter/dist/esm/languages/hljs/bash';
+import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+
+// Register languages
+SyntaxHighlighter.registerLanguage('bash', bash);
+SyntaxHighlighter.registerLanguage('python', python);
 
 // Simple tabbed code viewer for hero. No live requests; copy/paste ready.
-type TabKey = "curl" | "node" | "python";
+type TabKey = "curl" | "python";
 
 const snippets: Record<TabKey, string> = {
-  curl: `curl -X POST https://<host>/api/proxy/otp/send \
-  -H "content-type: application/json" \
-  -H "authorization: Bearer <FIREBASE_ID_TOKEN>" \
-  -H "idempotency-key: idem-123" \
-  -d '{ "destination":"+15555550123", "channel":"sms" }'`,
-  node: `await fetch('https://<host>/api/proxy/otp/send', {
-  method: 'POST',
-  headers: {
-    'content-type': 'application/json',
-    authorization: 'Bearer <FIREBASE_ID_TOKEN>',
-    'idempotency-key': 'idem-123',
-  },
-  body: JSON.stringify({ destination: '+15555550123', channel: 'sms' }),
-});`,
+  curl: `curl -X POST https://api.ezstack.app/ezauth/otp/send \\
+  -H "Authorization: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "destination": "1234567890",
+    "channel": "sms",
+    "contextDescription": "Login verification"
+  }'`,
   python: `import requests
 
-requests.post('https://<host>/api/proxy/otp/send',
-  headers={
-    'content-type': 'application/json',
-    'authorization': 'Bearer <FIREBASE_ID_TOKEN>',
-    'idempotency-key': 'idem-123',
-  },
-  json={ 'destination': '+15555550123', 'channel': 'sms' },
-)`,
+url = "https://api.ezstack.app/ezauth/otp/send"
+headers = {
+    "Authorization": "YOUR_API_KEY",
+    "Content-Type": "application/json"
+}
+data = {
+    "destination": "1234567890",
+    "channel": "sms",
+    "contextDescription": "Login verification"
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())`,
 };
 
 export function CodeExample() {
   const [tab, setTab] = useState<TabKey>("curl");
   return (
-    <div className="rounded-xl border border-black/[.08] dark:border-white/[.145] bg-background/80 backdrop-blur p-3">
-      <div className="flex gap-2 mb-2" role="tablist" aria-label="Code examples">
-        {(["curl", "node", "python"] as TabKey[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            role="tab"
-            aria-selected={tab === k}
-            className={`px-3 py-1 rounded-md text-sm border focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-              tab === k
-                ? "bg-foreground text-background border-transparent"
-                : "border-black/[.08] dark:border-white/[.145]"
-            }`}
-          >
-            {k}
-          </button>
-        ))}
+    <div className="rounded-lg overflow-hidden" style={{ background: '#0F0F0F', border: '0.5px solid #2A2A2A' }}>
+      <div className="flex gap-1 px-4 py-2" style={{ background: '#141414', borderBottom: '0.5px solid #2A2A2A' }}>
+        <button
+          onClick={() => setTab("curl")}
+          className={`px-3 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+            tab === "curl"
+              ? "bg-green-600/20 text-green-400 border border-green-600/30"
+              : "text-gray-400 hover:text-gray-300"
+          }`}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          cURL
+        </button>
+        <button
+          onClick={() => setTab("python")}
+          className={`px-3 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+            tab === "python"
+              ? "bg-green-600/20 text-green-400 border border-green-600/30"
+              : "text-gray-400 hover:text-gray-300"
+          }`}
+        >
+          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.06.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.33-.08.41.08.41.23.34.33.22.41.09.41-.09.33-.22.23-.34.08-.41-.08-.41-.23-.33-.33-.22-.41-.09-.41.09zm13.09 3.95l.28.06.32.12.35.18.36.27.36.35.35.47.32.59.28.73.21.88.14 1.04.05 1.23-.06 1.23-.16 1.04-.24.86-.32.71-.36.57-.4.45-.42.33-.42.24-.4.16-.36.09-.32.05-.24.02-.16-.01h-8.22v.82h5.84l.01 2.76.02.36-.05.34-.11.31-.17.29-.25.25-.31.24-.38.2-.44.17-.51.15-.58.13-.64.09-.71.07-.77.04-.84.01-1.27-.04-1.07-.14-.9-.2-.73-.25-.59-.3-.45-.33-.34-.34-.25-.34-.16-.33-.1-.3-.04-.25-.02-.2.01-.13v-5.34l.05-.64.13-.54.21-.46.26-.38.3-.32.33-.24.35-.2.35-.14.33-.1.3-.06.26-.04.21-.02.13-.01h5.84l.69-.05.59-.14.5-.21.41-.28.33-.32.27-.35.2-.36.15-.36.1-.35.07-.32.04-.28.02-.21V6.07h2.09l.14.01zm-6.47 14.25l-.23.33-.08.41.08.41.23.33.33.23.41.08.41-.08.33-.23.23-.33.08-.41-.08-.41-.23-.33-.33-.23-.41-.08-.41.08z"/>
+          </svg>
+          Python
+        </button>
       </div>
-      <pre className="text-xs overflow-x-auto p-3 rounded-md bg-black/[.06] dark:bg-white/[.06]">
-        <code className="font-mono whitespace-pre-wrap">{snippets[tab]}</code>
-      </pre>
+      <SyntaxHighlighter
+        language={tab === "curl" ? "bash" : "python"}
+        style={atomOneDark}
+        customStyle={{
+          margin: 0,
+          padding: '1rem',
+          background: 'transparent',
+          fontSize: '0.75rem',
+          lineHeight: '1.5'
+        }}
+        codeTagProps={{
+          style: {
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+          }
+        }}
+      >
+        {snippets[tab]}
+      </SyntaxHighlighter>
     </div>
   );
 }
