@@ -8,6 +8,7 @@ import { CodeExample } from "../components/code-example";
 import { BentoGrid } from "../components/bento-grid";
 import { Section } from "../components/section";
 import { FeaturesBentoGrid } from "../components/features-bento-grid";
+import { Footer } from "../components/Footer";
 import { useIsAuthenticated } from "../components/AuthProvider";
 import { useLoginDialog } from "../components/LoginDialogProvider";
 import { Zap, Shield, Gauge, Code2, ArrowRight, Sparkles } from "lucide-react";
@@ -59,7 +60,7 @@ function HomeContent() {
   }, [setSections]);
   
   return (
-    <div className="relative font-sans">
+    <div className="relative font-sans w-full">
       {/* Animated Gradient Background */}
       <div className="fixed inset-0 -z-10 overflow-hidden" style={{background: '#0D0D0D'}}>
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10" />
@@ -67,8 +68,9 @@ function HomeContent() {
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{animationDuration: '6s'}} />
       </div>
 
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-24 px-6">
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Hero Section */}
+        <section className="relative pt-20 pb-24">
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-8">
             {/* Badge */}
@@ -135,8 +137,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Code Example Section */}
-      <section className="relative py-16 px-6">
+        {/* Code Example Section */}
+        <section className="relative py-16">
         <div className="max-w-5xl mx-auto">
           <div className="rounded-2xl border border-gray-800 bg-gray-900/50 backdrop-blur-xl p-8 shadow-2xl">
             <div className="flex items-center gap-3 mb-6">
@@ -148,8 +150,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Key Features Grid */}
-      <section className="relative py-16 px-6">
+        {/* Key Features Grid */}
+        <section className="relative py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
@@ -200,8 +202,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Products Section */}
-      <section className="relative py-16 px-6">
+        {/* Products Section */}
+        <section className="relative py-16">
         <div className="max-w-6xl mx-auto">
           <Section
             title="Product Suite"
@@ -212,8 +214,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* How it Works */}
-      <section className="relative py-16 px-6">
+        {/* How it Works */}
+        <section className="relative py-16">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
@@ -268,8 +270,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Why EzStack */}
-      <section className="relative py-16 px-6">
+        {/* Why EzStack */}
+        <section className="relative py-16">
         <div className="max-w-6xl mx-auto">
           <Section title="Why EzStack">
             <FeaturesBentoGrid />
@@ -277,9 +279,9 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      {!isAuthenticated && (
-        <section className="relative py-20 px-6">
+        {/* Final CTA */}
+        {!isAuthenticated && (
+          <section className="relative py-20">
           <div className="max-w-4xl mx-auto">
             <div className="relative rounded-3xl border border-gray-800 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-blue-600/20 backdrop-blur-xl p-12 text-center overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10" />
@@ -301,10 +303,11 @@ function HomeContent() {
             </div>
           </div>
         </section>
-      )}
+        )}
+      </div>
 
-      {/* Spacer */}
-      <div className="h-20" />
+      {/* Footer - Full width outside container */}
+      <Footer />
     </div>
   );
 }
@@ -316,7 +319,9 @@ export default function Home() {
         <div className="fixed inset-0 -z-10" style={{background: '#0D0D0D'}} />
       </div>
     }>
-      <HomeContent />
+      <div className="relative">
+        <HomeContent />
+      </div>
     </Suspense>
   );
 }
