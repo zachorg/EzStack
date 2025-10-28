@@ -43,7 +43,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased h-full`}
         style={{
-          background: "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
+          background: "#0D0D0D",
         }}
       >
         <AuthProvider>
@@ -64,8 +64,7 @@ export default function RootLayout({
                       <div
                         className="flex-1 overflow-auto min-h-0 scrollbar-hide"
                         style={{
-                          background:
-                            "linear-gradient(135deg, #0D0D0D 0%, #141414 100%)",
+                          background: "#0D0D0D",
                         }}
                       >
                         {children}
