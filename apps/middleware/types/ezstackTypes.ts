@@ -57,6 +57,35 @@ interface ApiKeyDescriptor {
   key_prefix: string;
 }
 
+interface ProjectsAnalyticsDescriptor {
+  // Name of the project
+  /** @ProjectAnalyticsRequest */
+  project_name: string;
+  // Number of completed requests per month
+  // Number of completed requests per month
+  /** @ProjectAnalyticsDocument */
+  /** @ProjectAnalyticsResponse */
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  /** @ProjectAnalyticsDocument */
+  /** @ProjectAnalyticsResponse */
+  completed_requests: number;
+}
+
+interface ServiceAnalyticsDescriptor {
+  // Name of the project
+  /** @ServiceAnalyticsRequest */
+  service_name: string;
+  // Number of completed requests per month
+  /** @ServiceAnalyticsDocument */
+  /** @ServiceAnalyticsResponse */
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  /** @ServiceAnalyticsDocument */
+  /** @ServiceAnalyticsResponse */
+  completed_requests: number;
+}
+
 interface DefaultDescriptor {
   /** @RevokeApiKeyResponse */
   ok: boolean;

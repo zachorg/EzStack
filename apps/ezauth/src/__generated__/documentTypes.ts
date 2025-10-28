@@ -32,6 +32,20 @@ export interface ApiKeyDocument {
   key_prefix: string;
 }
 
+export interface ProjectAnalyticsDocument {
+  // Number of completed requests per month,Number of completed requests per month
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  completed_requests: number;
+}
+
+export interface ServiceAnalyticsDocument {
+  // Number of completed requests per month
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  completed_requests: number;
+}
+
 export interface UserProjectDocument {
   // Primary key
   id: string;

@@ -20,6 +20,16 @@ export interface RevokeApiKeyRequest {
   name: string;
 }
 
+export interface ProjectAnalyticsRequest {
+  // Name of the project
+  project_name: string;
+}
+
+export interface ServiceAnalyticsRequest {
+  // Name of the project
+  service_name: string;
+}
+
 export interface CreateProjectRequest {
   // Name of the project
   name: string;

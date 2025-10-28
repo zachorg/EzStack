@@ -19,6 +19,20 @@ export interface ListApiKeysResponse {
   key_prefix: string;
 }
 
+export interface ProjectAnalyticsResponse {
+  // Number of completed requests per month,Number of completed requests per month
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  completed_requests: number;
+}
+
+export interface ServiceAnalyticsResponse {
+  // Number of completed requests per month
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  completed_requests: number;
+}
+
 export interface RevokeApiKeyResponse {
   // 
   ok: boolean;

@@ -2,6 +2,19 @@ import type { FastifyPluginAsync } from "fastify";
 // import { verifySchema } from "../schemas/otp.js";
 import * as OTP from "../services/otp.js";
 import { hashApiKey } from "../utils/crypto.js";
+import { ProjectAnalyticsDocument } from "../__generated__/documentTypes.js";
+
+export const kSendOtpUsageByProject = (
+  apikeyPepper: string,
+  userId: string,
+  projectId: string
+) => hashApiKey(`${userId}:${projectId}`, apikeyPepper);
+export const kSendOtpUsageByKey = (
+  apikeyPepper: string,
+  userId: string,
+  projectId: string,
+  keyId: string
+) => hashApiKey(`${userId}:${projectId}:${keyId}`, apikeyPepper);
 
 const routes: FastifyPluginAsync = async (app) => {
   const db = app.firebase.db;
@@ -46,9 +59,10 @@ const routes: FastifyPluginAsync = async (app) => {
     userId: string,
     projectId: string
   ): Promise<string | undefined> {
-    const usage_project_lookup_id = hashApiKey(
-      `${userId}:${projectId}`,
-      app.apikeyPepper
+    const usage_project_lookup_id = kSendOtpUsageByProject(
+      app.apikeyPepper,
+      userId,
+      projectId
     );
     return check_and_increment_otp_send_usage(
       trySendOtp,
@@ -65,9 +79,11 @@ const routes: FastifyPluginAsync = async (app) => {
     projectId: string,
     keyId: string
   ): Promise<string | undefined> {
-    const usage_key_lookup_id = hashApiKey(
-      `${userId}:${projectId}:${keyId}`,
-      app.apikeyPepper
+    const usage_key_lookup_id = kSendOtpUsageByKey(
+      app.apikeyPepper,
+      userId,
+      projectId,
+      keyId
     );
     return check_and_increment_otp_send_usage(trySendOtp, usage_key_lookup_id);
   }
@@ -99,7 +115,7 @@ const routes: FastifyPluginAsync = async (app) => {
             completed_monthly_requests: {
               [dateKey]: 1,
             },
-          });
+          } as ProjectAnalyticsDocument);
         }
 
         const data = usageDoc.data();
@@ -132,7 +148,7 @@ const routes: FastifyPluginAsync = async (app) => {
                 ...completed_monthly_requests,
                 [dateKey]: currentCount + 1,
               },
-            },
+            } as ProjectAnalyticsDocument,
             { merge: true }
           );
 

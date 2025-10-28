@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
@@ -17,6 +17,7 @@ import {
   RevokeApiKeyRequest,
 } from "@/__generated__/requestTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
+import { AnalyticsEvent, ServiceAnalytics, useServiceAnalytics, useServiceAnalyticsEventListener } from "@/app/components/AnalyticsProvider";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -36,6 +37,28 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   const [revokingKey, setRevokingKey] = useState<ListApiKeysResponse | null>(
     null
   );
+  const [totalRequests, setTotalRequests] = useState(0);
+  const { analytics } = useServiceAnalytics("ezauth", resolvedParams.projectname);
+  const hasFetchedApiKeys = useRef(false);
+  const hasProcessedAnalytics = useRef(false);
+
+  useServiceAnalyticsEventListener("ezauth", "analytics_fetched", (event) => {
+    const analyticsData = event.data as ServiceAnalytics;
+    // Only triggered when ezauth analytics are fetched
+    console.log("EzAuth analytics:", event.data);
+    // Update totalRequests when analytics data is received
+    if (analyticsData) {
+      setTotalRequests(analyticsData.completed_requests);
+    }
+  });
+
+  useEffect(() => {
+    if (analytics && !hasProcessedAnalytics.current) {
+      const analyticsData = analytics as ServiceAnalytics;
+      setTotalRequests(analyticsData.completed_requests);
+      hasProcessedAnalytics.current = true;
+    }
+  }, [analytics]);
 
   const { setSections } = useSidebar();
   useEffect(() => {
@@ -78,13 +101,22 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
 
   useEffect(() => {
     const fetchApiKeys = async () => {
+      if (!isAuthenticated || hasFetchedApiKeys.current) {
+        return;
+      }
+
+      if (!project?.name) {
+        return;
+      }
+
+      hasFetchedApiKeys.current = true;
       const res = await apiKeysApi.list({
-        project_name: project?.name ?? "",
+        project_name: project.name,
       } as ListApiKeysRequest);
       setApiKeys(res?.api_keys ?? []);
     };
     fetchApiKeys();
-  }, [project]);
+  }, [isAuthenticated, project]);
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -278,7 +310,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
             <h3 className="text-lg font-semibold text-gray-200 mb-2">
               Total Requests
             </h3>
-            <div className="text-3xl font-bold text-blue-400">0</div>
+            <div className="text-3xl font-bold text-blue-400">{totalRequests}</div>
             <p className="text-sm text-gray-400 mt-1">This month</p>
           </div>
 
