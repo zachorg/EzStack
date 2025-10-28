@@ -17,7 +17,7 @@ export const ezAuthProduct: Product = {
         "Authorization": {
           type: "string",
           required: true,
-          description: "Bearer token from Firebase Authentication"
+          description: "API key from your EzStack account"
         },
         "Content-Type": {
           type: "string",
@@ -47,7 +47,7 @@ export const ezAuthProduct: Product = {
       },
       examples: {
         curl: `curl -X POST https://api.ezstack.app/ezauth/otp/send \\
-  -H "Authorization: Bearer YOUR_FIREBASE_TOKEN" \\
+  -H "Authorization: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "destination": "1234567890",
@@ -58,7 +58,7 @@ export const ezAuthProduct: Product = {
 
 url = "https://api.ezstack.app/ezauth/otp/send"
 headers = {
-    "Authorization": "Bearer YOUR_FIREBASE_TOKEN",
+    "Authorization": "YOUR_API_KEY",
     "Content-Type": "application/json"
 }
 data = {
@@ -85,7 +85,7 @@ print(response.json())`
         "Authorization": {
           type: "string",
           required: true,
-          description: "Bearer token from Firebase Authentication"
+          description: "API key from your EzStack account"
         },
         "Content-Type": {
           type: "string",
@@ -110,7 +110,7 @@ print(response.json())`
       },
       examples: {
         curl: `curl -X POST https://api.ezstack.app/ezauth/otp/verify \\
-  -H "Authorization: Bearer YOUR_FIREBASE_TOKEN" \\
+  -H "Authorization: YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
     "requestId": "req_abc123xyz",
@@ -120,7 +120,7 @@ print(response.json())`
 
 url = "https://api.ezstack.app/ezauth/otp/verify"
 headers = {
-    "Authorization": "Bearer YOUR_FIREBASE_TOKEN",
+    "Authorization": "YOUR_API_KEY",
     "Content-Type": "application/json"
 }
 data = {
@@ -146,7 +146,7 @@ print(response.json())`
         "Authorization": {
           type: "string",
           required: true,
-          description: "API key for authentication"
+          description: "API key from your EzStack account"
         },
         "Content-Type": {
           type: "string",
@@ -219,7 +219,7 @@ print(response.json())`
         "Authorization": {
           type: "string",
           required: true,
-          description: "API key for authentication"
+          description: "API key from your EzStack account"
         },
         "Content-Type": {
           type: "string",
@@ -280,7 +280,7 @@ print(response.json())`
         "Authorization": {
           type: "string",
           required: true,
-          description: "API key for authentication"
+          description: "API key from your EzStack account"
         },
         "Content-Type": {
           type: "string",
