@@ -107,10 +107,31 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   }, [authLoading, isAuthenticated, fetchedProjects, router, setSelectedProject, resolvedParams]);
 
   const handleInputChange = useCallback(
-    <K extends keyof EzAuthServiceConfig>(field: K, value: EzAuthServiceConfig[K]) => {
-      setConfig((prev) => (prev ? { ...prev, [field]: value } : null));
+    async <K extends keyof EzAuthServiceConfig>(field: K, value: EzAuthServiceConfig[K]) => {
+      // Auto-save when disabling the service
+      if (field === "enabled" && value === false && config?.enabled === true) {
+        const updatedConfig = config ? { ...config, [field]: value } : null;
+        setConfig(updatedConfig);
+        
+        if (updatedConfig) {
+          setIsSaving(true);
+          try {
+            await updateServiceSettings("ezauth", updatedConfig);
+            originalConfigRef.current = JSON.parse(JSON.stringify(updatedConfig));
+            setHasChanges(false);
+          } catch (error) {
+            console.error("Failed to auto-save on disable:", error);
+            // Revert the state on error
+            setConfig(config);
+          } finally {
+            setIsSaving(false);
+          }
+        }
+      } else {
+        setConfig((prev) => (prev ? { ...prev, [field]: value } : null));
+      }
     },
-    []
+    [config, updateServiceSettings]
   );
 
   const handleSave = useCallback(async () => {
