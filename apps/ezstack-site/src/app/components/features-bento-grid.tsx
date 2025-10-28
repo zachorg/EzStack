@@ -10,24 +10,24 @@ interface FeatureItem {
 
 const features: FeatureItem[] = [
   {
-    title: "OTP/OTE in one call",
-    description: "Send and verify codes with a single API endpoint"
+    title: "Email & SMS delivery",
+    description: "Send OTP codes via email or SMS with a simple API"
   },
   {
-    title: "Idempotent sends",
-    description: "Prevent duplicate sends with built-in deduplication"
+    title: "Built-in rate limiting",
+    description: "Automatic throttling to prevent abuse and respect user preferences"
   },
   {
     title: "Per-destination rate limits",
-    description: "Respect user preferences with smart throttling"
+    description: "Smart rate limiting per phone number or email address"
   },
   {
     title: "Standardized errors with Retry-After",
     description: "Clear error handling with automatic retry guidance"
   },
   {
-    title: "Tenant-aware plans",
-    description: "Scale pricing and features per organization"
+    title: "Simple API integration",
+    description: "Easy to integrate with comprehensive documentation"
   }
 ];
 
