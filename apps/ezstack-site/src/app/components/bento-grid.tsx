@@ -3,6 +3,7 @@
 // Responsive cards sourcing content from config to keep layout extensible.
 import Link from "next/link";
 import { productTiles, type ProductTile } from "../../lib/products";
+import { useLoginDialog } from "./LoginDialogProvider";
 
 function StatusBadge({ status }: { status: ProductTile["status"] }) {
   const color = status === "available" ? "bg-emerald-600" : "bg-amber-600";
@@ -15,6 +16,8 @@ function StatusBadge({ status }: { status: ProductTile["status"] }) {
 }
 
 export function BentoGrid() {
+  const { openDialog } = useLoginDialog();
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {productTiles.map((tile) => (
@@ -38,19 +41,21 @@ export function BentoGrid() {
             ))}
           </ul>
           <div className="flex gap-2">
-            <Link
-              href={tile.primaryHref}
-              className="px-3 py-1.5 rounded-md bg-foreground text-background text-sm"
-            >
-              Docs
-            </Link>
-            {tile.secondaryHref && (
+            {tile.status === "available" && (
               <Link
-                href={tile.secondaryHref}
-                className="px-3 py-1.5 rounded-md border border-black/[.08] dark:border-white/[.145] text-sm"
+                href={tile.primaryHref}
+                className="px-3 py-1.5 rounded-md bg-foreground text-background text-sm"
+              >
+                Docs
+              </Link>
+            )}
+            {tile.secondaryHref && tile.status === "available" && (
+              <button
+                onClick={openDialog}
+                className="px-3 py-1.5 rounded-md border border-black/[.08] dark:border-white/[.145] text-sm hover:bg-black/[.04] dark:hover:bg-white/[.04] transition-colors"
               >
                 Start
-              </Link>
+              </button>
             )}
           </div>
         </article>
