@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import bash from 'react-syntax-highlighter/dist/esm/languages/hljs/bash';
+import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
+import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { Language } from "../types";
+
+// Register languages
+SyntaxHighlighter.registerLanguage('bash', bash);
+SyntaxHighlighter.registerLanguage('python', python);
+SyntaxHighlighter.registerLanguage('json', json);
 
 interface CodeExampleProps {
   code: { 
@@ -63,11 +73,24 @@ export function CodeExample({ code, responseExample, method, path }: CodeExample
             </button>
           </div>
         </div>
-        <pre className="p-4 overflow-x-auto text-xs leading-relaxed">
-          <code className="text-gray-300">
-            {code[language]}
-          </code>
-        </pre>
+        <SyntaxHighlighter
+          language={language === "curl" ? "bash" : "python"}
+          style={atomOneDark}
+          customStyle={{
+            margin: 0,
+            padding: '1rem',
+            background: 'transparent',
+            fontSize: '0.75rem',
+            lineHeight: '1.5'
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+            }
+          }}
+        >
+          {code[language]}
+        </SyntaxHighlighter>
       </div>
 
       {/* Response Example */}
@@ -85,11 +108,24 @@ export function CodeExample({ code, responseExample, method, path }: CodeExample
             </svg>
           </button>
         </div>
-        <pre className="p-4 overflow-x-auto text-xs leading-relaxed">
-          <code className="text-gray-300">
-            {responseExample}
-          </code>
-        </pre>
+        <SyntaxHighlighter
+          language="json"
+          style={atomOneDark}
+          customStyle={{
+            margin: 0,
+            padding: '1rem',
+            background: 'transparent',
+            fontSize: '0.75rem',
+            lineHeight: '1.5'
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+            }
+          }}
+        >
+          {responseExample}
+        </SyntaxHighlighter>
       </div>
     </div>
   );
