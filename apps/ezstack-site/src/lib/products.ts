@@ -1,10 +1,10 @@
 // Product tiles drive the "Bento" grid on the homepage.
 // Adding a new tile here automatically updates the UI.
 import type { ComponentType } from "react";
-import { type LucideIcon, ShieldCheck, CreditCard, LineChart } from "lucide-react";
+import { type LucideIcon, ShieldCheck, MessageSquare } from "lucide-react";
 
 export type ProductTile = {
-  slug: "ezauth" | "ezpayments" | "ezanalytics" | string;
+  slug: "ezauth" | "ezsms" | string;
   title: string;
   status: "available" | "coming_soon";
   description: string;
@@ -23,28 +23,18 @@ export const productTiles: ProductTile[] = [
     description: "OTP & email codes in minutes.",
     bullets: ["OTP/OTE in one call", "Idempotent sends", "Rate-limit headers"],
     icon: ShieldCheck,
-    primaryHref: "/docs/ezauth/overview",
+    primaryHref: "/docs",
     secondaryHref: "/account",
     span: "wide",
   },
   {
-    slug: "ezpayments",
-    title: "EzPayments",
+    slug: "ezsms",
+    title: "EzSms",
     status: "coming_soon",
-    description: "Take money, not months.",
-    bullets: ["Hosted flows", "Webhooks", "Fraud tools"],
-    icon: CreditCard,
-    primaryHref: "/docs/ezpayments",
-    span: "square",
-  },
-  {
-    slug: "ezanalytics",
-    title: "EzAnalytics",
-    status: "coming_soon",
-    description: "Usage insights & alerts.",
-    bullets: ["Live charts", "Threshold alerts", "Exports"],
-    icon: LineChart,
-    primaryHref: "/docs/ezanalytics",
+    description: "SMS messaging made simple.",
+    bullets: ["Bulk messaging", "Templates", "Delivery tracking"],
+    icon: MessageSquare,
+    primaryHref: "/docs/ezsms",
     span: "square",
   },
 ];
