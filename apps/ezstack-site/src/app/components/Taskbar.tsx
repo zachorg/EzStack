@@ -42,7 +42,7 @@ export function Taskbar() {
       {/* EzStack Logo */}
       <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" style={{ marginLeft: '12px' }}>
         {/* Logo */}
-        <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
+        <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
           <span className="text-white font-bold text-xs">E</span>
         </div>
         
@@ -131,7 +131,7 @@ export function Taskbar() {
               </button>
               <button
                 onClick={openDialog}
-                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transform hover:-translate-y-0.5"
               >
                 Sign up
               </button>

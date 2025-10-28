@@ -8,10 +8,11 @@ import { AuroraBackground } from "../components/aurora-background";
 import { CodeExample } from "../components/code-example";
 import { BentoGrid } from "../components/bento-grid";
 import { Section } from "../components/section";
-import { CtaBand } from "../components/cta-band";
 import { FeaturesBentoGrid } from "../components/features-bento-grid";
+import { Footer } from "../components/Footer";
 import { useIsAuthenticated, useAuth } from "../components/AuthProvider";
 import { useLoginDialog } from "../components/LoginDialogProvider";
+import { Zap, Shield, Gauge, Code2, ArrowRight, Sparkles } from "lucide-react";
 
 function HomeContent() {
   const router = useRouter();
@@ -40,6 +41,16 @@ function HomeContent() {
             icon: (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            ),
+          },
+          {
+            id: "docs",
+            name: "Docs",
+            href: "/docs",
+            icon: (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             ),
           }
@@ -74,82 +85,266 @@ function HomeContent() {
   }
   
   return (
-    <div className="relative font-sans space-y-16">
-      <AuroraBackground />
-      <section className="relative text-center sm:text-left space-y-6 pt-6">
-        <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight">
-          The easiest way to ship customer workflows.
-        </h1>
-        <p className="text-lg text-foreground/80 max-w-2xl mx-auto sm:mx-0">
-          Start with EzAuth—OTP & email codes with idempotent sends, per-destination rate
-          limits, and tenant-aware plans. Add EzPayments, EzAnalytics as you grow.
-        </p>
-        <div className="flex gap-3 justify-center sm:justify-start">
-        {!isAuthenticated && <button
-            onClick={openDialog}
-            className="rounded-full border border-transparent bg-foreground text-background px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
-            Sign in
-          </button>}
-          <Link
-            href="/docs"
-            className="rounded-full border border-black/[.08] dark:border-white/[.145] px-5 h-12 inline-flex items-center justify-center text-sm sm:text-base font-medium hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a]"
-          >
-            Explore docs
-          </Link>
-        </div>
-        <div className="mt-8">
-          <CodeExample />
+    <div className="relative font-sans w-full">
+      {/* Animated Gradient Background */}
+      <div className="fixed inset-0 -z-10 overflow-hidden" style={{background: '#0D0D0D'}}>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse" style={{animationDuration: '4s'}} />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" style={{animationDuration: '6s'}} />
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Hero Section */}
+        <section className="relative pt-20 pb-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center space-y-8">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-blue-500/30 bg-blue-500/10 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-sm text-blue-300">Ship customer workflows in minutes</span>
+            </div>
+
+            {/* Main Heading */}
+            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-bold tracking-tight">
+              <span className="bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+                Build faster with
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent animate-gradient">
+                EzStack
+              </span>
+            </h1>
+
+            {/* Subheading */}
+            <p className="text-xl sm:text-2xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+              Production-ready authentication, payments, and analytics APIs.
+              <br />
+              <span className="text-gray-500">Built for developers who ship fast.</span>
+            </p>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+              {!isAuthenticated && (
+                <button
+                  onClick={openDialog}
+                  className="group relative px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold text-lg shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105"
+                >
+                  <span className="flex items-center gap-2">
+                    Start building free
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </span>
+                </button>
+              )}
+              <Link
+                href="/docs"
+                className="px-8 py-4 rounded-xl border border-gray-700 bg-gray-800/50 backdrop-blur-sm text-white font-semibold text-lg hover:bg-gray-800 hover:border-gray-600 transition-all duration-300"
+              >
+                View documentation
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto pt-12">
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">99.9%</div>
+                <div className="text-sm text-gray-500">Uptime</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">&lt;100ms</div>
+                <div className="text-sm text-gray-500">Latency</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-3xl font-bold text-white">10M+</div>
+                <div className="text-sm text-gray-500">API Calls</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <Section
-        title="Product suite"
-        description="Add modules as you grow. EzAuth is available today; more coming soon."
-      >
-        <BentoGrid />
-      </Section>
-
-      <Section
-        title="How it works"
-        description="Collect → Send/Verify → Handle cooldown/429."
-      >
-        <ol className="grid gap-4 sm:grid-cols-3 text-sm">
-          <li className="rounded-lg border border-black/[.08] dark:border-white/[.145] p-4">
-            <p className="font-medium mb-1">Collect</p>
-            <p className="text-foreground/75">Gather destination (email/phone) and request a code.</p>
-          </li>
-          <li className="rounded-lg border border-black/[.08] dark:border-white/[.145] p-4">
-            <p className="font-medium mb-1">Send & verify</p>
-            <p className="text-foreground/75">Use the Firebase proxy to send and verify one-time codes.</p>
-          </li>
-          <li className="rounded-lg border border-black/[.08] dark:border-white/[.145] p-4">
-            <p className="font-medium mb-1">Handle cooldown</p>
-            <p className="text-foreground/75">Respect 429s with Retry-After for per-destination limits.</p>
-          </li>
-        </ol>
-        <div className="mt-3 text-sm">
-          <Link href="/docs/ezauth/overview" className="underline">Read the docs</Link>
-          <span className="mx-2">·</span>
-          <Link href="/docs/ezauth/otp" className="underline">Implement with AI</Link>
+        {/* Code Example Section */}
+        <section className="relative py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="rounded-2xl border border-gray-800 bg-gray-900/50 backdrop-blur-xl p-8 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <Code2 className="w-6 h-6 text-blue-400" />
+              <h3 className="text-xl font-semibold text-white">Quick Start Example</h3>
+            </div>
+            <CodeExample />
+          </div>
         </div>
-      </Section>
+      </section>
 
-      <Section title="Why EzStack">
-        <FeaturesBentoGrid />
-      </Section>
+        {/* Key Features Grid */}
+        <section className="relative py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+              Everything you need to ship
+            </h2>
+            <p className="text-xl text-gray-400">
+              Powerful features that scale with your application
+            </p>
+          </div>
 
-      {!isAuthenticated && <CtaBand />}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Feature Card 1 */}
+            <div className="group relative rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-blue-500/50 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Lightning Fast</h3>
+                <p className="text-gray-400">Sub-100ms response times with global edge deployment</p>
+              </div>
+            </div>
 
-      {/* Login Dialog */}
+            {/* Feature Card 2 */}
+            <div className="group relative rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-purple-500/50 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-purple-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Enterprise Security</h3>
+                <p className="text-gray-400">Bank-grade encryption and compliance out of the box</p>
+              </div>
+            </div>
+
+            {/* Feature Card 3 */}
+            <div className="group relative rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-green-500/50 transition-all duration-300 hover:scale-105">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4">
+                  <Gauge className="w-6 h-6 text-green-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Auto-Scaling</h3>
+                <p className="text-gray-400">From zero to millions of requests seamlessly</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+        {/* Products Section */}
+        <section className="relative py-16">
+        <div className="max-w-6xl mx-auto">
+          <Section
+            title="Product Suite"
+            description="Add modules as you grow. EzAuth is available today; more coming soon."
+          >
+            <BentoGrid />
+          </Section>
+        </div>
+      </section>
+
+        {/* How it Works */}
+        <section className="relative py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+              How it works
+            </h2>
+            <p className="text-xl text-gray-400">
+              Collect → Send/Verify → Handle cooldown/429
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="relative group rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-blue-500/50 transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/50">
+                1
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3 mt-4">Collect</h3>
+              <p className="text-gray-400">
+                Gather destination (email/phone) and request a code through our simple API.
+              </p>
+            </div>
+
+            <div className="relative group rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-purple-500/50 transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-purple-500/50">
+                2
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3 mt-4">Send & Verify</h3>
+              <p className="text-gray-400">
+                Use the Firebase proxy to send and verify one-time codes securely.
+              </p>
+            </div>
+
+            <div className="relative group rounded-2xl border border-gray-800 bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm p-8 hover:border-green-500/50 transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-green-500/50">
+                3
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3 mt-4">Handle Cooldown</h3>
+              <p className="text-gray-400">
+                Respect 429s with Retry-After for per-destination rate limits automatically.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center text-sm">
+            <Link href="/docs/ezauth/overview" className="text-blue-400 hover:text-blue-300 transition-colors">
+              Read the docs
+            </Link>
+            <span className="mx-3 text-gray-600">·</span>
+            <Link href="/docs/ezauth/otp" className="text-blue-400 hover:text-blue-300 transition-colors">
+              Implement with AI
+            </Link>
+          </div>
+        </div>
+      </section>
+
+        {/* Why EzStack */}
+        <section className="relative py-16">
+        <div className="max-w-6xl mx-auto">
+          <Section title="Why EzStack">
+            <FeaturesBentoGrid />
+          </Section>
+        </div>
+      </section>
+
+        {/* Final CTA */}
+        {!isAuthenticated && (
+          <section className="relative py-20">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative rounded-3xl border border-gray-800 bg-gradient-to-br from-blue-600/20 via-purple-600/20 to-blue-600/20 backdrop-blur-xl p-12 text-center overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10" />
+              <div className="relative">
+                <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
+                  Ready to build something amazing?
+                </h2>
+                <p className="text-xl text-gray-300 mb-8">
+                  Start for free. No credit card required.
+                </p>
+                <button
+                  onClick={openDialog}
+                  className="group inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold text-lg shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105"
+                >
+                  Get started now
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+        )}
+      </div>
+
+      {/* Footer - Full width outside container */}
+      <Footer />
     </div>
   );
 }
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="relative font-sans space-y-16"><AuroraBackground /></div>}>
-      <div className="min-h-full p-6">
+    <Suspense fallback={
+      <div className="relative font-sans min-h-screen">
+        <div className="fixed inset-0 -z-10" style={{background: '#0D0D0D'}} />
+      </div>
+    }>
+      <div className="relative">
         <HomeContent />
       </div>
     </Suspense>

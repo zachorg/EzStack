@@ -56,17 +56,17 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     // Only triggered when ezauth analytics are fetched
     console.log("EzAuth analytics:", event.data);
     // Update totalRequests when analytics data is received
-    if (analyticsData) {
-      const data = analyticsData.ezauth as EzAuthAnalyticsResponse;
-      setEzauthAnalytics(data ?? null);
+    if (analyticsData && analyticsData.ezauth) {
+      setEzauthAnalytics(analyticsData.ezauth);
     }
   });
 
   useEffect(() => {
     if (analytics && !hasProcessedAnalytics.current) {
       const analyticsData = analytics as ServiceAnalytics;
-      const data = analyticsData.ezauth as EzAuthAnalyticsResponse;
-      setEzauthAnalytics(data ?? null);
+      if (analyticsData && analyticsData.ezauth) {
+        setEzauthAnalytics(analyticsData.ezauth);
+      }
       hasProcessedAnalytics.current = true;
     }
   }, [analytics]);

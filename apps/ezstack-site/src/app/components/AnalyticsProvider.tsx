@@ -25,7 +25,7 @@ export interface ServiceAnalytics {
   projectName: string;
   lastUpdated: string;
   // Add specific metrics based on the service
-  [key: string]: any;
+  ezauth?: EzAuthAnalyticsResponse;
 }
 
 // Event types for analytics lifecycle (now service-specific)
@@ -269,7 +269,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
       });
 
       try {
-        let serviceAnalytics: ServiceAnalytics = {
+        const serviceAnalytics: ServiceAnalytics = {
           serviceId,
           projectName,
           lastUpdated: new Date().toISOString(),

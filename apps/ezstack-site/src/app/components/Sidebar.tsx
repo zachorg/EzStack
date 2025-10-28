@@ -47,7 +47,7 @@ export function Sidebar() {
                                 href={item.href}
                                 className={`group relative flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200 ${
                                   isActive
-                                    ? 'bg-blue-600 text-white shadow-lg'
+                                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
                                     : 'text-gray-300 hover:text-white hover:bg-gray-800/50'
                                 }`}
                               >
