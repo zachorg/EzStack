@@ -59,6 +59,8 @@ export interface UserProjectDocument {
   created_at: string;
   // Date updated
   updated_at: string;
+  // List of services: value is JSON string of ServiceConfig.
+  services: Record<string, string>;
 }
 
 export interface UserProfileDocument {

@@ -55,7 +55,7 @@ const routes: FastifyPluginAsync = async (app) => {
           name: body.name,
           created_at: new Date().toLocaleDateString(),
           updated_at: new Date().toLocaleDateString(),
-          api_keys: [],
+          services: {},
         } as UserProjectDocument);
 
         // Update existing user

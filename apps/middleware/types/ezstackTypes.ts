@@ -95,6 +95,7 @@ interface ServiceAnalyticsDescriptor {
 
 interface DefaultDescriptor {
   /** @RevokeApiKeyResponse */
+  /** @EzAuthServiceUpdateResponse */
   ok: boolean;
 }
 
@@ -118,6 +119,46 @@ interface ProjectDescriptor {
   // List of projects
   /** @ListUserProjectsResponse */
   projects: UserProjectResponse[];
+  // List of services: value is JSON string of ServiceConfig.
+  /** @UserProjectDocument */
+  /** @UserProjectResponse */
+  services: Record<string, string>;
+}
+
+interface GetProjectServicesDescriptor {
+  // Name of the project
+  /** @GetProjectServicesRequest */
+  project_name: string;
+}
+
+interface ServiceConfigDescriptor {
+  // Whether the service is enabled
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  enabled: boolean;
+  // Name of the project this service is associated with
+  /** @EzAuthServiceUpdateRequest */
+  project_name: string;
+  // Company name to be displayed on OTP email/SMS
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  organization_name: string;
+  // Length of the OTP code (min 4 - max 6)
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_code_length: number;
+  // Rate limit for destination per minute
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_rate_limit_destination_per_minute: number;
+  // TTL of the OTP code in seconds
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_ttl_seconds: number;
+  // Maximum number of OTP verification attempts
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_max_verification_attempts: number;
 }
 
 interface UserProfileDescriptor {

@@ -3,8 +3,6 @@ import { randomUUID } from "node:crypto";
 import type Redis from "ioredis";
 import { destHash, randomOtp, hashOtp } from "../utils/crypto.js";
 
-const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS || 300);
-
 const kOtp = (t: string, id: string) => `otp:${t}:${id}`;
 // const kIdem   = (t: string, k: string)  => `idem:${t}:${k}`;
 const kRate = (dh: string) => `rate:dest:${dh}`;
@@ -15,12 +13,14 @@ export async function send(app: any, body: any) {
     throw new Error("SNS not configured");
   }
 
-  const { destination, channel, userId, contextDescription } = body;
+  const { destination, channel, userId, contextDescription, serviceInfo } =
+    body;
   const log = app.log.child({ userId, contextDescription });
   const redis = app.redis as Redis;
 
-  const OTP_LENGTH = Number(process.env.OTP_LENGTH || 6);
-  const DEST_PER_MINUTE = Number(process.env.DEST_PER_MINUTE || 5);
+  const OTP_LENGTH = Math.min(Math.max(serviceInfo.otp_code_length, 4), 6);
+  const DEST_PER_MINUTE = serviceInfo.otp_rate_limit_destination_per_minute;
+  const OTP_TTL_SECONDS = serviceInfo.otp_ttl_seconds;
 
   const dh = destHash(destination);
   const rc = await redis.incr(kRate(dh));
@@ -56,7 +56,7 @@ export async function send(app: any, body: any) {
   // Send OTP via SNS
   if (app.sns?.isReady()) {
     try {
-      const result = await app.sns.sendOtp(destination, otp);
+      const result = await app.sns.sendOtp(destination, otp, serviceInfo);
       if (!result.success) {
         log.error(
           { requestId, destination, error: result.error },
@@ -86,9 +86,10 @@ export async function send(app: any, body: any) {
 }
 
 export async function verify(app: FastifyInstance, body: any) {
-  const { userId, requestId, code } = body;
+  const { userId, requestId, code, serviceInfo } = body;
   const redis = app.redis;
-  const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
+  const OTP_MAX_ATTEMPTS = serviceInfo.otp_max_verification_attempts;
+  const OTP_TTL_SECONDS = serviceInfo.otp_ttl_seconds;
   const key = kOtp(userId, requestId);
   const raw = await redis.get(key);
 

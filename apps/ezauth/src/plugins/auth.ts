@@ -15,7 +15,7 @@ export default fp(async (app) => {
       return;
     }
 
-    const apiKey = req.headers ? req.headers["eza-api-key"] as string : null;
+    const apiKey = req.headers ? (req.headers["eza-api-key"] as string) : null;
     if (apiKey !== null) {
       try {
         const res = await app.introspectApiKey(apiKey);
@@ -29,9 +29,14 @@ export default fp(async (app) => {
         req.user_id = res.userId;
         req.key_id = res.keyId;
         req.project_id = res.projectId;
-        try {
-          req.log.debug({ userId: res.userId }, "auth: firebase token verified");
-        } catch {}
+        req.service_info = res.serviceInfo;
+
+        if (!res.serviceInfo.enabled) {
+          const err: any = new Error("EzAuth service is not enabled");
+          err.statusCode = 403;
+          err.code = "forbidden";
+          throw err;
+        }
         return;
       } catch (e: any) {
         const err: any = new Error(e?.message);
@@ -46,7 +51,9 @@ export default fp(async (app) => {
       try {
         req.log.error("auth: missing FASTIFY_PUBLIC_APIKEY_PEPPER");
       } catch {}
-      const err: any = new Error("Server misconfigured: FASTIFY_PUBLIC_APIKEY_PEPPER not set");
+      const err: any = new Error(
+        "Server misconfigured: FASTIFY_PUBLIC_APIKEY_PEPPER not set"
+      );
       err.statusCode = 500;
       err.code = "internal_error";
       throw err;

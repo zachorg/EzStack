@@ -6,6 +6,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
 import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
+import { PAGE_SECTIONS } from "@/app/pageSections";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -27,33 +28,10 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       {
         title: "",
         items: [
-          {
-            id: "API Keys",
-            name: "API Keys",
-            href: `/project/${resolvedParams.projectname}/api-keys`,
-            icon: (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={800}
-                height={800}
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M21.067 5c.592.958.933 2.086.933 3.293 0 3.476-2.83 6.294-6.32 6.294-.636 0-2.086-.146-2.791-.732l-.882.878c-.735.732-.147.732.147 1.317 0 0 .735 1.025 0 2.05-.441.585-1.676 1.404-3.086 0l-.294.292s.881 1.025.147 2.05c-.441.585-1.617 1.17-2.646.146l-1.028 1.024c-.706.703-1.568.293-1.91 0l-.883-.878c-.823-.82-.343-1.708 0-2.05l7.642-7.61s-.735-1.17-.735-2.78c0-3.476 2.83-6.294 6.32-6.294.819 0 1.601.155 2.319.437"
-                />
-                <path
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  d="M17.885 8.294a2.2 2.2 0 0 1-2.204 2.195 2.2 2.2 0 0 1-2.205-2.195 2.2 2.2 0 0 1 2.205-2.196 2.2 2.2 0 0 1 2.204 2.196Z"
-                />
-              </svg>
-            ),
-          }
+          PAGE_SECTIONS({ resolvedParams }).dashboard,
+          PAGE_SECTIONS({ resolvedParams }).services,
+          PAGE_SECTIONS({ resolvedParams }).apiKeys,
+          PAGE_SECTIONS({ resolvedParams }).docs,
         ],
       },
     ];

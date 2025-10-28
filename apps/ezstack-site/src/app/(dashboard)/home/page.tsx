@@ -8,6 +8,7 @@ import CreateProjectDialog from "@/app/components/CreateProjectDialog";
 import { ezstack_api_fetch } from "@/lib/api/client";
 import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useProjects } from "@/app/components/ProjectsProvider";
+import { PAGE_SECTIONS } from "@/app/pageSections";
 
 // Project Card Component
 function ProjectCard({ project }: { project: UserProjectResponse }) {
@@ -71,6 +72,7 @@ function ProjectDocument() {
         name: projectData.name,
         created_at: new Date().toLocaleDateString(),
         updated_at: new Date().toLocaleDateString(),
+        services: {},
       });
 
       setProjects([
@@ -79,6 +81,7 @@ function ProjectDocument() {
           name: projectData.name,
           created_at: new Date().toLocaleDateString(),
           updated_at: new Date().toLocaleDateString(),
+          services: {},
         },
       ]);
     } catch (err) {
@@ -177,52 +180,8 @@ export default function Dashboard() {
       {
         title: "",
         items: [
-          {
-            id: "Projects",
-            name: "Projects",
-            href: "/home",
-            icon: (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 5a2 2 0 012-2h4a2 2 0 012 2v3H8V5z"
-                />
-              </svg>
-            ),
-          },
-          {
-            id: "billing",
-            name: "Billing",
-            href: "/billing",
-            icon: (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                />
-              </svg>
-            ),
-          },
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).billing,
         ],
       },
     ];

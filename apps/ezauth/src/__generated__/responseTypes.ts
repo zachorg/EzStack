@@ -42,6 +42,11 @@ export interface RevokeApiKeyResponse {
   ok: boolean;
 }
 
+export interface EzAuthServiceUpdateResponse {
+  // 
+  ok: boolean;
+}
+
 export interface UserProjectResponse {
   // Name of the project
   name: string;
@@ -49,6 +54,8 @@ export interface UserProjectResponse {
   created_at: string;
   // Date updated
   updated_at: string;
+  // List of services: value is JSON string of ServiceConfig.
+  services: Record<string, string>;
 }
 
 export interface ListUserProjectsResponse {

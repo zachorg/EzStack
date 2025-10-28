@@ -11,6 +11,7 @@ import { TaskbarProvider } from "./components/TaskbarProvider";
 import { LoginDialogProvider } from "./components/LoginDialogProvider";
 import { ProjectsProvider } from "./components/ProjectsProvider";
 import { AnalyticsProvider } from "./components/AnalyticsProvider";
+import { ProjectServicesProvider } from "./components/ProjectServicesProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -50,32 +51,34 @@ export default function RootLayout({
         <AuthProvider>
           <LoginDialogProvider>
             <ProjectsProvider>
-              <AnalyticsProvider>
-                <SidebarProvider>
-                  <TaskbarProvider>
-                    <div className="flex h-full">
-                      {/* Sidebar */}
-                      <Sidebar />
+              <ProjectServicesProvider>
+                <AnalyticsProvider>
+                  <SidebarProvider>
+                    <TaskbarProvider>
+                      <div className="flex h-full">
+                        {/* Sidebar */}
+                        <Sidebar />
 
-                      {/* Main Content Area */}
-                      <div className="flex-1 flex flex-col min-h-0 ml-12">
-                        {/* Taskbar */}
-                        <Taskbar />
+                        {/* Main Content Area */}
+                        <div className="flex-1 flex flex-col min-h-0 ml-12">
+                          {/* Taskbar */}
+                          <Taskbar />
 
-                        {/* Page Content */}
-                        <div
-                          className="flex-1 overflow-auto min-h-0 scrollbar-hide"
-                          style={{
-                            background: "#0D0D0D",
-                          }}
-                        >
-                          {children}
+                          {/* Page Content */}
+                          <div
+                            className="flex-1 overflow-auto min-h-0 scrollbar-hide"
+                            style={{
+                              background: "#0D0D0D",
+                            }}
+                          >
+                            {children}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </TaskbarProvider>
-                </SidebarProvider>
-              </AnalyticsProvider>
+                    </TaskbarProvider>
+                  </SidebarProvider>
+                </AnalyticsProvider>
+              </ProjectServicesProvider>
             </ProjectsProvider>
           </LoginDialogProvider>
         </AuthProvider>

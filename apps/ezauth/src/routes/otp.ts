@@ -54,6 +54,66 @@ const routes: FastifyPluginAsync = async (app) => {
     return rep.code(ok ? 200 : 503).send(payload);
   });
 
+  async function update_topdown_analytics_send_otp() {
+    if (!db) {
+      throw new Error("Firebase firestore not initialized");
+    }
+
+    const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
+    const usageRef = db.doc(`analytics/ezauth/topdown/${dateKey}`);
+
+    await db.runTransaction(async (transaction) => {
+      const usageDoc = await transaction.get(usageRef);
+
+      if (!usageDoc.exists) {
+        transaction.set(usageRef, {
+          send_otp_completed_requests: 1,
+        } as EzAuthAnalyticsDocument);
+      }
+
+      const data = usageDoc.data();
+      const send_otp_completed_requests =
+        data?.send_otp_completed_requests || 0;
+      transaction.set(
+        usageRef,
+        {
+          send_otp_completed_requests: send_otp_completed_requests + 1,
+        },
+        { merge: true }
+      );
+    });
+  }
+
+  async function update_topdown_analytics_verify_otp() {
+    if (!db) {
+      throw new Error("Firebase firestore not initialized");
+    }
+
+    const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
+    const usageRef = db.doc(`analytics/ezauth/topdown/${dateKey}`);
+
+    await db.runTransaction(async (transaction) => {
+      const usageDoc = await transaction.get(usageRef);
+
+      if (!usageDoc.exists) {
+        transaction.set(usageRef, {
+          verify_otp_completed_requests: 1,
+        } as EzAuthAnalyticsDocument);
+      }
+
+      const data = usageDoc.data();
+      const verify_otp_completed_requests =
+        data?.verify_otp_completed_requests || 0;
+      transaction.set(
+        usageRef,
+        {
+          verify_otp_completed_requests: verify_otp_completed_requests + 1,
+        },
+        { merge: true }
+      );
+    });
+  }
+
   async function check_and_increment_otp_send_usage(
     trySendOtp: () => Promise<string>,
     usage_key_lookup_id: string,
@@ -117,6 +177,9 @@ const routes: FastifyPluginAsync = async (app) => {
             } as EzAuthAnalyticsDocument,
             { merge: true }
           );
+
+          // no need to wait for this to complete
+          update_topdown_analytics_send_otp();
 
           return requestId;
         } catch (error) {
@@ -187,6 +250,8 @@ const routes: FastifyPluginAsync = async (app) => {
           } as EzAuthAnalyticsDocument,
           { merge: true }
         );
+        // no need to wait for this to complete
+        update_topdown_analytics_verify_otp();
       } catch (error) {
         throw new Error("Failed to verify OTP");
       }
@@ -212,7 +277,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const destination = req.body["destination"];
       const channel = req.body["channel"];
-      const payload = { ...(req.body as any), userId, projectId };
+      const payload = { ...(req.body as any), userId, projectId, serviceInfo: req.service_info };
 
       // Validate destination based on channel
       if (channel === "sms") {

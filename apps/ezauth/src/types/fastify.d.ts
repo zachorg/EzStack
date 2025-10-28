@@ -36,6 +36,7 @@ declare module "fastify" {
       keyId: string;
       userId: string;
       projectId: string;
+      serviceInfo: EzAuthServiceConfig;
     } | null>;
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;

@@ -10,8 +10,6 @@ export type ProductTile = {
   description: string;
   bullets: string[];
   icon: LucideIcon | ComponentType<Record<string, unknown>>;
-  primaryHref: string; // docs
-  secondaryHref?: string; // start / sign in
   span?: "wide" | "tall" | "square";
 };
 
@@ -20,11 +18,9 @@ export const productTiles: ProductTile[] = [
     slug: "ezauth",
     title: "EzAuth",
     status: "available",
-    description: "OTP codes via email or SMS in minutes.",
+    description: "OTP codes via email or SMS in seconds.",
     bullets: ["Email & SMS delivery", "Built-in rate limiting", "Simple API integration"],
     icon: ShieldCheck,
-    primaryHref: "/docs",
-    secondaryHref: "/account",
     span: "wide",
   },
   {
@@ -34,7 +30,6 @@ export const productTiles: ProductTile[] = [
     description: "SMS messaging made simple.",
     bullets: ["Bulk messaging", "Templates", "Delivery tracking"],
     icon: MessageSquare,
-    primaryHref: "/docs/ezsms",
     span: "square",
   },
 ];
