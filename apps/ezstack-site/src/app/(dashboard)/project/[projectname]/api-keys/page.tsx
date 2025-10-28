@@ -6,6 +6,7 @@ import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
 import {
   CreateApiKeyResponse,
+  EzAuthAnalyticsResponse,
   ListApiKeysResponse,
   UserProjectResponse,
 } from "@/__generated__/responseTypes";
@@ -17,7 +18,12 @@ import {
   RevokeApiKeyRequest,
 } from "@/__generated__/requestTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
-import { AnalyticsEvent, ServiceAnalytics, useServiceAnalytics, useServiceAnalyticsEventListener } from "@/app/components/AnalyticsProvider";
+import {
+  AnalyticsEvent,
+  ServiceAnalytics,
+  useServiceAnalytics,
+  useServiceAnalyticsEventListener,
+} from "@/app/components/AnalyticsProvider";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -37,8 +43,11 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   const [revokingKey, setRevokingKey] = useState<ListApiKeysResponse | null>(
     null
   );
-  const [totalRequests, setTotalRequests] = useState(0);
-  const { analytics } = useServiceAnalytics("ezauth", resolvedParams.projectname);
+  const [ezauthAnalytics, setEzauthAnalytics] = useState<EzAuthAnalyticsResponse | null>(null);
+  const { analytics } = useServiceAnalytics(
+    "ezauth",
+    resolvedParams.projectname
+  );
   const hasFetchedApiKeys = useRef(false);
   const hasProcessedAnalytics = useRef(false);
 
@@ -48,14 +57,16 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     console.log("EzAuth analytics:", event.data);
     // Update totalRequests when analytics data is received
     if (analyticsData) {
-      setTotalRequests(analyticsData.completed_requests);
+      const data = analyticsData.ezauth as EzAuthAnalyticsResponse;
+      setEzauthAnalytics(data ?? null);
     }
   });
 
   useEffect(() => {
     if (analytics && !hasProcessedAnalytics.current) {
       const analyticsData = analytics as ServiceAnalytics;
-      setTotalRequests(analyticsData.completed_requests);
+      const data = analyticsData.ezauth as EzAuthAnalyticsResponse;
+      setEzauthAnalytics(data ?? null);
       hasProcessedAnalytics.current = true;
     }
   }, [analytics]);
@@ -308,9 +319,21 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
           <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-200 mb-2">
-              Total Requests
+              Total Send OTP Requests
             </h3>
-            <div className="text-3xl font-bold text-blue-400">{totalRequests}</div>
+            <div className="text-3xl font-bold text-blue-400">
+              {ezauthAnalytics?.send_otp_completed_requests}
+            </div>
+            <p className="text-sm text-gray-400 mt-1">This month</p>
+          </div>
+
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-200 mb-2">
+              Total Verify OTP Requests
+            </h3>
+            <div className="text-3xl font-bold text-blue-400">
+              {ezauthAnalytics?.verify_otp_completed_requests}
+            </div>
             <p className="text-sm text-gray-400 mt-1">This month</p>
           </div>
 
@@ -333,7 +356,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
           onClose={() => setShowCreateDialog(false)}
           onCreated={handleKeyCreated}
           projectName={project.name}
-          existingNames={apiKeys.map(key => key.name).filter(Boolean)}
+          existingNames={apiKeys.map((key) => key.name).filter(Boolean)}
         />
       )}
 

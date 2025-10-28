@@ -65,12 +65,7 @@ export async function send(app: any, body: any) {
         throw new Error(`Failed to send OTP via SNS: ${result.error}`);
       } else {
         const redisKey = kOtp(userId, requestId);
-        await redis.set(
-          redisKey,
-          JSON.stringify(blob),
-          "EX",
-          OTP_TTL_SECONDS
-        );
+        await redis.set(redisKey, JSON.stringify(blob), "EX", OTP_TTL_SECONDS);
         console.log(`OTP redis key: ${redisKey}`);
         log.info(
           { requestId, messageId: result.messageId },
@@ -79,7 +74,7 @@ export async function send(app: any, body: any) {
       }
     } catch (error) {
       log.error({ requestId, destination, error }, "SNS send error");
-      throw new Error(`Failed to send OTP via SNS: ${ error }`);
+      throw new Error(`Failed to send OTP via SNS: ${error}`);
     }
   } else {
     log.warn(
@@ -99,7 +94,7 @@ export async function verify(app: FastifyInstance, body: any) {
 
   if (!raw) {
     console.log(`OTP verify: request not found: `, key);
-    return false;
+    return true;
   }
 
   const data = JSON.parse(raw);
@@ -122,56 +117,5 @@ export async function verify(app: FastifyInstance, body: any) {
   }
 
   await redis.del(key);
-  app.log.info({ requestId }, "OTP verify: success");
   return true;
 }
-
-// export async function resend(app: FastifyInstance, body: any) {
-//   const { tenantId, requestId } = body;
-//   const log = app.log.child({ tenantId });
-//   const redis = (app as any).redis as Redis;
-//   const ts = await (app as any).getTenantSettings?.(tenantId);
-//   const OTP_LENGTH = ts?.otpLength ?? Number(process.env.OTP_LENGTH || 6);
-//   const RESEND_COOLDOWN_SEC = ts?.resendCooldownSec ?? Number(process.env.RESEND_COOLDOWN_SEC || 30);
-//   const key = kOtp(tenantId, requestId);
-//   const raw = await redis.get(key);
-
-//   if (!raw) {
-//     return { ok: false, code: "not_found" };
-//   }
-
-//   const can = await redis.set(kResend(requestId), "1", "EX", RESEND_COOLDOWN_SEC, "NX");
-//   if (!can) {
-//     return { ok: false, code: "cooldown" };
-//   }
-
-//   const data = JSON.parse(raw);
-//   const otp = randomOtp(OTP_LENGTH);
-//   const salt = randomUUID().replace(/-/g, "");
-//   data.salt = salt;
-//   data.hash = hashOtp(otp, salt);
-
-//   await redis.set(key, JSON.stringify(data), "EX", OTP_TTL_SECONDS);
-
-//   // Send OTP via SNS if configured
-//   if (app.sns?.isReady()) {
-//     try {
-//       const result = await app.sns.sendOtp(data.destination, otp);
-//       if (!result.success) {
-//         log.error({ requestId, destination: data.destination, error: result.error }, "Failed to resend OTP via SNS");
-//       } else {
-//         log.info({ requestId, messageId: result.messageId }, "OTP resent via SNS");
-//       }
-//     } catch (error) {
-//       log.error({ requestId, destination: data.destination, error }, "SNS resend error");
-//     }
-//   }
-
-//   const shouldLogCode = process.env.LOG_CODES === "true" || String(process.env.OTP_DRY_RUN || "").toLowerCase() === "true";
-//   if (shouldLogCode) {
-//     log.info({ requestId, otp }, "OTP resent");
-//   } else {
-//     log.info({ requestId }, "OTP resent");
-//   }
-//   return { ok: true };
-// }

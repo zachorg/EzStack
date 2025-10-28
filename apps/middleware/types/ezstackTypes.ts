@@ -7,7 +7,7 @@ interface ApiKeyDescriptor {
   // Foreign key to project
   /** @ApiKeyDocument */
   project_id: string;
-  // Name of project 
+  // Name of project
   /** @CreateApiKeyRequest */
   /** @ListApiKeysRequest */
   /** @RevokeApiKeyRequest */
@@ -59,17 +59,24 @@ interface ApiKeyDescriptor {
 
 interface ProjectsAnalyticsDescriptor {
   // Name of the project
-  /** @ProjectAnalyticsRequest */
+  /** @EzAuthAnalyticsRequest */
   project_name: string;
-  // Number of completed requests per month
-  // Number of completed requests per month
-  /** @ProjectAnalyticsDocument */
-  /** @ProjectAnalyticsResponse */
-  completed_monthly_requests: Record<string, number>;
-  // Number of completed requests
-  /** @ProjectAnalyticsDocument */
-  /** @ProjectAnalyticsResponse */
-  completed_requests: number;
+  // Number of completed send OTP requests per month
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  send_otp_completed_requests: number;
+  // Number of completed verify OTP requests per month
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  verify_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed verify OTP requests
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  verify_otp_completed_requests: number;
 }
 
 interface ServiceAnalyticsDescriptor {

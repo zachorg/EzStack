@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 // import { verifySchema } from "../schemas/otp.js";
-import { ProjectAnalyticsRequest } from "../__generated__/requestTypes.js";
-import { ProjectAnalyticsResponse } from "../__generated__/responseTypes.js";
 import { hashApiKey } from "../utils/crypto.js";
+import { EzAuthAnalyticsRequest } from "../__generated__/requestTypes.js";
+import { EzAuthAnalyticsResponse } from "../__generated__/responseTypes.js";
 
 export const kSendOtpUsageByProject = (
   apikeyPepper: string,
@@ -41,13 +41,13 @@ const routes: FastifyPluginAsync = async (app) => {
   });
 
   app.get(
-    "/ezauth/send-otp/usage-by-project",
+    "/ezauth/otp/usage-by-project",
     {
       preHandler: [app.rlPerRoute(5)],
     },
     async (req: any, rep: any) => {
       const userId = req.userId as string | undefined;
-      const request = req.headers as ProjectAnalyticsRequest;
+      const request = req.headers as EzAuthAnalyticsRequest;
       if (!userId || request.project_name === undefined) {
         return rep.status(401).send({
           error: { message: "Unauthenticated or missing project name" },
@@ -75,7 +75,7 @@ const routes: FastifyPluginAsync = async (app) => {
           projectId
         );
         const analyticsRef = db
-          .collection("analytics/ezauth/send-otp/")
+          .collection("analytics/ezauth/otp/")
           .doc(`${usage_key_lookup_id}`);
         const analyticsDoc = await analyticsRef.get();
         if (!analyticsDoc.exists) {
@@ -84,9 +84,7 @@ const routes: FastifyPluginAsync = async (app) => {
           });
         }
 
-        const analyticsData = analyticsDoc.data() as ProjectAnalyticsResponse;
-
-        console.log("analyticsData", analyticsData);
+        const analyticsData = analyticsDoc.data() as EzAuthAnalyticsResponse;
         return rep.status(200).send(analyticsData);
       } catch (error: any) {
         return rep.status(500).send({

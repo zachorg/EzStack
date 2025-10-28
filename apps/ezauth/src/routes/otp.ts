@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 // import { verifySchema } from "../schemas/otp.js";
 import * as OTP from "../services/otp.js";
 import { hashApiKey } from "../utils/crypto.js";
-import { ProjectAnalyticsDocument } from "../__generated__/documentTypes.js";
+import { EzAuthAnalyticsDocument } from "../__generated__/documentTypes.js";
 
 export const kSendOtpUsageByProject = (
   apikeyPepper: string,
@@ -54,40 +54,6 @@ const routes: FastifyPluginAsync = async (app) => {
     return rep.code(ok ? 200 : 503).send(payload);
   });
 
-  async function check_and_increment_otp_usage_by_project(
-    trySendOtp: () => Promise<string>,
-    userId: string,
-    projectId: string
-  ): Promise<string | undefined> {
-    const usage_project_lookup_id = kSendOtpUsageByProject(
-      app.apikeyPepper,
-      userId,
-      projectId
-    );
-    return check_and_increment_otp_send_usage(
-      trySendOtp,
-      usage_project_lookup_id,
-      {
-        max_requests_per_month: 2,
-      }
-    );
-  }
-
-  async function check_and_increment_otp_usage_by_key(
-    trySendOtp: () => Promise<string>,
-    userId: string,
-    projectId: string,
-    keyId: string
-  ): Promise<string | undefined> {
-    const usage_key_lookup_id = kSendOtpUsageByKey(
-      app.apikeyPepper,
-      userId,
-      projectId,
-      keyId
-    );
-    return check_and_increment_otp_send_usage(trySendOtp, usage_key_lookup_id);
-  }
-
   async function check_and_increment_otp_send_usage(
     trySendOtp: () => Promise<string>,
     usage_key_lookup_id: string,
@@ -100,7 +66,7 @@ const routes: FastifyPluginAsync = async (app) => {
       throw new Error("Firebase firestore not initialized");
     }
 
-    const usageRef = db.doc(`analytics/ezauth/send-otp/${usage_key_lookup_id}`);
+    const usageRef = db.doc(`analytics/ezauth/otp/${usage_key_lookup_id}`);
 
     const result: string | undefined = await db.runTransaction(
       async (transaction) => {
@@ -111,17 +77,17 @@ const routes: FastifyPluginAsync = async (app) => {
         // Initialize document if it doesn't exist
         if (!usageDoc.exists) {
           transaction.set(usageRef, {
-            completed_requests: 1,
-            completed_monthly_requests: {
+            send_otp_completed_requests: 1,
+            send_otp_completed_monthly_requests: {
               [dateKey]: 1,
             },
-          } as ProjectAnalyticsDocument);
+          } as EzAuthAnalyticsDocument);
         }
 
         const data = usageDoc.data();
-        const completed_requests = data?.completed_requests || 0;
+        const completed_requests = data?.send_otp_completed_requests || 0;
         const completed_monthly_requests =
-          data?.completed_monthly_requests || {};
+          data?.send_otp_completed_monthly_requests || {};
         const currentCount = completed_monthly_requests[dateKey] || 0;
 
         if (
@@ -143,12 +109,12 @@ const routes: FastifyPluginAsync = async (app) => {
           transaction.set(
             usageRef,
             {
-              completed_requests: completed_requests + 1,
-              completed_monthly_requests: {
+              send_otp_completed_requests: completed_requests + 1,
+              send_otp_completed_monthly_requests: {
                 ...completed_monthly_requests,
                 [dateKey]: currentCount + 1,
               },
-            } as ProjectAnalyticsDocument,
+            } as EzAuthAnalyticsDocument,
             { merge: true }
           );
 
@@ -160,6 +126,71 @@ const routes: FastifyPluginAsync = async (app) => {
     );
 
     return result;
+  }
+
+  async function check_and_increment_otp_verify_usage(
+    usage_key_lookup_id: string,
+    request_limits?: {
+      max_requests_per_month?: number;
+      max_requests?: number;
+    }
+  ): Promise<void> {
+    if (!db) {
+      throw new Error("Firebase firestore not initialized");
+    }
+
+    const usageRef = db.doc(`analytics/ezauth/otp/${usage_key_lookup_id}`);
+
+    await db.runTransaction(async (transaction) => {
+      const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
+
+      const usageDoc = await transaction.get(usageRef);
+
+      // Initialize document if it doesn't exist
+      if (!usageDoc.exists) {
+        transaction.set(usageRef, {
+          verify_otp_completed_requests: 1,
+          verify_otp_completed_monthly_requests: {
+            [dateKey]: 1,
+          },
+        } as EzAuthAnalyticsDocument);
+      }
+
+      const data = usageDoc.data();
+      const completed_requests = data?.verify_otp_completed_requests || 0;
+      const completed_monthly_requests =
+        data?.verify_otp_completed_monthly_requests || {};
+      const currentCount = completed_monthly_requests[dateKey] || 0;
+
+      if (
+        request_limits?.max_requests_per_month &&
+        currentCount >= request_limits.max_requests_per_month
+      ) {
+        throw new Error("OTP Verify limit per month exceeded");
+      }
+      if (
+        request_limits?.max_requests &&
+        completed_requests >= request_limits.max_requests
+      ) {
+        throw new Error("OTP Verify limit per request exceeded");
+      }
+
+      try {
+        transaction.set(
+          usageRef,
+          {
+            verify_otp_completed_requests: completed_requests + 1,
+            verify_otp_completed_monthly_requests: {
+              ...completed_monthly_requests,
+              [dateKey]: currentCount + 1,
+            },
+          } as EzAuthAnalyticsDocument,
+          { merge: true }
+        );
+      } catch (error) {
+        throw new Error("Failed to verify OTP");
+      }
+    });
   }
 
   // Issue an OTP and queue a send (if SQS configured). Returns requestId.
@@ -181,7 +212,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const destination = req.body["destination"];
       const channel = req.body["channel"];
-      const payload = { ...(req.body as any), userId };
+      const payload = { ...(req.body as any), userId, projectId };
 
       // Validate destination based on channel
       if (channel === "sms") {
@@ -201,19 +232,20 @@ const routes: FastifyPluginAsync = async (app) => {
           };
 
           // update analytics for the user after successfully sending the OTP
-          const requestId = await check_and_increment_otp_usage_by_project(
+          const requestId = await check_and_increment_otp_send_usage(
             trySendOtp,
-            userId,
-            projectId
+            kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),
+            {
+              max_requests_per_month: 3,
+            }
           );
+
           if (requestId === undefined) {
             throw new Error("OTP Send Failed");
           }
-          await check_and_increment_otp_usage_by_key(
-            () => Promise.resolve(""),
-            userId,
-            projectId,
-            keyId
+          await check_and_increment_otp_send_usage(
+            (): Promise<string> => Promise.resolve(requestId),
+            kSendOtpUsageByKey(app.apikeyPepper, userId, projectId, keyId)
           );
 
           return rep.status(200).send({ requestId });
@@ -238,45 +270,35 @@ const routes: FastifyPluginAsync = async (app) => {
   );
 
   // Verify a previously issued OTP by requestId.
-  app.post(
-    "/verify",
+  app.get(
+    "/verify/:requestId/:code",
     {
       // schema: { body: verifySchema },
       preHandler: [app.rlPerRoute()],
     },
     async (req: any, rep: any) => {
-      const userId = req.userId as string | undefined;
-      if (!userId) {
-        return rep.status(401).send({ error: { message: "Unauthenticated" } });
+      const userId = req.user_id as string | undefined;
+      const projectId = req.project_id as string | undefined;
+      const requestId = req.params.requestId as string | undefined;
+      const code = req.params.code as string | undefined;
+      if (!userId || !requestId || !code || !projectId) {
+        return rep.status(401).send({
+          error: { message: "Unauthenticated or missing requestId / code" },
+        });
       }
-      const payload = { ...(req.body as any), userId };
-      console.log("payload: ", JSON.stringify(payload));
-      const verified = await OTP.verify(app, payload);
+
+      const verified = await OTP.verify(app, { userId, requestId, code });
+
+      await check_and_increment_otp_verify_usage(
+        kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),
+        {
+          max_requests_per_month: 2,
+        }
+      );
+
       return rep.send({ verified });
     }
   );
-
-  // Regenerate and (re)send an OTP for an existing request. Enforces cooldown.
-  // app.post(
-  //   "/resend",
-  //   {
-  //     schema: { body: resendSchema },
-  //     preHandler: [app.rlPerRoute()]
-  //   },
-  //   async (req: any) => {
-  //     const r = await OTP.resend(app, { ...(req.body as any), tenantId: req.tenantId });
-
-  //     if (r.ok) {
-  //       req.log.info({ requestId: (req.body as any)?.requestId }, "otp/resend: ok");
-  //       return { ok: true };
-  //     }
-
-  //     const err: any = new Error(r.code === "not_found" ? "Request not found" : "Resend cooldown in effect");
-  //     err.statusCode = r.code === "not_found" ? 404 : 429;
-  //     err.code = r.code === "not_found" ? "not_found" : "cooldown";
-  //     throw err;
-  //   }
-  // );
 };
 
 export default routes;

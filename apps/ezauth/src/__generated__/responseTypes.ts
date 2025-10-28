@@ -19,11 +19,15 @@ export interface ListApiKeysResponse {
   key_prefix: string;
 }
 
-export interface ProjectAnalyticsResponse {
-  // Number of completed requests per month,Number of completed requests per month
-  completed_monthly_requests: Record<string, number>;
-  // Number of completed requests
-  completed_requests: number;
+export interface EzAuthAnalyticsResponse {
+  // Number of completed send OTP requests per month
+  send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests
+  send_otp_completed_requests: number;
+  // Number of completed verify OTP requests per month
+  verify_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed verify OTP requests
+  verify_otp_completed_requests: number;
 }
 
 export interface ServiceAnalyticsResponse {

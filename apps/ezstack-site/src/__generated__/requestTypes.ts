@@ -20,7 +20,7 @@ export interface RevokeApiKeyRequest {
   name: string;
 }
 
-export interface ProjectAnalyticsRequest {
+export interface EzAuthAnalyticsRequest {
   // Name of the project
   project_name: string;
 }

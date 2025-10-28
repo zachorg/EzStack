@@ -13,8 +13,8 @@ import React, {
 import { useProjects } from "./ProjectsProvider";
 import { useAuth } from "./AuthProvider";
 import { ezstack_api_fetch } from "@/lib/api/client";
-import { ProjectAnalyticsResponse } from "@/__generated__/responseTypes";
-import { ProjectAnalyticsRequest } from "@/__generated__/requestTypes";
+import { EzAuthAnalyticsResponse } from "@/__generated__/responseTypes";
+import { EzAuthAnalyticsRequest } from "@/__generated__/requestTypes";
 
 // Service types based on your modular ecosystem
 export type ServiceType = "ezauth" | "ezpayments" | "eznotify" | string;
@@ -276,22 +276,20 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
         };
 
         if (serviceId === "ezauth") {
-          const response = await ezstack_api_fetch<ProjectAnalyticsResponse>(
-            `/api/v1/analytics/ezauth/send-otp/usage-by-project`,
-            {
-              method: "GET",
-              headers: JSON.parse(
-                JSON.stringify({
-                  project_name: projectName,
-                } as ProjectAnalyticsRequest)
-              ),
-            }
-          );
+          const response: EzAuthAnalyticsResponse =
+            await ezstack_api_fetch<EzAuthAnalyticsResponse>(
+              `/api/v1/analytics/ezauth/otp/usage-by-project`,
+              {
+                method: "GET",
+                headers: JSON.parse(
+                  JSON.stringify({
+                    project_name: projectName,
+                  } as EzAuthAnalyticsRequest)
+                ),
+              }
+            );
 
-          serviceAnalytics.completed_requests = response.completed_requests;
-          serviceAnalytics.completed_monthly_requests =
-            response.completed_monthly_requests;
-
+          serviceAnalytics.ezauth = response;
           console.log("ProjectAnalyticsResponse", response);
         }
 
@@ -518,10 +516,10 @@ export function useServiceAnalyticsEventListener(
   listener: AnalyticsEventListener
 ) {
   const { onServiceEvent } = useAnalytics();
-  
+
   // Use a ref to store the latest listener to avoid re-subscribing on every render
   const listenerRef = useRef<AnalyticsEventListener>(listener);
-  
+
   // Update the ref whenever the listener changes
   useEffect(() => {
     listenerRef.current = listener;
