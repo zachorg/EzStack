@@ -30,67 +30,51 @@ function ServiceCard({ service, projectname }: { service: ProductTile, projectna
   };
 
   return (
-    <div className="w-full h-full min-h-[320px] overflow-hidden rounded-2xl">
+    <div className="w-full h-full min-h-[320px] overflow-hidden rounded-lg">
       <button
-        className="group relative w-full h-full bg-gradient-to-br from-gray-900/90 to-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 transition-all duration-300 hover:border-blue-500/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="group relative w-full h-full rounded-lg border border-neutral-800 bg-neutral-900/50 transition-colors duration-200 hover:bg-neutral-900 disabled:cursor-not-allowed disabled:opacity-50"
         disabled={!isAvailable}
         onClick={handleClick}
       >
-        {/* Animated gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-        
         {/* Content */}
         <div className="relative space-y-4 p-6">
-        {/* Icon */}
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform duration-300">
-          <Icon className="w-7 h-7 text-blue-400" />
-        </div>
-
-        {/* Title and Status */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold text-gray-200 group-hover:text-white transition-colors">
-            {service.title}
-          </h3>
-          {isComingSoon && (
-            <span className="px-2 py-1 text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full">
-              Coming Soon
-            </span>
-          )}
-          {isAvailable && (
-            <span className="px-2 py-1 text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30 rounded-full">
-              Available
-            </span>
-          )}
-        </div>
-
-        {/* Description */}
-        <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors text-left">
-          {service.description}
-        </p>
-
-        {/* Bullets */}
-        <ul className="space-y-2 text-left">
-          {service.bullets.slice(0, 3).map((bullet, index) => (
-            <li key={index} className="flex items-start space-x-2">
-              <Sparkles className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <span className="text-xs text-gray-500">{bullet}</span>
-            </li>
-          ))}
-        </ul>
-
-        {/* Click indicator */}
-        {isAvailable && (
-          <div className="flex items-center text-blue-400 text-sm font-medium mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            Click to Integrate
-            <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+          {/* Icon */}
+          <div className="w-14 h-14 rounded-md bg-neutral-800/60 flex items-center justify-center mb-2">
+            <Icon className="w-7 h-7 text-neutral-300" />
           </div>
-        )}
-      </div>
 
-      {/* Shine effect on hover */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] opacity-0 group-hover:opacity-100 transition-all duration-1000 rounded-2xl" />
+          {/* Title and Status */}
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-white">
+              {service.title}
+            </h3>
+            {isComingSoon && (
+              <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-900/30 text-amber-300">
+                Coming Soon
+              </span>
+            )}
+            {isAvailable && (
+              <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-900/30 text-emerald-300">
+                Available
+              </span>
+            )}
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-neutral-400 text-left">
+            {service.description}
+          </p>
+
+          {/* Bullets */}
+          <ul className="space-y-2 text-left">
+            {service.bullets.slice(0, 3).map((bullet, index) => (
+              <li key={index} className="flex items-start space-x-2">
+                <Sparkles className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                <span className="text-xs text-neutral-500">{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </button>
     </div>
   );
@@ -154,10 +138,8 @@ export default function ServicesPage({ params }: ServicesPageProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Loading services...
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
+          <p className="text-sm text-neutral-400">Loading services...</p>
         </div>
       </div>
     );
@@ -169,39 +151,37 @@ export default function ServicesPage({ params }: ServicesPageProps) {
   }
 
   return (
-    <div className="min-h-full p-6 mt-12">
-      <div className="max-w-7xl mx-auto">
+    <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-200 mb-2">
-            Available Services
-          </h1>
-          <p className="text-gray-400">
-            Select a service to integrate and manage
-          </p>
-        </div>
+        <header className="mt-3 md:mt-4">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white">Available Services</h1>
+          <p className="mt-1 text-sm text-neutral-400">Select a service to integrate and manage.</p>
+        </header>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {productTiles.map((service) => (
-            <ServiceCard key={service.slug} service={service} projectname={resolvedParams.projectname} />
-          ))}
-        </div>
+        <section>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {productTiles.map((service) => (
+              <ServiceCard key={service.slug} service={service} projectname={resolvedParams.projectname} />
+            ))}
+          </div>
+        </section>
 
         {/* Info Section */}
-        <div className="mt-12 p-6 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 rounded-2xl border border-blue-500/20">
-          <div className="flex items-start space-x-4">
-            <Sparkles className="w-6 h-6 text-blue-400 flex-shrink-0 mt-1" />
-            <div>
-              <h3 className="text-lg font-semibold text-gray-200 mb-2">
-                More services coming soon
-              </h3>
-              <p className="text-sm text-gray-400">
-                We&apos;re constantly expanding our service offerings. Subscribe to our newsletter to stay updated on new features and services.
-              </p>
+        <section>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <div className="flex items-start space-x-4">
+              <Sparkles className="w-6 h-6 text-emerald-300 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">More services coming soon</h3>
+                <p className="text-sm text-neutral-400">
+                  We&apos;re constantly expanding our offerings. Subscribe to our newsletter to stay updated on new features and services.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

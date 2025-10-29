@@ -167,10 +167,8 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Loading API keys...
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
+          <p className="text-sm text-neutral-400">Loading API keys...</p>
         </div>
       </div>
     );
@@ -182,148 +180,99 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   }
 
   return (
-    <div className="min-h-full p-6 mt-12">
-      <div className="max-w-6xl mx-auto">
+    <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <header className="mt-3 md:mt-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-200 mb-2">
-                API Keys
-              </h1>
-              <p className="text-gray-400">
-                Manage API keys for {project.name}
-              </p>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white">API Keys</h1>
+              <p className="mt-1 text-sm text-neutral-400">Manage API keys for {project.name}</p>
             </div>
             <button
               onClick={() => setShowCreateDialog(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
             >
               Create New Key
             </button>
           </div>
-        </div>
+        </header>
 
         {/* API Keys List */}
-        <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-700/50">
-            <h2 className="text-lg font-semibold text-gray-200">
-              Your API Keys
-            </h2>
-            <p className="text-sm text-gray-400 mt-1">
-              Manage your API keys for accessing project services
-            </p>
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-base md:text-lg font-semibold text-white">Your API Keys</h2>
+            <p className="mt-1 text-sm text-neutral-400">Manage your API keys for accessing project services.</p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed">
-              <colgroup>
-                <col className="w-1/4" />
-                <col className="w-1/4" />
-                <col className="w-1/4" />
-                <col className="w-1/4" />
-              </colgroup>
-              <thead className="bg-gray-800">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Key
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700/50">
-                {apiKeys.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center">
-                      <p className="text-gray-400">No API keys created yet</p>
-                      <button
-                        onClick={() => setShowCreateDialog(true)}
-                        className="mt-4 text-blue-400 hover:text-blue-300"
-                      >
-                        Create your first API key
-                      </button>
-                    </td>
+          <div className="rounded-lg border border-neutral-800 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-300">
+                  <tr className="divide-x divide-neutral-800">
+                    <th className="px-3 py-2 font-semibold">Name</th>
+                    <th className="px-3 py-2 font-semibold">Key</th>
+                    <th className="px-3 py-2 font-semibold">Status</th>
+                    <th className="px-3 py-2 font-semibold">Actions</th>
                   </tr>
-                ) : (
-                  apiKeys.map((key: ListApiKeysResponse) => (
-                    <tr key={key.name} className="hover:bg-gray-800/30">
-                      <td className="px-6 py-4 whitespace-nowrap truncate">
-                        <div className="text-sm font-medium text-gray-200">
-                          {key.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap truncate">
-                        <div className="text-sm text-gray-400 font-mono">
-                          {key.key_prefix}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            key.status === "active"
-                              ? "bg-green-900/30 text-green-400"
-                              : "bg-gray-700 text-gray-400"
-                          }`}
-                        >
-                          {key.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
-                        <button
-                          className="text-red-400 hover:text-red-300"
-                          onClick={() => setRevokingKey(key)}
-                        >
-                          Revoke
-                        </button>
-                      </td>
+                </thead>
+                <tbody className="divide-y divide-neutral-800">
+                  {apiKeys.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-neutral-400">No API keys created yet.</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    apiKeys.map((key: ListApiKeysResponse) => (
+                      <tr key={key.name} className="divide-x divide-neutral-800">
+                        <td className="px-3 py-2 text-neutral-200 whitespace-nowrap truncate">{key.name}</td>
+                        <td className="px-3 py-2 text-neutral-400 font-mono whitespace-nowrap truncate">{key.key_prefix}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <span className={
+                            "text-xs px-2 py-0.5 rounded-full " +
+                            (key.status === "active"
+                              ? "bg-emerald-900/30 text-emerald-300"
+                              : "bg-neutral-800 text-neutral-300")
+                          }>
+                            {key.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-left text-sm font-medium">
+                          <button
+                            className="text-red-400 hover:text-red-300"
+                            onClick={() => setRevokingKey(key)}
+                          >
+                            Revoke
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Usage Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">
-              Total Send OTP Requests
-            </h3>
-            <div className="text-3xl font-bold text-blue-400">
-              {ezauthAnalytics?.send_otp_completed_requests}
-            </div>
-            <p className="text-sm text-gray-400 mt-1">This month</p>
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Total Send OTP Requests</h3>
+            <div className="text-3xl font-bold text-blue-400">{ezauthAnalytics?.send_otp_completed_requests}</div>
+            <p className="text-sm text-neutral-400 mt-1">This month</p>
           </div>
 
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">
-              Total Verify OTP Requests
-            </h3>
-            <div className="text-3xl font-bold text-blue-400">
-              {ezauthAnalytics?.verify_otp_completed_requests}
-            </div>
-            <p className="text-sm text-gray-400 mt-1">This month</p>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Total Verify OTP Requests</h3>
+            <div className="text-3xl font-bold text-blue-400">{ezauthAnalytics?.verify_otp_completed_requests}</div>
+            <p className="text-sm text-neutral-400 mt-1">This month</p>
           </div>
 
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-200 mb-2">
-              Active Keys
-            </h3>
-            <div className="text-3xl font-bold text-purple-400">
-              {apiKeys.filter((key) => key.status === "active").length}
-            </div>
-            <p className="text-sm text-gray-400 mt-1">Currently active</p>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <h3 className="text-lg font-semibold text-white mb-2">Active Keys</h3>
+            <div className="text-3xl font-bold text-purple-400">{apiKeys.filter((key) => key.status === "active").length}</div>
+            <p className="text-sm text-neutral-400 mt-1">Currently active</p>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Create API Key Dialog */}

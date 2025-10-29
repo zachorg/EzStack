@@ -157,10 +157,8 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Loading service settings...
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
+          <p className="text-sm text-neutral-400">Loading service settings...</p>
         </div>
       </div>
     );
@@ -170,8 +168,8 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   if (serviceSettings?.error) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <p className="text-red-400">Error loading service settings: {serviceSettings.error}</p>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-red-400">Error loading service settings: {serviceSettings.error}</p>
         </div>
       </div>
     );
@@ -185,16 +183,12 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   // If no config available, show a message
   if (!config) {
     return (
-      <div className="min-h-full p-6 mt-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-8 text-center">
-            <ShieldCheck className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">
-              Unable to load configuration
-            </h3>
-            <p className="text-gray-400">
-              Please try refreshing the page or contact support if the issue persists.
-            </p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-8 text-center">
+            <ShieldCheck className="w-16 h-16 text-neutral-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">Unable to load configuration</h3>
+            <p className="text-neutral-400">Please try refreshing the page or contact support if the issue persists.</p>
           </div>
         </div>
       </div>
@@ -204,17 +198,17 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   const isEnabled = config.enabled || false;
 
   return (
-    <div className="min-h-full p-6 mt-12">
-      <div className="max-w-4xl mx-auto">
+    <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6 text-blue-400" />
+        <header className="mt-3 md:mt-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-md bg-neutral-800/60 flex items-center justify-center">
+              <ShieldCheck className="w-6 h-6 text-neutral-300" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-200">{service.title}</h1>
-              <p className="text-gray-400">{service.description}</p>
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white">{service.title}</h1>
+              <p className="mt-1 text-sm text-neutral-400">{service.description}</p>
             </div>
             <div className="ml-auto">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -224,61 +218,51 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
                   onChange={(e) => handleInputChange("enabled", e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                <span className="ml-3 text-sm font-medium text-gray-300">
+                <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-400/60 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                <span className="ml-3 text-sm font-medium text-neutral-300">
                   {isEnabled ? "Enabled" : "Disabled"}
                 </span>
               </label>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Settings Panel */}
         {isEnabled && (
-          <div className="space-y-6">
+          <section className="space-y-6">
             {/* Organization Name */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Organization Name
-              </label>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <label className="block text-sm font-medium text-white mb-2">Organization Name</label>
               <input
                 type="text"
                 value={config.organization_name}
                 onChange={(e) => handleInputChange("organization_name", e.target.value)}
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
                 placeholder="Your Company Name"
               />
-              <p className="mt-2 text-xs text-gray-500">
-                This name will appear on OTP emails and SMS messages
-              </p>
+              <p className="mt-2 text-xs text-neutral-500">This name will appear on OTP emails and SMS messages</p>
             </div>
 
             {/* OTP Code Length */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                OTP Code Length: {config.otp_code_length}
-              </label>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <label className="block text-sm font-medium text-white mb-2">OTP Code Length: {config.otp_code_length}</label>
               <input
                 type="range"
                 min="4"
                 max="6"
                 value={config.otp_code_length}
-                onChange={(e) =>
-                  handleInputChange("otp_code_length", parseInt(e.target.value))
-                }
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                onChange={(e) => handleInputChange("otp_code_length", parseInt(e.target.value))}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-emerald-500 bg-neutral-800"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-neutral-500 mt-1">
                 <span>4 digits</span>
                 <span>6 digits</span>
               </div>
             </div>
 
             {/* Rate Limit */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Rate Limit (requests per minute per destination)
-              </label>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <label className="block text-sm font-medium text-white mb-2">Rate Limit (requests per minute per destination)</label>
               <input
                 type="number"
                 min="1"
@@ -289,37 +273,27 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
                     parseInt(e.target.value) || 1
                   )
                 }
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
               />
-              <p className="mt-2 text-xs text-gray-500">
-                Maximum number of OTP requests allowed per destination per minute
-              </p>
+              <p className="mt-2 text-xs text-neutral-500">Maximum number of OTP requests allowed per destination per minute</p>
             </div>
 
             {/* TTL in Seconds */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                OTP Time-to-Live (seconds)
-              </label>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <label className="block text-sm font-medium text-white mb-2">OTP Time-to-Live (seconds)</label>
               <input
                 type="number"
                 min="60"
                 value={config.otp_ttl_seconds}
-                onChange={(e) =>
-                  handleInputChange("otp_ttl_seconds", parseInt(e.target.value) || 60)
-                }
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={(e) => handleInputChange("otp_ttl_seconds", parseInt(e.target.value) || 60)}
+                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
               />
-              <p className="mt-2 text-xs text-gray-500">
-                How long the OTP code remains valid (minimum 60 seconds)
-              </p>
+              <p className="mt-2 text-xs text-neutral-500">How long the OTP code remains valid (minimum 60 seconds)</p>
             </div>
 
             {/* Max Verification Attempts */}
-            <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Maximum Verification Attempts
-              </label>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <label className="block text-sm font-medium text-white mb-2">Maximum Verification Attempts</label>
               <input
                 type="number"
                 min="1"
@@ -330,18 +304,16 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
                     parseInt(e.target.value) || 1
                   )
                 }
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
               />
-              <p className="mt-2 text-xs text-gray-500">
-                Maximum number of attempts allowed to verify an OTP code
-              </p>
+              <p className="mt-2 text-xs text-neutral-500">Maximum number of attempts allowed to verify an OTP code</p>
             </div>
-          </div>
+          </section>
         )}
 
         {/* Save Button */}
         {isEnabled && (
-          <div className="mt-8 flex justify-end">
+          <div className="flex justify-end">
             <button
               onClick={(e) => {
                 if (!hasChanges || isSaving) {
@@ -351,11 +323,13 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
                 handleSave();
               }}
               disabled={!hasChanges || isSaving}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                hasChanges && !isSaving
-                  ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              }`}
+              className={
+                `inline-flex items-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 ${
+                  hasChanges && !isSaving
+                    ? "bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-400/60"
+                    : "bg-neutral-800 text-neutral-400 cursor-not-allowed focus:ring-transparent"
+                }`
+              }
             >
               {isSaving ? "Saving..." : "Save Changes"}
             </button>
@@ -364,15 +338,10 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
 
         {/* Disabled State */}
         {!isEnabled && (
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-8 text-center">
-            <ShieldCheck className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-300 mb-2">
-              {service.title} is currently disabled
-            </h3>
-            <p className="text-gray-400">
-              Enable {service.title} to start using OTP authentication in your
-              application.
-            </p>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-8 text-center">
+            <ShieldCheck className="w-16 h-16 text-neutral-600 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-white mb-2">{service.title} is currently disabled</h3>
+            <p className="text-neutral-400">Enable {service.title} to start using OTP authentication in your application.</p>
           </div>
         )}
       </div>

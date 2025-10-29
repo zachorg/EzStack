@@ -72,8 +72,8 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
+          <p className="text-sm text-neutral-400">
             Loading project...
           </p>
         </div>
@@ -87,43 +87,23 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   }
 
   return (
-    <div className="min-h-full p-6 mt-12">
-      <div className="max-w-6xl mx-auto">
+    <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
         {/* Project Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <header className="mt-3 md:mt-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-200 mb-2">
-                {project.name}
-              </h1>
-              <p className="text-gray-400">
-                Created: {project.created_at}
-              </p>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white">{project.name}</h1>
+              <p className="mt-1 text-sm text-neutral-400">Created: {project.created_at}</p>
             </div>
             <button
               onClick={() => router.push("/home")}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
             >
               Back to Projects
             </button>
           </div>
-        </div>
-
-        {/* Project Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Project Settings */}
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-200 mb-4">
-              Settings
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-400">Project Name</label>
-                <p className="text-gray-200">{project.name}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        </header>
       </div>
     </div>
   );

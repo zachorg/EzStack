@@ -23,7 +23,7 @@ function formatCurrency(amountCents: number, currency: string | undefined) {
 }
 
 export default function BillingPage() {
-  const { data, loading, error, refresh, subscribe } = useBilling();
+  const { data, loading, error, subscribe } = useBilling();
   const { setSections } = useSidebar();
 
   const invoices = useMemo(() => data?.invoices ?? [], [data]);
@@ -94,12 +94,12 @@ export default function BillingPage() {
           <div className="text-sm text-neutral-400">Loading billing information…</div>
         )}
 
-        {error && (
+        {/* {error && (
           <div className="text-sm text-red-400">
             {error}
             <button onClick={refresh} className="ml-2 underline underline-offset-2">Retry</button>
           </div>
-        )}
+        )} */}
 
         {/* Subscription Section */}
         <section className="space-y-3">
