@@ -44,8 +44,8 @@ await app.register(fastifyRateLimit, { global: false });
 await app.register(rl);
 await app.register(auth);
 
-await app.register(otpRoutes, { prefix: "api/v1/otp" });
-await app.register(oteRoutes, { prefix: "api/v1/ote" });
+await app.register(otpRoutes, { prefix: "api/v1/ezauth/otp" });
+await app.register(oteRoutes, { prefix: "api/v1/ezauth/ote" });
 
 // Start server
 const port = Number(process.env.PORT_EZAUTH || 8081);

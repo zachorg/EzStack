@@ -47,7 +47,7 @@ export function ProjectsProvider({ children }: ProjectsProviderProps) {
         setIsLoading(true);
 
         const response = await ezstack_api_fetch<ListUserProjectsResponse>(
-          "/api/v1/userProjects/list",
+          "/api/v1/user/projects/list",
           {
             method: "POST",
             body: JSON.stringify({}),

@@ -48,10 +48,10 @@ await app.register(stripe);
 
 // Business routes
 await app.register(apikeyRoutes, { prefix: "/api/v1/keys" });
-await app.register(userProfileRoutes, { prefix: "/api/v1/userProfile" });
-await app.register(userProjectsRoutes, { prefix: "/api/v1/userProjects" });
+await app.register(userProfileRoutes, { prefix: "/api/v1/user/profile" });
+await app.register(userProjectsRoutes, { prefix: "/api/v1/user/projects" });
 await app.register(analyticsRoutes, { prefix: "/api/v1/analytics" });
-await app.register(userServicesRoutes, { prefix: "/api/v1/userProjects/services" });
+await app.register(userServicesRoutes, { prefix: "/api/v1/user/projects/services" });
 await app.register(userBillingRoutes, { prefix: "/api/v1/user/billing" });
 
 app.apikeyPepper = (process.env.FASTIFY_PUBLIC_APIKEY_PEPPER || "").trim();

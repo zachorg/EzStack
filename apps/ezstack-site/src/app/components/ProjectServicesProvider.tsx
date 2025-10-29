@@ -114,7 +114,7 @@ export function ProjectServicesProvider({
 
       try {
         const response = await ezstack_api_fetch<EzAuthServiceConfig>(
-          `/api/v1/userProjects/services/${serviceId}/config/${selectedProject}`,
+          `/api/v1/user/projects/services/${serviceId}/config/${selectedProject}`,
           {
             method: "GET",
           }
@@ -182,7 +182,7 @@ export function ProjectServicesProvider({
         };
 
         await ezstack_api_fetch(
-          `/api/v1/userProjects/services/${serviceId}/config/update`,
+          `/api/v1/user/projects/services/${serviceId}/config/update`,
           {
             method: "POST",
             body: JSON.stringify(request),

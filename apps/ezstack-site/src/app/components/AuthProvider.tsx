@@ -197,7 +197,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     const response = await foward_req_to_ezstack_api(
-      "/api/v1/userProfile/loginin",
+      "/api/v1/user/profile/loginin",
       req
     );
     if (!response.ok) {

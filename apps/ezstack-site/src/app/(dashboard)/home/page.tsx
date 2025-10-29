@@ -61,7 +61,7 @@ function ProjectDocument() {
   const handleCreateProject = async (projectData: { name: string }) => {
     try {
       await ezstack_api_fetch<null>(
-        "/api/v1/userProjects/create",
+        "/api/v1/user/projects/create",
         {
           method: "POST",
           body: JSON.stringify(projectData),
