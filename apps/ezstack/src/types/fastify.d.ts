@@ -1,6 +1,7 @@
 import "fastify";
 import type { preHandlerHookHandler } from "fastify";
 import type Redis from "ioredis";
+import type Stripe from "stripe";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -17,6 +18,7 @@ declare module "fastify" {
       oteLength: number;
       oteMaxAttempts: number;
     }>;
+    stripe?: Stripe;
     firebase: {
       auth: import("firebase-admin/auth").Auth;
       db: import("firebase-admin/firestore").Firestore;

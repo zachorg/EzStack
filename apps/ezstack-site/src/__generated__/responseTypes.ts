@@ -47,6 +47,18 @@ export interface EzAuthServiceUpdateResponse {
   ok: boolean;
 }
 
+export interface BillingUpdateResponse {
+  // 
+  ok: boolean;
+}
+
+export interface BillingSetupResponse {
+  // 
+  ok: boolean;
+  // Stripe setup intent ID
+  stripe_setup_intent_client_secret: string;
+}
+
 export interface UserProjectResponse {
   // Name of the project
   name: string;
@@ -61,5 +73,10 @@ export interface UserProjectResponse {
 export interface ListUserProjectsResponse {
   // List of projects
   projects: UserProjectResponse[];
+}
+
+export interface BillingIsSuscribedResponse {
+  // Whether the user has a valid payment method
+  has_valid_payment_method: boolean;
 }
 

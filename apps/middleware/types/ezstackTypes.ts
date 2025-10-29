@@ -96,6 +96,8 @@ interface ServiceAnalyticsDescriptor {
 interface DefaultDescriptor {
   /** @RevokeApiKeyResponse */
   /** @EzAuthServiceUpdateResponse */
+  /** @BillingUpdateResponse */
+  /** @BillingSetupResponse */
   ok: boolean;
 }
 
@@ -184,5 +186,21 @@ interface UserProfileDescriptor {
   updated_at: string;
   // Date last logged in
   /** @UserProfileDocument */
-  last_login?: string;
+  last_login: string;
+
+  // Stripe customer ID
+  /** @UserProfileDocument */
+  stripe_customer_id: string;
+}
+
+interface UserBillingDescriptor {
+  // Stripe setup intent ID
+  /** @BillingSetupResponse */
+  stripe_setup_intent_client_secret: string;
+  // Stripe payment method ID
+  /** @BillingUpdateRequest */
+  stripe_payment_method_id: string;
+  // Whether the user has a valid payment method
+  /** @BillingIsSuscribedResponse */
+  has_valid_payment_method: boolean;
 }

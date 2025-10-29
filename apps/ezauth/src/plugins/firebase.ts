@@ -8,6 +8,7 @@ import argon2 from "argon2";
 import { hashApiKey } from "../utils/crypto.js";
 import {
   ApiKeyDocument,
+  UserProfileDocument,
   UserProjectDocument,
 } from "../__generated__/documentTypes.js";
 import { EzAuthServiceConfig } from "../__generated__/configTypes.js";
@@ -124,6 +125,14 @@ export default fp(async (app: any) => {
       if (!userDoc.exists) {
         return null;
       }
+      const userData = userDoc.data() as UserProfileDocument;
+      if (!userData) {
+        return null;
+      }
+
+      if (!userData.stripe_customer_id) {
+        throw new Error("User billing has not been setup for user");
+      }
 
       const projectsDocs = await db
         .collection("projects")
@@ -142,6 +151,7 @@ export default fp(async (app: any) => {
         projectId: keyData.project_id,
         userId: userId,
         serviceInfo,
+        stripeCustomerId: userData.stripe_customer_id,
       };
     } catch (error) {
       app.log.error(error);

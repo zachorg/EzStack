@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import * as OTP from "../services/otp.js";
 import { hashApiKey } from "../utils/crypto.js";
 import { EzAuthAnalyticsDocument } from "../__generated__/documentTypes.js";
+import Stripe from "stripe";
 
 export const kSendOtpUsageByProject = (
   apikeyPepper: string,
@@ -18,6 +19,7 @@ export const kSendOtpUsageByKey = (
 
 const routes: FastifyPluginAsync = async (app) => {
   const db = app.firebase.db;
+  const stripe = app.stripe as Stripe;
   // Health/readiness check. Unauthenticated by auth plugin exemption.
   app.get("/healthz", async (_req, rep) => {
     let redisOk = false;
@@ -117,9 +119,9 @@ const routes: FastifyPluginAsync = async (app) => {
   async function check_and_increment_otp_send_usage(
     trySendOtp: () => Promise<string>,
     usage_key_lookup_id: string,
+    stripe_customer_id: string,
     request_limits?: {
-      max_requests_per_month?: number;
-      max_requests?: number;
+      max_free_requests_per_month?: number;
     }
   ): Promise<string | undefined> {
     if (!db) {
@@ -150,41 +152,42 @@ const routes: FastifyPluginAsync = async (app) => {
           data?.send_otp_completed_monthly_requests || {};
         const currentCount = completed_monthly_requests[dateKey] || 0;
 
+        let should_charge: boolean = false;
         if (
-          request_limits?.max_requests_per_month &&
-          currentCount >= request_limits.max_requests_per_month
+          request_limits?.max_free_requests_per_month &&
+          currentCount >= request_limits.max_free_requests_per_month
         ) {
-          throw new Error("OTP Send limit per month exceeded");
-        }
-        if (
-          request_limits?.max_requests &&
-          completed_requests >= request_limits.max_requests
-        ) {
-          throw new Error("OTP Send limit per request exceeded");
+          should_charge = true;
         }
 
-        try {
-          const requestId = await trySendOtp();
+        const requestId = await trySendOtp();
 
-          transaction.set(
-            usageRef,
-            {
-              send_otp_completed_requests: completed_requests + 1,
-              send_otp_completed_monthly_requests: {
-                ...completed_monthly_requests,
-                [dateKey]: currentCount + 1,
-              },
-            } as EzAuthAnalyticsDocument,
-            { merge: true }
-          );
-
-          // no need to wait for this to complete
-          update_topdown_analytics_send_otp();
-
-          return requestId;
-        } catch (error) {
-          throw new Error("Failed to send OTP");
+        if (should_charge) {
+          await stripe.billing.meterEvents.create({
+            event_name: "otp_send_api_requests", // your meter name from Stripe dashboard
+            payload: {
+              value: "1", // usage amount
+              stripe_customer_id: stripe_customer_id, // target customer
+            },
+          });
         }
+
+        transaction.set(
+          usageRef,
+          {
+            send_otp_completed_requests: completed_requests + 1,
+            send_otp_completed_monthly_requests: {
+              ...completed_monthly_requests,
+              [dateKey]: currentCount + 1,
+            },
+          } as EzAuthAnalyticsDocument,
+          { merge: true }
+        );
+
+        // no need to wait for this to complete
+        update_topdown_analytics_send_otp();
+
+        return requestId;
       }
     );
 
@@ -193,9 +196,9 @@ const routes: FastifyPluginAsync = async (app) => {
 
   async function check_and_increment_otp_verify_usage(
     usage_key_lookup_id: string,
+    stripe_customer_id: string,
     request_limits?: {
-      max_requests_per_month?: number;
-      max_requests?: number;
+      max_free_requests_per_month?: number;
     }
   ): Promise<void> {
     if (!db) {
@@ -225,20 +228,25 @@ const routes: FastifyPluginAsync = async (app) => {
         data?.verify_otp_completed_monthly_requests || {};
       const currentCount = completed_monthly_requests[dateKey] || 0;
 
+      let should_charge: boolean = false;
       if (
-        request_limits?.max_requests_per_month &&
-        currentCount >= request_limits.max_requests_per_month
+        request_limits?.max_free_requests_per_month &&
+        currentCount >= request_limits.max_free_requests_per_month
       ) {
-        throw new Error("OTP Verify limit per month exceeded");
-      }
-      if (
-        request_limits?.max_requests &&
-        completed_requests >= request_limits.max_requests
-      ) {
-        throw new Error("OTP Verify limit per request exceeded");
+        should_charge = true;
       }
 
       try {
+        if (should_charge) {
+          await stripe.billing.meterEvents.create({
+            event_name: "otp_verify_api_request", // your meter name from Stripe dashboard
+            payload: {
+              value: "1", // usage amount
+              stripe_customer_id: stripe_customer_id, // target customer
+            },
+          });
+        }
+
         transaction.set(
           usageRef,
           {
@@ -269,7 +277,8 @@ const routes: FastifyPluginAsync = async (app) => {
       const userId = req.user_id as string | undefined;
       const keyId = req.key_id as string | undefined;
       const projectId = req.project_id as string | undefined;
-      if (!userId || !keyId || !projectId) {
+      const stripe_customer_id = req.stripe_customer_id as string | undefined;
+      if (!userId || !keyId || !projectId || !stripe_customer_id) {
         return rep.status(401).send({
           error: { message: "Unauthenticated or missing keyId / projectId" },
         });
@@ -277,7 +286,12 @@ const routes: FastifyPluginAsync = async (app) => {
 
       const destination = req.body["destination"];
       const channel = req.body["channel"];
-      const payload = { ...(req.body as any), userId, projectId, serviceInfo: req.service_info };
+      const payload = {
+        ...(req.body as any),
+        userId,
+        projectId,
+        serviceInfo: req.service_info,
+      };
 
       // Validate destination based on channel
       if (channel === "sms") {
@@ -300,8 +314,9 @@ const routes: FastifyPluginAsync = async (app) => {
           const requestId = await check_and_increment_otp_send_usage(
             trySendOtp,
             kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),
+            stripe_customer_id,
             {
-              max_requests_per_month: 3,
+              max_free_requests_per_month: 3,
             }
           );
 
@@ -310,7 +325,8 @@ const routes: FastifyPluginAsync = async (app) => {
           }
           await check_and_increment_otp_send_usage(
             (): Promise<string> => Promise.resolve(requestId),
-            kSendOtpUsageByKey(app.apikeyPepper, userId, projectId, keyId)
+            kSendOtpUsageByKey(app.apikeyPepper, userId, projectId, keyId),
+            ""
           );
 
           return rep.status(200).send({ requestId });
@@ -345,8 +361,9 @@ const routes: FastifyPluginAsync = async (app) => {
       const userId = req.user_id as string | undefined;
       const projectId = req.project_id as string | undefined;
       const requestId = req.params.requestId as string | undefined;
+      const stripe_customer_id = req.stripe_customer_id as string | undefined;
       const code = req.params.code as string | undefined;
-      if (!userId || !requestId || !code || !projectId) {
+      if (!userId || !requestId || !code || !projectId || !stripe_customer_id) {
         return rep.status(401).send({
           error: { message: "Unauthenticated or missing requestId / code" },
         });
@@ -356,8 +373,9 @@ const routes: FastifyPluginAsync = async (app) => {
 
       await check_and_increment_otp_verify_usage(
         kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),
+        stripe_customer_id,
         {
-          max_requests_per_month: 2,
+          max_free_requests_per_month: 2,
         }
       );
 

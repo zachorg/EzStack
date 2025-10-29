@@ -35,6 +35,11 @@ export interface CreateProjectRequest {
   name: string;
 }
 
+export interface GetProjectServicesRequest {
+  // Name of the project
+  project_name: string;
+}
+
 export interface EzAuthServiceUpdateRequest {
   // Whether the service is enabled
   enabled: boolean;
@@ -50,5 +55,10 @@ export interface EzAuthServiceUpdateRequest {
   otp_ttl_seconds: number;
   // Maximum number of OTP verification attempts
   otp_max_verification_attempts: number;
+}
+
+export interface BillingUpdateRequest {
+  // Stripe payment method ID
+  stripe_payment_method_id: string;
 }
 

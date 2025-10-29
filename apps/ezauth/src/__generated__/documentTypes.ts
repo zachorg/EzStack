@@ -77,6 +77,8 @@ export interface UserProfileDocument {
   // Date updated
   updated_at: string;
   // Date last logged in
-  last_login?: string;
+  last_login: string;
+  // Stripe customer ID
+  stripe_customer_id: string;
 }
 

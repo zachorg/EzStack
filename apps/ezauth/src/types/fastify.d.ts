@@ -3,6 +3,7 @@ import type { preHandlerHookHandler } from "fastify";
 import type Redis from "ioredis";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Firestore } from "firebase/firestore";
+import type Stripe from "stripe";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -25,6 +26,7 @@ declare module "fastify" {
       testConnection(): Promise<{ success: boolean; error?: string }>;
     };
     sendEmail: (args: { to: string; from?: string; subject: string; text?: string; html?: string }) => Promise<void>;
+    stripe?: Stripe;
     firebase: {
       auth: import("firebase-admin/auth").Auth;
       db: import("firebase-admin/firestore").Firestore;
@@ -37,6 +39,7 @@ declare module "fastify" {
       userId: string;
       projectId: string;
       serviceInfo: EzAuthServiceConfig;
+      stripeCustomerId?: string;
     } | null>;
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;
