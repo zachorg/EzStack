@@ -183,7 +183,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         unsubscribe();
       }
     };
-  }, []);
+  }, [fetchUserProfile]);
 
   const tryUserLogin = async (userId: string) => {
     const req: RequestInit = {
@@ -263,7 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [refreshUser]);
+  }, []);
 
   // Sign up with email/password
   const signup = useCallback(async (email: string, password: string) => {

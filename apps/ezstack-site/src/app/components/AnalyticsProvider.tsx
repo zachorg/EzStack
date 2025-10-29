@@ -486,7 +486,7 @@ export function useServiceAnalytics(
         fetchServiceAnalytics(currentServiceId, currentProjectName);
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchServiceAnalytics, getServiceAnalytics, isLoadingServiceAnalytics]);
 
   // Get current values using useMemo to prevent recreation
   const analytics = useMemo(

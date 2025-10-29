@@ -32,12 +32,12 @@ export default function CreateProjectDialog({ isOpen, onClose, onCreateProject }
     }
   };
 
-  const handleClose = () => {
+  const handleClose = React.useCallback(() => {
     if (!isLoading) {
       setProjectName("");
       onClose();
     }
-  };
+  }, [isLoading, onClose]);
 
   // Handle escape key
   React.useEffect(() => {
@@ -56,7 +56,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onCreateProject }
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, isLoading]);
+  }, [isOpen, isLoading, handleClose]);
 
   if (!isOpen) return null;
 

@@ -15,25 +15,6 @@ type UserProfile = {
   planId: string | null;
 };
 
-function formatDate(value: string | null) {
-  if (!value) return "—";
-  try {
-    if (typeof value === "string" || typeof value === "number") {
-      const d = new Date(Number(value));
-      if (!isNaN(d.getTime())) return d.toLocaleString();
-    } else if (typeof value === "object" && value) {
-      if ("seconds" in value) {
-        const secs = Number((value as { seconds: number }).seconds) * 1000;
-        if (!isNaN(secs)) return new Date(secs).toLocaleString();
-      } else if ("_seconds" in value) {
-        const secs = Number((value as { _seconds: number })._seconds) * 1000;
-        if (!isNaN(secs)) return new Date(secs).toLocaleString();
-      }
-    }
-  } catch {}
-  return "—";
-}
-
 function useUserProfile() {
   const { user, isLoading, error } = useAuth();
 

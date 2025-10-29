@@ -197,7 +197,7 @@ export default function ServicesPage({ params }: ServicesPageProps) {
                 More services coming soon
               </h3>
               <p className="text-sm text-gray-400">
-                We're constantly expanding our service offerings. Subscribe to our newsletter to stay updated on new features and services.
+                We&apos;re constantly expanding our service offerings. Subscribe to our newsletter to stay updated on new features and services.
               </p>
             </div>
           </div>

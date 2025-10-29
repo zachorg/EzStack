@@ -11,6 +11,8 @@ export type ProductTile = {
   bullets: string[];
   icon: LucideIcon | ComponentType<Record<string, unknown>>;
   span?: "wide" | "tall" | "square";
+  primaryHref?: string;
+  secondaryHref?: string;
 };
 
 export const productTiles: ProductTile[] = [
@@ -22,6 +24,8 @@ export const productTiles: ProductTile[] = [
     bullets: ["Email & SMS delivery", "Built-in rate limiting", "Simple API integration"],
     icon: ShieldCheck,
     span: "wide",
+    primaryHref: "/docs",
+    secondaryHref: "/get-started",
   },
   {
     slug: "ezsms",

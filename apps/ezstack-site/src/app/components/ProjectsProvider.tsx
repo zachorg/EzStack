@@ -71,7 +71,7 @@ export function ProjectsProvider({ children }: ProjectsProviderProps) {
     };
 
     fetchProjects();
-  }, [isAuthenticated]); // Only fetch when authenticated
+  }, [isAuthenticated, authLoading]); // Only fetch when authenticated
 
   // Wrapper function that validates the project name
   const setSelectedProject = useCallback(

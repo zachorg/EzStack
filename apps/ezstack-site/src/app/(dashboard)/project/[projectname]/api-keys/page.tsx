@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use, useCallback, useRef } from "react";
+import { useEffect, useState, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
@@ -15,11 +15,9 @@ import RevokeApiKeyDialog from "@/app/components/RevokeApiKeyDialog";
 import { apiKeys as apiKeysApi } from "@/lib/api/apikeys";
 import {
   ListApiKeysRequest,
-  RevokeApiKeyRequest,
 } from "@/__generated__/requestTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
 import {
-  AnalyticsEvent,
   ServiceAnalytics,
   useServiceAnalytics,
   useServiceAnalyticsEventListener,
@@ -35,7 +33,7 @@ interface ProjectPageProps {
 export default function ApiKeysPage({ params }: ProjectPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { fetchedProjects } = useProjects();
   const [project, setProject] = useState<UserProjectResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -166,7 +166,7 @@ export function ProjectServicesProvider({
   // Refresh service settings for current project
   const refreshServiceSettings = useCallback(async (serviceId: ServiceId) => {
     await fetchServiceSettings(serviceId);
-  }, []);
+  }, [fetchServiceSettings]);
 
   // Update service settings
   const updateServiceSettings = useCallback(
