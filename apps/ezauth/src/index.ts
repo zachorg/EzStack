@@ -10,6 +10,7 @@ import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
 import secrets from "./plugins/secrets.js";
 import firebase from "./plugins/firebase.js";
+import stripe from "./plugins/stripe.js";
 import email from "./plugins/email.js";
 import otpRoutes from "./routes/otp.js";
 import oteRoutes from "./routes/ote.js";
@@ -36,14 +37,15 @@ await app.register(errors);
 await app.register(tenantSettings);
 await app.register(secrets);
 await app.register(firebase);
+await app.register(stripe);
 await app.register(email);
 await app.register(sns);
 await app.register(fastifyRateLimit, { global: false });
 await app.register(rl);
 await app.register(auth);
 
-await app.register(otpRoutes, { prefix: "api/v1/otp" });
-await app.register(oteRoutes, { prefix: "api/v1/ote" });
+await app.register(otpRoutes, { prefix: "api/v1/ezauth/otp" });
+await app.register(oteRoutes, { prefix: "api/v1/ezauth/ote" });
 
 // Start server
 const port = Number(process.env.PORT_EZAUTH || 8081);

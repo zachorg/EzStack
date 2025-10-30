@@ -8,6 +8,7 @@ class SimpleJSDocParser {
     this.documentTypes = new Map();
     this.responseTypes = new Map();
     this.requestTypes = new Map();
+    this.configTypes = new Map();
 
     this.documentRequiresResponseTypes = false;
     this.documentRequiresRequestTypes = false;
@@ -115,6 +116,12 @@ class SimpleJSDocParser {
                   this.requestRequiresResponseTypes = true;
                 }
                 this.requestTypes.get(interfaceName).push({ name: propName, type: pt, comment: comments });
+              }
+              if (annotation.includes("Config")) {
+                if (!this.configTypes.has(interfaceName)) {
+                  this.configTypes.set(interfaceName, []);
+                }
+                this.configTypes.get(interfaceName).push({ name: propName, type: fieldInfo.type, comment: comments });
               }
             }
           }
@@ -226,6 +233,33 @@ class SimpleJSDocParser {
     console.log(`Generated Request types file: ${outputPath}`);
   }
 
+  generateConfigTypesFile(paths) {
+    const outputPath = paths.config;
+    let content = "// Generated Config Types\n\n";
+
+    this.configTypes.forEach((fields, interfaceName) => {
+      content += `export interface ${interfaceName} {\n`;
+
+      fields.forEach((field) => {
+        if (field.comment) {
+          content += `  // ${field.comment}\n`;
+        }
+        content += `  ${field.name}: ${field.type};\n`;
+      });
+
+      content += "}\n\n";
+    });
+
+    const p1 = path.join(outputPath, "ezauth/src/__generated__/configTypes.ts");
+    const p2 = path.join(outputPath, "ezstack/src/__generated__/configTypes.ts");
+    const p3 = path.join(outputPath, "ezstack-site/src/__generated__/configTypes.ts");
+
+    fs.writeFileSync(p1, content);
+    fs.writeFileSync(p2, content);
+    fs.writeFileSync(p3, content);
+    console.log(`Generated config types file: ${outputPath}`);
+  }
+
   generateFiles(outputDir) {
     this.parseFile();
 
@@ -233,15 +267,19 @@ class SimpleJSDocParser {
       document: outputDir,
       response: outputDir,
       request: outputDir,
+      config: outputDir,
     };
 
     this.generateDocumentTypesFile(paths);
     this.generateResponseTypesFile(paths);
     this.generateRequestTypesFile(paths);
+    this.generateConfigTypesFile(paths);
 
     console.log("Type generation completed!");
     console.log(`Document types: ${this.documentTypes.size} interfaces`);
     console.log(`Response types: ${this.responseTypes.size} interfaces`);
+    console.log(`Request types: ${this.requestTypes.size} interfaces`);
+    console.log(`Config types: ${this.configTypes.size} interfaces`);
   }
 }
 

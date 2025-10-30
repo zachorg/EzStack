@@ -7,8 +7,10 @@ interface ApiKeyDescriptor {
   // Foreign key to project
   /** @ApiKeyDocument */
   project_id: string;
-  // Name of project 
+  // Name of project
   /** @CreateApiKeyRequest */
+  /** @ListApiKeysRequest */
+  /** @RevokeApiKeyRequest */
   project_name: string;
   // Foreign key to user
   /** @ApiKeyDocument */
@@ -27,6 +29,7 @@ interface ApiKeyDescriptor {
   alg: string;
   // Status of the key
   /** @ApiKeyDocument */
+  /** @ListApiKeysResponse */
   status: "active" | "inactive";
   // Date created
   /** @ApiKeyDocument */
@@ -39,16 +42,63 @@ interface ApiKeyDescriptor {
   config_version: number;
   // Key: Service name. Value: JSON string of config.
   /** @ApiKeyDocument */
-  config: Record<string, any>;
+  config: Record<string, string>;
   // Name of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
+  /** @RevokeApiKeyRequest */
   /** @CreateApiKeyRequest */
+  /** @ApiKeyDocument */
   name: string;
   // Prefix of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
+  /** @ApiKeyDocument */
   key_prefix: string;
+}
+
+interface ProjectsAnalyticsDescriptor {
+  // Name of the project
+  /** @EzAuthAnalyticsRequest */
+  project_name: string;
+  // Number of completed send OTP requests per month
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  send_otp_completed_requests: number;
+  // Number of completed verify OTP requests per month
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  verify_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed verify OTP requests
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  verify_otp_completed_requests: number;
+}
+
+interface ServiceAnalyticsDescriptor {
+  // Name of the project
+  /** @ServiceAnalyticsRequest */
+  service_name: string;
+  // Number of completed requests per month
+  /** @ServiceAnalyticsDocument */
+  /** @ServiceAnalyticsResponse */
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  /** @ServiceAnalyticsDocument */
+  /** @ServiceAnalyticsResponse */
+  completed_requests: number;
+}
+
+interface DefaultDescriptor {
+  /** @RevokeApiKeyResponse */
+  /** @EzAuthServiceUpdateResponse */
+  /** @BillingUpdateResponse */
+  /** @BillingSetupResponse */
+  ok: boolean;
 }
 
 interface ProjectDescriptor {
@@ -68,13 +118,49 @@ interface ProjectDescriptor {
   /** @UserProjectDocument */
   /** @UserProjectResponse */
   updated_at: string;
-  // List of API keys
-  /** @UserProjectDocument */
-  /** @UserProjectResponse */
-  api_keys: ListApiKeysResponse[];
   // List of projects
   /** @ListUserProjectsResponse */
   projects: UserProjectResponse[];
+  // List of services: value is JSON string of ServiceConfig.
+  /** @UserProjectDocument */
+  /** @UserProjectResponse */
+  services: Record<string, string>;
+}
+
+interface GetProjectServicesDescriptor {
+  // Name of the project
+  /** @GetProjectServicesRequest */
+  project_name: string;
+}
+
+interface ServiceConfigDescriptor {
+  // Whether the service is enabled
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  enabled: boolean;
+  // Name of the project this service is associated with
+  /** @EzAuthServiceUpdateRequest */
+  project_name: string;
+  // Company name to be displayed on OTP email/SMS
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  organization_name: string;
+  // Length of the OTP code (min 4 - max 6)
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_code_length: number;
+  // Rate limit for destination per minute
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_rate_limit_destination_per_minute: number;
+  // TTL of the OTP code in seconds
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_ttl_seconds: number;
+  // Maximum number of OTP verification attempts
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  otp_max_verification_attempts: number;
 }
 
 interface UserProfileDescriptor {
@@ -90,7 +176,7 @@ interface UserProfileDescriptor {
 
   // List of projects
   /** @UserProfileDocument */
-  projects: string[];
+  projects: Record<string, string>;
 
   // Date created
   /** @UserProfileDocument */
@@ -100,5 +186,21 @@ interface UserProfileDescriptor {
   updated_at: string;
   // Date last logged in
   /** @UserProfileDocument */
-  last_login?: string;
+  last_login: string;
+
+  // Stripe customer ID
+  /** @UserProfileDocument */
+  stripe_customer_id: string;
+}
+
+interface UserBillingDescriptor {
+  // Stripe setup intent ID
+  /** @BillingSetupResponse */
+  stripe_setup_intent_client_secret: string;
+  // Stripe payment method ID
+  /** @BillingUpdateRequest */
+  stripe_payment_method_id: string;
+  // Whether the user has a valid payment method
+  /** @BillingIsSuscribedResponse */
+  has_valid_payment_method: boolean;
 }

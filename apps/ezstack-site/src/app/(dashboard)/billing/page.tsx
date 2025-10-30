@@ -1,232 +1,222 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/components/AuthProvider";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useBilling } from "@/app/components/BillingProvider";
+import { PAGE_SECTIONS } from "@/app/pageSections";
+import { useSidebar } from "@/app/components/SidebarProvider";
+import stripe from "@/lib/stripe";
+import type { StripeCardElement } from "@stripe/stripe-js";
+
+function formatCurrency(amountCents: number, currency: string | undefined) {
+  try {
+    const formatter = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: (currency || "usd").toUpperCase(),
+      currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return formatter.format((amountCents || 0) / 100);
+  } catch {
+    return `${(amountCents || 0) / 100} ${currency || "USD"}`;
+  }
+}
 
 export default function BillingPage() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
-  const [currentPlan] = useState({
-    name: "Pro Plan",
-    price: 29,
-    period: "month",
-    features: ["Unlimited API calls", "Priority support", "Advanced analytics", "Custom webhooks"]
-  });
+  const { data, loading, error, subscribe } = useBilling();
+  const { setSections } = useSidebar();
 
-  const [usage] = useState({
-    requests: 12345,
-    limit: 50000,
-    period: "January 2024"
-  });
+  const invoices = useMemo(() => data?.invoices ?? [], [data]);
+  const plan = data?.plan ?? null;
+  const [showCard, setShowCard] = useState(false);
+  const cardRef = useRef<StripeCardElement | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/get-started");
+    const dashboardSections = [
+      {
+        title: "",
+        items: [
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).billing,
+        ],
+      },
+    ];
+
+    setSections(dashboardSections);
+  }, [setSections]);
+
+  // Mount/unmount Stripe Element when card modal toggles
+  useEffect(() => {
+    if (!showCard) {
+      cardRef.current?.unmount?.();
+      cardRef.current = null;
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
+    const elements = stripe?.elements();
+    if (!elements) return;
+    const card = elements.create("card", {
+      hidePostalCode: true,
+      style: {
+        base: { color: "#e5e7eb", fontFamily: "inherit", fontSize: "16px" },
+        invalid: { color: "#fca5a5" },
+      },
+    });
+    cardRef.current = card;
+    card.mount("#card-element");
+    return () => {
+      cardRef.current?.unmount?.();
+      cardRef.current = null;
+    };
+  }, [showCard]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleSubscribeClick = () => {
+    setShowCard(true);
+  };
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  const handleConfirmSubscribe = async () => {
+    if (!cardRef.current) return;
+    // Pass the card element to the subscribe hook
+    await (subscribe as unknown as (card: StripeCardElement) => void)(cardRef.current);
+    setShowCard(false);
+  };
 
-  const usagePercentage = (usage.requests / usage.limit) * 100;
+  const handleCloseCard = () => setShowCard(false);
 
   return (
-    <div className="bg-white min-h-full">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Billing & Usage</h1>
+    <>
+    <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-6">
+        <header className="mt-3 md:mt-4">
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white">Billing</h1>
+        </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Current Plan */}
-          <div className="lg:col-span-2">
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Current Plan</h2>
-              </div>
-              <div className="px-6 py-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">{currentPlan.name}</h3>
-                    <p className="text-2xl font-bold text-blue-600">${currentPlan.price}<span className="text-sm font-normal text-gray-500">/{currentPlan.period}</span></p>
-                  </div>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                    Change Plan
-                  </button>
-                </div>
-                
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-900">Plan Features:</h4>
-                  <ul className="space-y-1">
-                    {currentPlan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm text-gray-600">
-                        <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+        {loading && (
+          <div className="text-sm text-neutral-400">Loading billing information…</div>
+        )}
+
+        {/* {error && (
+          <div className="text-sm text-red-400">
+            {error}
+            <button onClick={refresh} className="ml-2 underline underline-offset-2">Retry</button>
           </div>
+        )} */}
 
-          {/* Usage Stats */}
+        {/* Subscription Section */}
+        <section className="space-y-3">
+          <div className="grid gap-6 md:grid-cols-[1fr_minmax(220px,360px)] items-start">
+            <div>
+              <h2 className="text-base md:text-lg font-semibold text-white">Subscription plan</h2>
+              <p className="mt-1 text-sm text-neutral-400">Manage your EzStack plan and billing status.</p>
+            </div>
+
+            <aside className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-white">Current plan</span>
+                  <span className={"text-xs px-2 py-0.5 rounded-full " + (plan?.isActive ? "bg-emerald-900/30 text-emerald-300" : "bg-neutral-800 text-neutral-300") }>
+                    {plan?.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-neutral-200">{plan?.name || "None"}</div>
+                  {(!plan || !plan.isActive) && (
+                    <button
+                      type="button"
+                      onClick={handleSubscribeClick}
+                      className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                    >
+                      Subscribe
+                    </button>
+                  )}
+                </div>
+                {plan?.interval && plan?.currency ? (
+                  <div className="text-sm text-neutral-400">
+                    Billed {plan.interval} • Currency {plan.currency.toUpperCase()}
+                  </div>
+                ) : (
+                  <div className="text-sm text-neutral-400"></div>
+                )}
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        {/* Invoices Section */}
+        <section className="space-y-3">
           <div>
-            <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Usage This Month</h2>
-                <p className="text-sm text-gray-600">{usage.period}</p>
-              </div>
-              <div className="px-6 py-4">
-                <div className="mb-4">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">API Requests</span>
-                    <span className="font-medium">{usage.requests.toLocaleString()} / {usage.limit.toLocaleString()}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                      style={{ width: `${Math.min(usagePercentage, 100)}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">{usagePercentage.toFixed(1)}% of monthly limit</p>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Success Rate</span>
-                    <span className="text-sm font-medium text-green-600">99.9%</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Avg Response Time</span>
-                    <span className="text-sm font-medium">45ms</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Errors</span>
-                    <span className="text-sm font-medium text-red-600">12</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-base md:text-lg font-semibold text-white">Invoices</h2>
+            <p className="mt-1 text-sm text-neutral-400">Your billing history sorted by most recent first.</p>
           </div>
-        </div>
 
-        {/* Billing History */}
-        <div className="mt-8">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Billing History</h2>
-            </div>
+          <div className="rounded-lg border border-neutral-800 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Description
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Invoice
-                    </th>
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-300">
+                  <tr className="divide-x divide-neutral-800">
+                    <th className="px-3 py-2 font-semibold">Name</th>
+                    <th className="px-3 py-2 font-semibold">Date</th>
+                    <th className="px-3 py-2 font-semibold">Amount</th>
+                    <th className="px-3 py-2 font-semibold">Payment status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Jan 15, 2024
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Pro Plan - Monthly
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      $29.00
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        Paid
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        Download
-                      </button>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Dec 15, 2023
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Pro Plan - Monthly
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      $29.00
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                        Paid
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900">
-                        Download
-                      </button>
-                    </td>
-                  </tr>
+                <tbody className="divide-y divide-neutral-800">
+                  {invoices.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-4 text-neutral-400">No invoices yet.</td>
+                    </tr>
+                  )}
+                  {invoices.map((inv) => {
+                    const date = new Date(inv.createdAt);
+                    const dateText = isNaN(date.getTime()) ? inv.createdAt : date.toLocaleDateString();
+                    const amountText = formatCurrency(inv.amountCents, inv.currency);
+                    const paid = inv.status === "paid";
+                    return (
+                      <tr key={inv.id} className="divide-x divide-neutral-800">
+                        <td className="px-3 py-2 text-neutral-200">{inv.name}</td>
+                        <td className="px-3 py-2 text-neutral-200">{dateText}</td>
+                        <td className="px-3 py-2 text-neutral-200">{amountText}</td>
+                        <td className="px-3 py-2">
+                          <span className={"text-xs px-2 py-0.5 rounded-full " + (paid ? "bg-emerald-900/30 text-emerald-300" : "bg-amber-900/30 text-amber-300") }>
+                            {inv.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-
-        {/* Payment Method */}
-        <div className="mt-8">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Payment Method</h2>
-            </div>
-            <div className="px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">•••• •••• •••• 4242</p>
-                    <p className="text-sm text-gray-500">Expires 12/25</p>
-                  </div>
-                </div>
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                  Update
-                </button>
-              </div>
-            </div>
-          </div>
+        </section>
+      </div>
+    </div>
+  {showCard && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={handleCloseCard} />
+      <div className="relative z-10 w-full max-w-md rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-xl">
+        <h3 className="mb-4 text-lg font-semibold text-white">Enter payment details</h3>
+        <div id="card-element" className="rounded-md border border-neutral-800 bg-neutral-950 p-3" />
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleCloseCard}
+            className="inline-flex items-center rounded-md bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmSubscribe}
+            className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+          >
+            Continue
+          </button>
         </div>
       </div>
     </div>
+  )}
+  </>
   );
 }
+
+

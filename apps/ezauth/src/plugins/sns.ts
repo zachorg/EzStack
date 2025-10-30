@@ -1,5 +1,6 @@
 import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 import fp from "fastify-plugin";
+import { EzAuthServiceConfig } from "../__generated__/configTypes";
 
 export default fp(async (app: any) => {
   let snsClient: SNSClient | undefined;
@@ -39,7 +40,8 @@ export default fp(async (app: any) => {
    */
   async function sendOtp(
     phoneNumber: string,
-    otp: string
+    otp: string,
+    serviceInfo: EzAuthServiceConfig
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!isConfigured || !snsClient) {
       return {
@@ -73,7 +75,11 @@ export default fp(async (app: any) => {
     }
 
     // Create the SMS message
-    const message = `Your EzStack verification code is: ${otp}. Valid for 5 minutes.`;
+    const message = `Your ${
+      serviceInfo.organization_name.length > 0
+        ? serviceInfo.organization_name
+        : "EzAuth"
+    } verification code is: ${otp}. Valid for ${Math.floor(serviceInfo.otp_ttl_seconds / 60)} minutes.`;
 
     app.log.info(`📱 [AWS SNS] Sending SMS to: ${formattedPhone}`);
     app.log.info(`📱 [AWS SNS] Message: ${message}`);

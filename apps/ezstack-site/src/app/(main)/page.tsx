@@ -4,27 +4,30 @@ import Link from "next/link";
 import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useSidebar } from "../components/SidebarProvider";
+import { AuroraBackground } from "../components/aurora-background";
 import { CodeExample } from "../components/code-example";
 import { BentoGrid } from "../components/bento-grid";
 import { Section } from "../components/section";
 import { FeaturesBentoGrid } from "../components/features-bento-grid";
 import { Footer } from "../components/Footer";
-import { useIsAuthenticated } from "../components/AuthProvider";
+import { useIsAuthenticated, useAuth } from "../components/AuthProvider";
 import { useLoginDialog } from "../components/LoginDialogProvider";
 import { Zap, Shield, Gauge, Code2, ArrowRight, Sparkles } from "lucide-react";
+import { PAGE_SECTIONS } from "../pageSections";
 
 function HomeContent() {
   const router = useRouter();
   const isAuthenticated = useIsAuthenticated();
+  const { isLoading } = useAuth();
   const { setSections } = useSidebar();
   const { openDialog } = useLoginDialog();
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if(isAuthenticated) {
+    if(isAuthenticated && !isLoading) {
       router.push("/home");
     }
-  }, [router, isAuthenticated]);
+  }, [router, isAuthenticated, isLoading]);
 
   // Set sidebar sections for main page
   useEffect(() => {
@@ -32,32 +35,37 @@ function HomeContent() {
       {
         title: "",
         items: [
-          {
-            id: "home",
-            name: "Home",
-            href: "/",
-            icon: (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-            ),
-          },
-          {
-            id: "docs",
-            name: "Docs",
-            href: "/docs",
-            icon: (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            ),
-          }
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).home,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },
     ];
     
     setSections(mainSections);
   }, [setSections]);
+
+  // Show loading state until auth is resolved
+  if (isLoading) {
+    return (
+      <div className="relative font-sans space-y-16">
+        <AuroraBackground />
+        <section className="relative text-center space-y-6 pt-6">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Loading...
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  if(isAuthenticated) {
+    return null;
+  }
   
   return (
     <div className="relative font-sans w-full">

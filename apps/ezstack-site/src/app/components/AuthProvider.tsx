@@ -109,8 +109,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshUser = useCallback(async () => {
     try {
       const userProfile = await fetchUserProfile();
-      setUserProfile(userProfile);
-      setIsAuthenticated(!!userProfile);
+      console.log("AuthProvider: Refresh: userProfile", userProfile);
+      console.log("AuthProvider: Refresh: isAuthenticated", !!userProfile);
     } catch (err) {
       console.error("Error refreshing user:", err);
       setError("Failed to refresh user data");
@@ -125,16 +125,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const userProfile = await fetchUserProfile();
 
-        console.log("AuthProvider: userProfile", userProfile);
-        console.log("AuthProvider: isAuthenticated", !!userProfile);
-        setUserProfile(userProfile);
-        setIsAuthenticated(!!userProfile);
+        console.log("AuthProvider: Initialize: userProfile", userProfile);
+        console.log("AuthProvider: Initialize: isAuthenticated", !!userProfile);
       } catch (err) {
         console.error("Error initializing auth:", err);
         setError("Failed to initialize authentication");
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -172,6 +167,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               setUserProfile(null);
               setIsAuthenticated(false);
             }
+            setIsLoading(false);
           });
         }
       } catch (error) {
@@ -187,7 +183,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         unsubscribe();
       }
     };
-  }, []);
+  }, [fetchUserProfile]);
 
   const tryUserLogin = async (userId: string) => {
     const req: RequestInit = {
@@ -201,7 +197,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     const response = await foward_req_to_ezstack_api(
-      "/api/v1/userProfile/loginin",
+      "/api/v1/user/profile/loginin",
       req
     );
     if (!response.ok) {
@@ -267,7 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [refreshUser]);
+  }, []);
 
   // Sign up with email/password
   const signup = useCallback(async (email: string, password: string) => {

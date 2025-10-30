@@ -10,7 +10,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../ezstack/src/routes/analytics.ts"]
 }
 
 

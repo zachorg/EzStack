@@ -4,11 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "./SidebarProvider";
+import { useAuth } from "./AuthProvider";
 
 export function Sidebar() {
   const pathname = usePathname();
   const [isHovered, setIsHovered] = useState(false);
   const { sections } = useSidebar();
+  const { isLoading: authLoading } = useAuth();
+
+  // Wait for auth to be ready before rendering
+  if (authLoading) {
+    return null;
+  }
 
   return (
     <div 
