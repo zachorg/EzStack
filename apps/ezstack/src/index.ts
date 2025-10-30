@@ -14,7 +14,6 @@ import userProjectsRoutes from "./routes/userProjects.js";
 import analyticsRoutes from "./routes/analytics.js";
 import userServicesRoutes from "./routes/userServices.js";
 import userBillingRoutes from "./routes/userBilling.js";
-import stripeRoutes from "./routes/stripe.js";
 
 // Fastify app with structured logging enabled. We redact sensitive fields by
 // default to avoid leaking destinations/PII in application logs.
@@ -54,7 +53,6 @@ await app.register(userProjectsRoutes, { prefix: "/api/v1/user/projects" });
 await app.register(analyticsRoutes, { prefix: "/api/v1/analytics" });
 await app.register(userServicesRoutes, { prefix: "/api/v1/user/projects/services" });
 await app.register(userBillingRoutes, { prefix: "/api/v1/user/billing" });
-await app.register(stripeRoutes, { prefix: "/api/v1/stripe" });
 
 app.apikeyPepper = (process.env.FASTIFY_PUBLIC_APIKEY_PEPPER || "").trim();
 if (!app.apikeyPepper) {
