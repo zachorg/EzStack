@@ -6,14 +6,13 @@ export default fp(async (app) => {
   const stripeSecretKey = process.env.FASTIFY_PUBLIC_STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
-    app.log.warn(
-      "STRIPE_SECRET_KEY not found in environment variables. Stripe will not be available."
+    throw new Error(
+      "FASTIFY_PUBLIC_STRIPE_SECRET_KEY not found in environment variables. Stripe is required."
     );
-    return;
   }
 
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: "2024-06-20",
+    apiVersion: "2025-02-24.acacia",
   });
 
   app.decorate("stripe", stripe);

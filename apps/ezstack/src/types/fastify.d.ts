@@ -18,7 +18,7 @@ declare module "fastify" {
       oteLength: number;
       oteMaxAttempts: number;
     }>;
-    stripe?: Stripe;
+    stripe: Stripe;
     firebase: {
       auth: import("firebase-admin/auth").Auth;
       db: import("firebase-admin/firestore").Firestore;
