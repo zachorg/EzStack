@@ -48,7 +48,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     resolvedParams.projectname
   );
   const hasFetchedApiKeys = useRef(false);
-  const hasProcessedAnalytics = useRef(false);
+  
 
   useServiceAnalyticsEventListener("ezauth", "analytics_fetched", (event) => {
     const analyticsData = event.data as ServiceAnalytics;
@@ -61,12 +61,11 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   });
 
   useEffect(() => {
-    if (analytics && !hasProcessedAnalytics.current) {
+    if (analytics) {
       const analyticsData = analytics as ServiceAnalytics;
       if (analyticsData && analyticsData.ezauth) {
         setEzauthAnalytics(analyticsData.ezauth);
       }
-      hasProcessedAnalytics.current = true;
     }
   }, [analytics]);
 
