@@ -34,7 +34,7 @@ export function Taskbar() {
 
   // Show loading state to prevent hydration mismatch
   if (authLoading) {
-    return <div className=""></div>;
+    return null;
   }
 
   return (

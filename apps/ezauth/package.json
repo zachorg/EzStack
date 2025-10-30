@@ -20,7 +20,8 @@
     "firebase": "^12.3.0",
     "firebase-admin": "^13.5.0",
     "ioredis": "^5.4.1",
-    "jose": "^5.9.3"
+    "jose": "^5.9.3",
+    "stripe": "^17.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.22",

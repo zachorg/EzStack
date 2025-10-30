@@ -15,14 +15,8 @@ export default fp(async (app) => {
       return;
     }
 
-    const apiKey = req.headers ? req.headers["eza-api-key"] as string : null;
+    const apiKey = req.headers ? (req.headers["eza-api-key"] as string) : null;
     if (apiKey !== null) {
-      try {
-        req.log.info(
-          { route: req.routeOptions?.url },
-          "auth: using firebase jwt"
-        );
-      } catch {}
       try {
         const res = await app.introspectApiKey(apiKey);
 
@@ -32,19 +26,21 @@ export default fp(async (app) => {
           err.code = "unauthorized";
           throw err;
         }
-        req.userId = res.userId;
-        try {
-          req.log.debug({ userId: res.userId }, "auth: firebase token verified");
-        } catch {}
+        req.user_id = res.userId;
+        req.key_id = res.keyId;
+        req.project_id = res.projectId;
+        req.service_info = res.serviceInfo;
+        req.stripe_customer_id = res.stripeCustomerId;
+
+        if (!res.serviceInfo.enabled) {
+          const err: any = new Error("EzAuth service is not enabled");
+          err.statusCode = 403;
+          err.code = "forbidden";
+          throw err;
+        }
         return;
-      } catch (e) {
-        try {
-          req.log.warn(
-            { err: e && (e as any).message },
-            "auth: api key verification failed"
-          );
-        } catch {}
-        const err: any = new Error(`Missing or invalid api key ${apiKey}`);
+      } catch (e: any) {
+        const err: any = new Error(e?.message);
         err.statusCode = 401;
         err.code = "unauthorized";
         throw err;
@@ -56,7 +52,9 @@ export default fp(async (app) => {
       try {
         req.log.error("auth: missing FASTIFY_PUBLIC_APIKEY_PEPPER");
       } catch {}
-      const err: any = new Error("Server misconfigured: FASTIFY_PUBLIC_APIKEY_PEPPER not set");
+      const err: any = new Error(
+        "Server misconfigured: FASTIFY_PUBLIC_APIKEY_PEPPER not set"
+      );
       err.statusCode = 500;
       err.code = "internal_error";
       throw err;

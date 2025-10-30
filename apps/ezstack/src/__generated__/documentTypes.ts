@@ -1,6 +1,5 @@
 // Generated Document Types
 
-import * as ResponseTypes from "./responseTypes"
 
 export interface ApiKeyDocument {
   // Primary key
@@ -26,7 +25,29 @@ export interface ApiKeyDocument {
   // Version of the config
   config_version: number;
   // Key: Service name. Value: JSON string of config.
-  config: Record<string, any>;
+  config: Record<string, string>;
+  // Name of the key
+  name: string;
+  // Prefix of the key
+  key_prefix: string;
+}
+
+export interface EzAuthAnalyticsDocument {
+  // Number of completed send OTP requests per month
+  send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests
+  send_otp_completed_requests: number;
+  // Number of completed verify OTP requests per month
+  verify_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed verify OTP requests
+  verify_otp_completed_requests: number;
+}
+
+export interface ServiceAnalyticsDocument {
+  // Number of completed requests per month
+  completed_monthly_requests: Record<string, number>;
+  // Number of completed requests
+  completed_requests: number;
 }
 
 export interface UserProjectDocument {
@@ -38,8 +59,8 @@ export interface UserProjectDocument {
   created_at: string;
   // Date updated
   updated_at: string;
-  // List of API keys
-  api_keys: ResponseTypes.ListApiKeysResponse[];
+  // List of services: value is JSON string of ServiceConfig.
+  services: Record<string, string>;
 }
 
 export interface UserProfileDocument {
@@ -50,12 +71,14 @@ export interface UserProfileDocument {
   // Status of the user
   status: "active" | "inactive";
   // List of projects
-  projects: string[];
+  projects: Record<string, string>;
   // Date created
   created_at: string;
   // Date updated
   updated_at: string;
   // Date last logged in
-  last_login?: string;
+  last_login: string;
+  // Stripe customer ID
+  stripe_customer_id: string;
 }
 

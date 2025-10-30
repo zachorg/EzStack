@@ -15,7 +15,6 @@ export default fp(async (app) => {
 
     // Branch: Firebase Auth JWT
     if (idToken) {
-      req.log.info({ route: req.routeOptions?.url }, `auth: using firebase jwt`);
       try {
         const res = await app.introspectIdToken(idToken);
         if (!res?.uid) {

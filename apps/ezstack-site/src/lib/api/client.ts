@@ -44,9 +44,9 @@ export async function ezstack_api_fetch<T>(
   const req: RequestInit = {
     ...init,
     headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${idToken}`,
       ...(init?.headers || {}),
+      "content-type": "application/json",
+      authorization: `Bearer ${idToken}`
     },
     cache: "no-store",
   };
