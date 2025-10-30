@@ -71,6 +71,25 @@ const routes: FastifyPluginAsync = async (app) => {
     return rep.send({ ok: true });
   });
 
+  app.get(
+    "/is-valid",
+    { preHandler: [app.rlPerRoute(10)] },
+    async (req: any, rep) => {
+      try {
+        const userId = req.userId as string | undefined;
+        if (!userId) {
+          return rep
+            .status(400)
+            .send({ error: { message: "Unauthenticated" } });
+        }
+        return rep.status(200).send({ ok: true });
+      } catch (err: any) {
+        req.log?.error({ err }, "isValidApiKey failed");
+        return rep.status(500).send({ error: { message: "Internal error" } });
+      }
+    }
+  );
+
   app.post(
     "/create",
     { preHandler: [app.rlPerRoute(10)] },
