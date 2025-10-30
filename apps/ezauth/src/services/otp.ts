@@ -95,7 +95,7 @@ export async function verify(app: FastifyInstance, body: any) {
 
   if (!raw) {
     console.log(`OTP verify: request not found: `, key);
-    return true;
+    return {verified: false, error: "Request not found"};
   }
 
   const data = JSON.parse(raw);
@@ -107,16 +107,16 @@ export async function verify(app: FastifyInstance, body: any) {
       { requestId },
       "OTP verify: exceeded max attempts; invalidated"
     );
-    return false;
+    return {verified: false, error: "Exceeded max attempts"};
   }
 
   const ok = hashOtp(code, data.salt) === data.hash;
   if (!ok) {
     await redis.set(key, JSON.stringify(data), "EX", OTP_TTL_SECONDS);
     app.log.warn({ requestId }, "OTP verify: incorrect code");
-    return false;
+    return {verified: false, error: "Incorrect code"};
   }
 
   await redis.del(key);
-  return true;
+  return {verified: true};
 }
