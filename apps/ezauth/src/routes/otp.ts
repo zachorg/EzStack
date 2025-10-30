@@ -369,7 +369,10 @@ const routes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      const verified = await OTP.verify(app, { userId, requestId, code });
+      const { verified, error } = await OTP.verify(app, { userId, requestId, code });
+      if (!verified) {
+        return rep.status(400).send({ error: { message: error } });
+      }
 
       await check_and_increment_otp_verify_usage(
         kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),

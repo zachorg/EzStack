@@ -48,7 +48,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     resolvedParams.projectname
   );
   const hasFetchedApiKeys = useRef(false);
-  const hasProcessedAnalytics = useRef(false);
+  
 
   useServiceAnalyticsEventListener("ezauth", "analytics_fetched", (event) => {
     const analyticsData = event.data as ServiceAnalytics;
@@ -61,12 +61,11 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   });
 
   useEffect(() => {
-    if (analytics && !hasProcessedAnalytics.current) {
+    if (analytics) {
       const analyticsData = analytics as ServiceAnalytics;
       if (analyticsData && analyticsData.ezauth) {
         setEzauthAnalytics(analyticsData.ezauth);
       }
-      hasProcessedAnalytics.current = true;
     }
   }, [analytics]);
 
@@ -79,7 +78,6 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
           PAGE_SECTIONS({ resolvedParams }).dashboard,
           PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
-          PAGE_SECTIONS({ resolvedParams }).docs,
         ],
       },
     ];
@@ -118,17 +116,12 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
       return;
     }
 
-    // Extract project name from URL
-    const pathname = window.location.pathname;
-    const match = pathname.match(/\/project\/([^/]+)/);
-    const projectName = match ? match[1] : null;
-
+    // Use resolved params to get the project name
+    const projectName = resolvedParams.projectname;
     if (projectName) {
-      // Find the project by name
       const foundProject = fetchedProjects.projects.find(
         (p) => p.name === projectName
       );
-
       if (foundProject) {
         setProject(foundProject);
       }

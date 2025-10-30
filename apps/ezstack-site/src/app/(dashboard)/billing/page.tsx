@@ -23,7 +23,7 @@ function formatCurrency(amountCents: number, currency: string | undefined) {
 }
 
 export default function BillingPage() {
-  const { data, loading, error, subscribe } = useBilling();
+  const { data, loading, subscribe } = useBilling();
   const { setSections } = useSidebar();
 
   const invoices = useMemo(() => data?.invoices ?? [], [data]);

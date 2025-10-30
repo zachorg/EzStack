@@ -25,7 +25,7 @@ function HomeContent() {
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if(isAuthenticated && !isLoading) {
-      router.push("/home");
+      router.push("/projects");
     }
   }, [router, isAuthenticated, isLoading]);
 
@@ -35,7 +35,7 @@ function HomeContent() {
       {
         title: "",
         items: [
-          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).home,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },

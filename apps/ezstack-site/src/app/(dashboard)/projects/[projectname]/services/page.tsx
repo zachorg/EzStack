@@ -8,6 +8,7 @@ import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
 import { PAGE_SECTIONS } from "@/app/pageSections";
 import { productTiles, type ProductTile } from "@/lib/products";
+import { useService } from "@/app/components/ProjectServicesProvider";
 import { Sparkles } from "lucide-react";
 
 interface ServicesPageProps {
@@ -17,6 +18,20 @@ interface ServicesPageProps {
 }
 
 // Service Card Component
+function EzAuthStatusBadge() {
+  const { settings } = useService("ezauth");
+  const enabled = settings?.ezauthConfig?.enabled;
+  return (
+    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+      enabled
+        ? "bg-emerald-900/30 text-emerald-300"
+        : "bg-emerald-900/30 text-emerald-300"
+    }`}>
+      {enabled ? "Enabled" : "Available"}
+    </span>
+  );
+}
+
 function ServiceCard({ service, projectname }: { service: ProductTile, projectname: string }) {
   const Icon = service.icon;
   const isAvailable = service.status === "available";
@@ -25,7 +40,7 @@ function ServiceCard({ service, projectname }: { service: ProductTile, projectna
 
   const handleClick = () => {
     if (isAvailable) {
-      router.push(`/project/${projectname}/services/${service.slug}`);
+      router.push(`/projects/${projectname}/services/${service.slug}`);
     }
   };
 
@@ -54,9 +69,13 @@ function ServiceCard({ service, projectname }: { service: ProductTile, projectna
               </span>
             )}
             {isAvailable && (
-              <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-900/30 text-emerald-300">
-                Available
-              </span>
+              service.slug === "ezauth" ? (
+                <EzAuthStatusBadge />
+              ) : (
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-900/30 text-emerald-300">
+                  Available
+                </span>
+              )
             )}
           </div>
 
@@ -97,7 +116,6 @@ export default function ServicesPage({ params }: ServicesPageProps) {
           PAGE_SECTIONS({ resolvedParams }).dashboard,
           PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
-          PAGE_SECTIONS({ resolvedParams }).docs,
         ],
       },
     ];
@@ -127,7 +145,7 @@ export default function ServicesPage({ params }: ServicesPageProps) {
       setSelectedProject(foundProject.name);
     } else {
       // Project not found, redirect to home
-      router.push("/home");
+      router.push("/projects");
     }
 
     setIsLoading(false);
