@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       // Verify the session cookie
       await adminAuth.verifySessionCookie(sessionCookie, true);
       // User is authenticated, redirect to dashboard
-      url.pathname = "/home";
+      url.pathname = "/projects";
       url.searchParams.delete("redirect");
       return NextResponse.redirect(url);
     }
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   // User is not authenticated, redirect to home with login dialog trigger
   url.pathname = "/";
   url.searchParams.set("login", "true");
-  url.searchParams.set("redirect", "/home");
+  url.searchParams.set("redirect", "/projects");
   return NextResponse.redirect(url);
 }
 

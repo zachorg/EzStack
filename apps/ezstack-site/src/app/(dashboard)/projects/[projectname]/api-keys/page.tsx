@@ -116,17 +116,12 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
       return;
     }
 
-    // Extract project name from URL
-    const pathname = window.location.pathname;
-    const match = pathname.match(/\/project\/([^/]+)/);
-    const projectName = match ? match[1] : null;
-
+    // Use resolved params to get the project name
+    const projectName = resolvedParams.projectname;
     if (projectName) {
-      // Find the project by name
       const foundProject = fetchedProjects.projects.find(
         (p) => p.name === projectName
       );
-
       if (foundProject) {
         setProject(foundProject);
       }

@@ -99,7 +99,8 @@ export function BillingProvider({
           },
           invoices: [],
         } as BillingData);
-      } catch (_err) {
+      } catch (err) {
+        console.error("BillingProvider: fetchBillingData: error", err);
         setData({
           plan: null,
           invoices: [],

@@ -40,7 +40,7 @@ function ServiceCard({ service, projectname }: { service: ProductTile, projectna
 
   const handleClick = () => {
     if (isAvailable) {
-      router.push(`/project/${projectname}/services/${service.slug}`);
+      router.push(`/projects/${projectname}/services/${service.slug}`);
     }
   };
 
@@ -145,7 +145,7 @@ export default function ServicesPage({ params }: ServicesPageProps) {
       setSelectedProject(foundProject.name);
     } else {
       // Project not found, redirect to home
-      router.push("/home");
+      router.push("/projects");
     }
 
     setIsLoading(false);

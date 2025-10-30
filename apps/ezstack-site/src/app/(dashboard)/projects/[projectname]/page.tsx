@@ -10,7 +10,7 @@ import { PAGE_SECTIONS } from "@/app/pageSections";
 import { productTiles, type ProductTile } from "@/lib/products";
 import { useService } from "@/app/components/ProjectServicesProvider";
 import { useServiceAnalytics } from "@/app/components/AnalyticsProvider";
-import { ShieldCheck, MessageSquare, Send, CheckCircle2, Activity, ChevronDown } from "lucide-react";
+import {  Send, CheckCircle2, Activity, ChevronDown, LucideIcon } from "lucide-react";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -25,7 +25,7 @@ function EnabledServiceCard({ service, projectname }: { service: ProductTile; pr
   
   const handleClick = () => {
     if (service.status === "available") {
-      router.push(`/project/${projectname}/services/${service.slug}`);
+      router.push(`/projects/${projectname}/services/${service.slug}`);
     }
   };
 
@@ -58,7 +58,7 @@ function AnalyticsStatCard({
   title: string; 
   value: string | number; 
   subtitle?: string; 
-  icon: any;
+  icon: LucideIcon;
 }) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
@@ -395,7 +395,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
       setSelectedProject(foundProject.name);
     } else {
       // Project not found, redirect to home
-      router.push("/home");
+      router.push("/projects");
     }
 
     setIsLoading(false);
@@ -439,7 +439,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
               <p className="mt-1 text-sm text-neutral-400">Created: {project.created_at}</p>
             </div>
             <button
-              onClick={() => router.push("/home")}
+              onClick={() => router.push("/projects")}
               className="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
             >
               Back to Projects

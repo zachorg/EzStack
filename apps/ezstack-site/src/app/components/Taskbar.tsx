@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { useLoginDialog } from "./LoginDialogProvider";
-import Link from "next/link";
 
 export function Taskbar() {
   const { isAuthenticated, isLoading: authLoading, logout, user } = useAuth();
@@ -38,19 +37,8 @@ export function Taskbar() {
   }
 
   return (
-    <header className="glass-effect flex items-center justify-between transition-all duration-300 ease-in-out h-12 w-full fixed left-0 top-0 z-40">
-      {/* EzStack Logo */}
-      <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity" style={{ marginLeft: '12px' }}>
-        {/* Logo */}
-        <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
-          <span className="text-white font-bold text-xs">E</span>
-        </div>
-        
-        {/* Text Label */}
-        <span className="text-white font-semibold text-sm">
-          EzStack
-        </span>
-      </Link>
+    <header className="bg-transparent backdrop-blur-0 border-0 shadow-none flex items-center justify-between transition-all duration-300 ease-in-out h-12 w-full fixed left-0 top-0 z-40">
+      <div style={{ marginLeft: '12px' }} />
 
       <div className="flex items-center pr-6">
 

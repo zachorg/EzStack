@@ -107,7 +107,7 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
       setSelectedProject(foundProject.name);
     } else {
       // Project not found, redirect to home
-      router.push("/home");
+      router.push("/projects");
     }
 
     setIsLoading(false);

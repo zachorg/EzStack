@@ -32,7 +32,7 @@ export default function DocsPage() {
       {
         title: "",
         items: [
-          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).home,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },
