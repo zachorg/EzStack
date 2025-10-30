@@ -22,10 +22,26 @@ export function Sidebar() {
       className={`glass-effect flex flex-col transition-all duration-300 ease-in-out fixed left-0 z-50 w-12 overflow-hidden ${
         isHovered ? 'w-48' : ''
       }`}
-      style={{ top: '47px', height: 'calc(100vh - 47px)' }}
+      style={{ top: '0px', height: '100vh' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Brand */}
+      <div className="p-2 pt-3">
+        <div className="flex items-center">
+          <Link
+            href="/"
+            className="group relative flex items-center justify-center w-8 h-8 rounded-xl"
+          >
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <span className="text-white font-bold text-xs">E</span>
+            </div>
+          </Link>
+          {isHovered && (
+            <span className="ml-3 text-white font-semibold text-sm">EzStack</span>
+          )}
+        </div>
+      </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-2 pt-4 space-y-4 overflow-y-auto overflow-x-hidden">

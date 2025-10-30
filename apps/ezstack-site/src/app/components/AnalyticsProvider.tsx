@@ -107,11 +107,11 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
   const { selectedProject } = useProjects();
   const { isAuthenticated } = useAuth();
 
-  // Get or create service state - using ref to access current state without dependency
+  // Get or create service state - reading from current state to trigger re-renders
   const getServiceState = useCallback(
     (serviceId: ServiceType): ServiceAnalyticsState => {
       return (
-        servicesStateRef.current.get(serviceId) || {
+        servicesState.get(serviceId) || {
           data: null,
           error: null,
           lastFetchTime: null,
@@ -119,7 +119,7 @@ export function AnalyticsProvider({ children }: AnalyticsProviderProps) {
         }
       );
     },
-    []
+    [servicesState]
   );
 
   // Emit event to service-specific listeners
@@ -439,10 +439,8 @@ export function useServiceAnalytics(
   projectName: string
 ) {
   const {
-    getServiceAnalytics,
+    getServiceState,
     fetchServiceAnalytics,
-    isLoadingServiceAnalytics,
-    getServiceError,
   } = useAnalytics();
   const { isAuthenticated } = useAuth();
 
@@ -472,8 +470,9 @@ export function useServiceAnalytics(
       currentProjectName &&
       fetchedRef.current !== fetchKey
     ) {
-      const analytics = getServiceAnalytics(currentServiceId);
-      const isLoading = isLoadingServiceAnalytics(currentServiceId);
+      const serviceState = getServiceState(currentServiceId);
+      const analytics = serviceState.data;
+      const isLoading = serviceState.isLoading;
 
       // Only fetch if we don't have data and we're not already loading
       if (!analytics && !isLoading) {
@@ -486,21 +485,14 @@ export function useServiceAnalytics(
         fetchServiceAnalytics(currentServiceId, currentProjectName);
       }
     }
-  }, [isAuthenticated, fetchServiceAnalytics, getServiceAnalytics, isLoadingServiceAnalytics]);
+  }, [isAuthenticated, fetchServiceAnalytics, getServiceState]);
 
-  // Get current values using useMemo to prevent recreation
-  const analytics = useMemo(
-    () => getServiceAnalytics(serviceId),
-    [getServiceAnalytics, serviceId]
-  );
-  const isLoading = useMemo(
-    () => isLoadingServiceAnalytics(serviceId),
-    [isLoadingServiceAnalytics, serviceId]
-  );
-  const error = useMemo(
-    () => getServiceError(serviceId),
-    [getServiceError, serviceId]
-  );
+  // Get current values - these will update when servicesState changes
+  const serviceState = getServiceState(serviceId);
+  
+  const analytics = serviceState?.data || null;
+  const isLoading = serviceState?.isLoading || false;
+  const error = serviceState?.error || null;
 
   return {
     analytics,

@@ -14,7 +14,7 @@ import { PAGE_SECTIONS } from "@/app/pageSections";
 function ProjectCard({ project }: { project: UserProjectResponse }) {
   const router = useRouter();
   const handleClick = () => {
-    router.push(`/project/${encodeURIComponent(project.name)}`);
+    router.push(`/projects/${encodeURIComponent(project.name)}`);
   };
 
   return (
@@ -188,6 +188,7 @@ export default function Dashboard() {
         items: [
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).billing,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },
     ];

@@ -62,7 +62,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
       await loginWithGoogle();
       // Close dialog and redirect to dashboard on successful login
       handleClose();
-      router.push("/home");
+      router.push("/projects");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Google sign-in failed";
       setMessage(errorMessage);
@@ -76,7 +76,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
       await signup(email.trim(), password);
       // Close dialog and redirect to dashboard on successful signup
       handleClose();
-      router.push("/home");
+      router.push("/projects");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Signup failed";
       setMessage(errorMessage);
@@ -90,7 +90,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
       await login(email.trim(), password);
       // Close dialog and redirect to dashboard on successful login
       handleClose();
-      router.push("/home");
+      router.push("/projects");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Sign-in failed";
       setMessage(errorMessage);
