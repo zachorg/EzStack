@@ -116,7 +116,6 @@ export default function ServicesPage({ params }: ServicesPageProps) {
           PAGE_SECTIONS({ resolvedParams }).dashboard,
           PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
-          PAGE_SECTIONS({ resolvedParams }).docs,
         ],
       },
     ];
