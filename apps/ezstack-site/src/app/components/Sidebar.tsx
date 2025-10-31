@@ -19,10 +19,10 @@ export function Sidebar() {
 
   return (
     <div 
-      className={`glass-effect flex flex-col transition-all duration-300 ease-in-out fixed left-0 z-50 w-12 overflow-hidden ${
+      className={`glass-effect flex flex-col transition-all duration-300 ease-in-out fixed left-0 z-50 w-12 overflow-hidden rounded-r-2xl border-r-0 border-l-0 border-t-0 border-b-0 ${
         isHovered ? 'w-48' : ''
       }`}
-      style={{ top: '0px', height: '100vh' }}
+      style={{ top: '0px', height: '100vh', borderRadius: '0 1rem 1rem 0' }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
