@@ -35,6 +35,7 @@ function HomeContent() {
       {
         title: "",
         items: [
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).home,
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },

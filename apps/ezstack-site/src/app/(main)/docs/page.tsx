@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSidebar } from "../../components/SidebarProvider";
+import { useIsAuthenticated } from "../../components/AuthProvider";
 import { PRODUCTS } from "./data";
 import { ProductSidebar } from "./components/ProductSidebar";
 import { EndpointDetails } from "./components/EndpointDetails";
@@ -9,8 +10,11 @@ import { PAGE_SECTIONS } from "@/app/pageSections";
 
 export default function DocsPage() {
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>("otp-send");
-  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set(["ezauth"]));
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
+    new Set(["ezauth"])
+  );
   const { setSections } = useSidebar();
+  const isAuthenticated = useIsAuthenticated();
 
   const toggleProduct = (productId: string) => {
     const newExpanded = new Set(expandedProducts);
@@ -23,27 +27,30 @@ export default function DocsPage() {
   };
 
   // Find current endpoint
-  const currentEndpoint = PRODUCTS.flatMap(p => p.endpoints).find(e => e.id === selectedEndpoint);
-  const currentProduct = PRODUCTS.find(p => p.endpoints.some(e => e.id === selectedEndpoint));
+  const currentEndpoint = PRODUCTS.flatMap((p) => p.endpoints).find(
+    (e) => e.id === selectedEndpoint
+  );
+  const currentProduct = PRODUCTS.find((p) =>
+    p.endpoints.some((e) => e.id === selectedEndpoint)
+  );
 
   // Set sidebar sections for docs page
   useEffect(() => {
+    const sections = PAGE_SECTIONS({ resolvedParams: { projectname: "" } });
     const docsSections = [
       {
         title: "",
-        items: [
-          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
-          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).billing,
-          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
-        ],
+        items: isAuthenticated
+          ? [sections.projects, sections.billing, sections.docs]
+          : [sections.home, sections.docs],
       },
     ];
-    
+
     setSections(docsSections);
-  }, [setSections]);
+  }, [setSections, isAuthenticated]);
 
   return (
-    <div className="min-h-screen flex" style={{ paddingTop: '47px' }}>
+    <div className="min-h-screen flex" style={{ paddingTop: "47px" }}>
       {/* Tree Navigation Sidebar */}
       <ProductSidebar
         products={PRODUCTS}
@@ -54,17 +61,24 @@ export default function DocsPage() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto ml-64 min-h-screen" style={{ background: '#0D0D0D' }}>
+      <div
+        className="flex-1 overflow-y-auto ml-64 min-h-screen"
+        style={{ background: "#0D0D0D" }}
+      >
         <div className="max-w-[1400px] mx-auto px-12 py-6">
           {currentEndpoint && currentProduct ? (
-            <EndpointDetails 
+            <EndpointDetails
               endpoint={currentEndpoint}
               product={currentProduct}
             />
           ) : (
             <div className="text-center py-20">
-              <h2 className="text-2xl font-semibold text-gray-400 mb-4">Select an endpoint to view details</h2>
-              <p className="text-gray-500">Choose an API endpoint from the navigation on the left</p>
+              <h2 className="text-2xl font-semibold text-gray-400 mb-4">
+                Select an endpoint to view details
+              </h2>
+              <p className="text-gray-500">
+                Choose an API endpoint from the navigation on the left
+              </p>
             </div>
           )}
         </div>
