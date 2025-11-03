@@ -76,7 +76,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
         title: "",
         items: [
           PAGE_SECTIONS({ resolvedParams }).dashboard,
-          PAGE_SECTIONS({ resolvedParams }).services,
+          // PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
         ],
       },

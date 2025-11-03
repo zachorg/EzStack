@@ -33,9 +33,6 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "features" | "pricing" | "settings"
-  >("features");
 
   // Get the ezauth service from products
   const service = productTiles.find((tile) => tile.slug === "ezauth");
@@ -76,7 +73,7 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
         title: "",
         items: [
           PAGE_SECTIONS({ resolvedParams }).dashboard,
-          PAGE_SECTIONS({ resolvedParams }).services,
+          // PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
         ],
       },
@@ -125,6 +122,11 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
       field: K,
       value: EzAuthServiceConfig[K]
     ) => {
+      // Don't allow changes if service is disabled (except for the enabled field itself)
+      if (!config?.enabled && field !== "enabled") {
+        return;
+      }
+
       // Auto-save when disabling the service
       const updatedConfig = config ? { ...config, [field]: value } : null;
       setConfig(updatedConfig);
@@ -255,235 +257,181 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
           </div>
         </header>
 
-        {/* Action Buttons */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab("features")}
-            className={`w-full rounded-lg border p-4 text-left focus:outline-none focus:ring-2 ${
-              activeTab === "features"
-                ? "border-emerald-600 bg-neutral-900/60 focus:ring-emerald-400/60"
-                : "border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900 focus:ring-emerald-400/60"
-            }`}
-          >
-            <div className="text-white font-medium">Features</div>
-            <div className="text-xs text-neutral-400 mt-1">
-              Explore everything included in EzAuth
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("pricing")}
-            className={`w-full rounded-lg border p-4 text-left focus:outline-none focus:ring-2 ${
-              activeTab === "pricing"
-                ? "border-emerald-600 bg-neutral-900/60 focus:ring-emerald-400/60"
-                : "border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900 focus:ring-emerald-400/60"
-            }`}
-          >
-            <div className="text-white font-medium">Pricing</div>
-            <div className="text-xs text-neutral-400 mt-1">
-              See plans and usage-based pricing
-            </div>
-          </button>
-          {isEnabled && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("settings")}
-              className={`w-full rounded-lg border p-4 text-left focus:outline-none focus:ring-2 ${
-                activeTab === "settings"
-                  ? "border-emerald-600 bg-neutral-900/60 focus:ring-emerald-400/60"
-                  : "border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900 focus:ring-emerald-400/60"
+        {/* Settings Section */}
+        <section
+          ref={settingsRef}
+          className={`space-y-6 ${!isEnabled ? "opacity-60" : ""}`}
+        >
+          {/* Organization Name */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                !isEnabled ? "text-neutral-500" : "text-white"
               }`}
             >
-              <div className="text-white font-medium">Settings</div>
-              <div className="text-xs text-neutral-400 mt-1">
-                Manage OTP configuration
-              </div>
-            </button>
-          )}
+              Organization Name
+            </label>
+            <input
+              type="text"
+              value={config.organization_name}
+              onChange={(e) =>
+                handleInputChange("organization_name", e.target.value)
+              }
+              disabled={!isEnabled}
+              className={`w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 focus:outline-none focus:ring-2 ${
+                !isEnabled
+                  ? "text-neutral-500 cursor-not-allowed"
+                  : "text-neutral-200 focus:ring-emerald-400/60"
+              }`}
+              placeholder="Your Company Name"
+            />
+            <p className="mt-2 text-xs text-neutral-500">
+              This name will appear on OTP emails and SMS messages
+            </p>
+          </div>
+
+          {/* OTP Code Length */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                !isEnabled ? "text-neutral-500" : "text-white"
+              }`}
+            >
+              OTP Code Length: {config.otp_code_length}
+            </label>
+            <input
+              type="range"
+              min="4"
+              max="6"
+              value={config.otp_code_length}
+              onChange={(e) =>
+                handleInputChange("otp_code_length", parseInt(e.target.value))
+              }
+              disabled={!isEnabled}
+              className={`w-full h-2 rounded-lg appearance-none accent-emerald-500 bg-neutral-800 ${
+                !isEnabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+              }`}
+            />
+            <div className="flex justify-between text-xs text-neutral-500 mt-1">
+              <span>4 digits</span>
+              <span>6 digits</span>
+            </div>
+          </div>
+
+          {/* Rate Limit */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                !isEnabled ? "text-neutral-500" : "text-white"
+              }`}
+            >
+              Rate Limit (requests per minute per destination)
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={config.otp_rate_limit_destination_per_minute}
+              onChange={(e) =>
+                handleInputChange(
+                  "otp_rate_limit_destination_per_minute",
+                  parseInt(e.target.value) || 1
+                )
+              }
+              disabled={!isEnabled}
+              className={`w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 focus:outline-none focus:ring-2 ${
+                !isEnabled
+                  ? "text-neutral-500 cursor-not-allowed"
+                  : "text-neutral-200 focus:ring-emerald-400/60"
+              }`}
+            />
+            <p className="mt-2 text-xs text-neutral-500">
+              Maximum number of OTP requests allowed per destination per minute
+            </p>
+          </div>
+
+          {/* TTL in Seconds */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                !isEnabled ? "text-neutral-500" : "text-white"
+              }`}
+            >
+              OTP Time-to-Live (seconds)
+            </label>
+            <input
+              type="number"
+              min="60"
+              value={config.otp_ttl_seconds}
+              onChange={(e) =>
+                handleInputChange(
+                  "otp_ttl_seconds",
+                  parseInt(e.target.value) || 60
+                )
+              }
+              disabled={!isEnabled}
+              className={`w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 focus:outline-none focus:ring-2 ${
+                !isEnabled
+                  ? "text-neutral-500 cursor-not-allowed"
+                  : "text-neutral-200 focus:ring-emerald-400/60"
+              }`}
+            />
+            <p className="mt-2 text-xs text-neutral-500">
+              How long the OTP code remains valid (minimum 60 seconds)
+            </p>
+          </div>
+
+          {/* Max Verification Attempts */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <label
+              className={`block text-sm font-medium mb-2 ${
+                !isEnabled ? "text-neutral-500" : "text-white"
+              }`}
+            >
+              Maximum Verification Attempts
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={config.otp_max_verification_attempts}
+              onChange={(e) =>
+                handleInputChange(
+                  "otp_max_verification_attempts",
+                  parseInt(e.target.value) || 1
+                )
+              }
+              disabled={!isEnabled}
+              className={`w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 focus:outline-none focus:ring-2 ${
+                !isEnabled
+                  ? "text-neutral-500 cursor-not-allowed"
+                  : "text-neutral-200 focus:ring-emerald-400/60"
+              }`}
+            />
+            <p className="mt-2 text-xs text-neutral-500">
+              Maximum number of attempts allowed to verify an OTP code
+            </p>
+          </div>
         </section>
 
-        {/* Tab Content */}
-        {activeTab === "features" && (
-          <section className="space-y-6">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <h3 className="text-lg font-semibold text-white">
-                What you get with EzAuth
-              </h3>
-              <p className="text-sm text-neutral-400 mt-1">
-                {service.description}
-              </p>
-              <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                {service.bullets?.map((bullet) => (
-                  <li key={bullet} className="text-sm text-neutral-300">
-                    • {bullet}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "pricing" && (
-          <section className="space-y-6">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <h3 className="text-lg font-semibold text-white">Pricing</h3>
-              <p className="text-sm text-neutral-400 mt-2">
-                Usage-based pricing only. No plans.
-              </p>
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-md border border-neutral-800 p-4">
-                  <div className="text-white font-medium">Sending OTP</div>
-                  <ul className="mt-3 text-sm text-neutral-300 space-y-1">
-                    <li>• Flat 0.01¢ per send</li>
-                    <li>• 20 sends free per month</li>
-                  </ul>
-                </div>
-                <div className="rounded-md border border-neutral-800 p-4">
-                  <div className="text-white font-medium">Verifying OTP</div>
-                  <ul className="mt-3 text-sm text-neutral-300 space-y-1">
-                    <li>• Flat 0.002¢ per verification</li>
-                    <li>• 20 verifications free per month</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {activeTab === "settings" && isEnabled && (
-          <section ref={settingsRef} className="space-y-6">
-            {/* Organization Name */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                Organization Name
-              </label>
-              <input
-                type="text"
-                value={config.organization_name}
-                onChange={(e) =>
-                  handleInputChange("organization_name", e.target.value)
-                }
-                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-                placeholder="Your Company Name"
-              />
-              <p className="mt-2 text-xs text-neutral-500">
-                This name will appear on OTP emails and SMS messages
-              </p>
-            </div>
-
-            {/* OTP Code Length */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                OTP Code Length: {config.otp_code_length}
-              </label>
-              <input
-                type="range"
-                min="4"
-                max="6"
-                value={config.otp_code_length}
-                onChange={(e) =>
-                  handleInputChange("otp_code_length", parseInt(e.target.value))
-                }
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-emerald-500 bg-neutral-800"
-              />
-              <div className="flex justify-between text-xs text-neutral-500 mt-1">
-                <span>4 digits</span>
-                <span>6 digits</span>
-              </div>
-            </div>
-
-            {/* Rate Limit */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                Rate Limit (requests per minute per destination)
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={config.otp_rate_limit_destination_per_minute}
-                onChange={(e) =>
-                  handleInputChange(
-                    "otp_rate_limit_destination_per_minute",
-                    parseInt(e.target.value) || 1
-                  )
-                }
-                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-              />
-              <p className="mt-2 text-xs text-neutral-500">
-                Maximum number of OTP requests allowed per destination per
-                minute
-              </p>
-            </div>
-
-            {/* TTL in Seconds */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                OTP Time-to-Live (seconds)
-              </label>
-              <input
-                type="number"
-                min="60"
-                value={config.otp_ttl_seconds}
-                onChange={(e) =>
-                  handleInputChange(
-                    "otp_ttl_seconds",
-                    parseInt(e.target.value) || 60
-                  )
-                }
-                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-              />
-              <p className="mt-2 text-xs text-neutral-500">
-                How long the OTP code remains valid (minimum 60 seconds)
-              </p>
-            </div>
-
-            {/* Max Verification Attempts */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-              <label className="block text-sm font-medium text-white mb-2">
-                Maximum Verification Attempts
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={config.otp_max_verification_attempts}
-                onChange={(e) =>
-                  handleInputChange(
-                    "otp_max_verification_attempts",
-                    parseInt(e.target.value) || 1
-                  )
-                }
-                className="w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
-              />
-              <p className="mt-2 text-xs text-neutral-500">
-                Maximum number of attempts allowed to verify an OTP code
-              </p>
-            </div>
-          </section>
-        )}
-
         {/* Save Button */}
-        {activeTab === "settings" && isEnabled && (
-          <div className="flex justify-end">
-            <button
-              onClick={(e) => {
-                if (!hasChanges || isSaving) {
-                  e.preventDefault();
-                  return;
-                }
-                handleSave();
-              }}
-              disabled={!hasChanges || isSaving}
-              className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 ${
-                hasChanges && !isSaving
-                  ? "bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-400/60"
-                  : "bg-neutral-800 text-neutral-400 cursor-not-allowed focus:ring-transparent"
-              }`}
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        )}
+        <div className="flex justify-end">
+          <button
+            onClick={(e) => {
+              if (!hasChanges || isSaving || !isEnabled) {
+                e.preventDefault();
+                return;
+              }
+              handleSave();
+            }}
+            disabled={!hasChanges || isSaving || !isEnabled}
+            className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium focus:outline-none focus:ring-2 ${
+              hasChanges && !isSaving && isEnabled
+                ? "bg-emerald-600 text-white hover:bg-emerald-500 focus:ring-emerald-400/60"
+                : "bg-neutral-800 text-neutral-400 cursor-not-allowed focus:ring-transparent"
+            }`}
+          >
+            {isSaving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </div>
     </div>
   );

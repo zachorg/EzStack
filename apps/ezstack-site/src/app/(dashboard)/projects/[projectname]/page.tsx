@@ -10,7 +10,7 @@ import { PAGE_SECTIONS } from "@/app/pageSections";
 import { productTiles, type ProductTile } from "@/lib/products";
 import { useService } from "@/app/components/ProjectServicesProvider";
 import { useServiceAnalytics } from "@/app/components/AnalyticsProvider";
-import {  Send, CheckCircle2, Activity, ChevronDown, LucideIcon } from "lucide-react";
+import {  Send, CheckCircle2, Activity, ChevronDown, LucideIcon, Search } from "lucide-react";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -44,6 +44,43 @@ function EnabledServiceCard({ service, projectname }: { service: ProductTile; pr
       <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-900/30 text-emerald-300">
         Enabled
       </span>
+    </button>
+  );
+}
+
+// Helper component to show available service cards (not enabled)
+function AvailableServiceCard({ service, projectname }: { service: ProductTile; projectname: string }) {
+  const router = useRouter();
+  const Icon = service.icon;
+  
+  const handleClick = () => {
+    if (service.status === "available") {
+      router.push(`/projects/${projectname}/services/${service.slug}`);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={service.status !== "available"}
+      className="flex items-center gap-4 p-4 rounded-lg border border-neutral-800 bg-neutral-900/50 hover:bg-neutral-900 transition-colors duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <div className="w-12 h-12 rounded-md bg-neutral-800/60 flex items-center justify-center">
+        <Icon className="w-6 h-6 text-neutral-300" />
+      </div>
+      <div className="flex-1">
+        <h3 className="text-sm font-semibold text-white">{service.title}</h3>
+        <p className="text-xs text-neutral-400 mt-1">{service.description}</p>
+      </div>
+      {service.status === "coming_soon" ? (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-neutral-800 text-neutral-400">
+          Coming Soon
+        </span>
+      ) : (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-neutral-800 text-neutral-300">
+          Available
+        </span>
+      )}
     </button>
   );
 }
@@ -353,6 +390,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   const router = useRouter();
   const [project, setProject] = useState<UserProjectResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Get service settings to check enabled status
   const ezauthService = useService("ezauth");
@@ -364,7 +402,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         title: "",
         items: [
           PAGE_SECTIONS({ resolvedParams }).dashboard,
-          PAGE_SECTIONS({ resolvedParams }).services,
+          // PAGE_SECTIONS({ resolvedParams }).services,
           PAGE_SECTIONS({ resolvedParams }).apiKeys,
         ],
       },
@@ -462,6 +500,73 @@ export default function ProjectPage({ params }: ProjectPageProps) {
             </div>
           </section>
         )}
+
+        {/* Available Services Section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-white">Available Services</h2>
+            <button
+              onClick={() => router.push("/services")}
+              className="inline-flex items-center rounded-md bg-neutral-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-emerald-400/60 transition-colors"
+            >
+              View All Services
+            </button>
+          </div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            {/* Search Bar */}
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search services..."
+                value={searchQuery}
+                className="w-full pl-10 pr-4 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                }}
+              />
+            </div>
+
+            {/* Services Container */}
+            {(() => {
+              // Get enabled service slugs
+              const enabledServiceSlugs = new Set(enabledServices.map(s => s.slug));
+              
+              // Filter out enabled services and filter by search query
+              const searchLower = searchQuery.toLowerCase();
+              const availableServices = productTiles.filter(service => {
+                const notEnabled = !enabledServiceSlugs.has(service.slug);
+                const matchesSearch = searchQuery === "" || 
+                  service.title.toLowerCase().includes(searchLower) ||
+                  service.description.toLowerCase().includes(searchLower) ||
+                  service.slug.toLowerCase().includes(searchLower);
+                return notEnabled && matchesSearch;
+              });
+
+              if (availableServices.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <p className="text-neutral-400">
+                      {searchQuery ? "No services found matching your search." : "All services are enabled."}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {availableServices.map((service) => (
+                    <AvailableServiceCard
+                      key={service.slug}
+                      service={service}
+                      projectname={resolvedParams.projectname}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        </section>
 
         {/* Analytics Section */}
         {enabledServices.length > 0 && (
