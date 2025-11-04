@@ -10,7 +10,7 @@ import { PAGE_SECTIONS } from "@/app/pageSections";
 import { productTiles, type ProductTile } from "@/lib/products";
 import { useService } from "@/app/components/ProjectServicesProvider";
 import { useServiceAnalytics } from "@/app/components/AnalyticsProvider";
-import {  Send, CheckCircle2, Activity, ChevronDown, LucideIcon, Search } from "lucide-react";
+import {  Send, CheckCircle2, Activity, ChevronDown, LucideIcon, Search, Mail, MessageSquare } from "lucide-react";
 
 interface ProjectPageProps {
   params: Promise<{
@@ -111,9 +111,51 @@ function AnalyticsStatCard({
 
 // Bar chart component for monthly data
 function MonthlyBarChart({ data, title }: { data: Record<string, number>; title: string }) {
-  // Sort by month/year ascending
-  const sortedEntries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b));
-  const maxValue = Math.max(...sortedEntries.map(([, value]) => value), 1);
+  // Helper function to parse month string (format: "YYYY-MM") to Date
+  const parseMonthString = (monthStr: string): Date => {
+    if (monthStr.includes("-")) {
+      const [year, month] = monthStr.split("-");
+      // Create date using UTC to avoid timezone issues
+      return new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1));
+    }
+    // Fallback for other formats
+    return new Date(monthStr);
+  };
+
+  // Helper function to format date as MM/YYYY
+  const formatMonthYear = (date: Date): string => {
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const year = date.getUTCFullYear().toString();
+    return `${month}/${year}`;
+  };
+
+  // Sort by month/year ascending (oldest to newest, left to right)
+  // Parse dates to ensure proper chronological sorting
+  const sortedEntries = Object.entries(data)
+    .map(([month, value]) => ({
+      monthKey: month,
+      value,
+      date: parseMonthString(month),
+      formatted: formatMonthYear(parseMonthString(month))
+    }))
+    .filter(entry => !isNaN(entry.date.getTime())) // Filter out invalid dates
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // Remove duplicates based on formatted date
+  const uniqueEntries = sortedEntries.reduce((acc, entry) => {
+    const existing = acc.find(e => e.formatted === entry.formatted);
+    if (existing) {
+      // If duplicate found, sum the values
+      existing.value += entry.value;
+    } else {
+      acc.push(entry);
+    }
+    return acc;
+  }, [] as typeof sortedEntries);
+
+  const maxValue = Math.max(...uniqueEntries.map(e => e.value), 1);
+  // Use 1.25x the max value for y-axis to ensure bars don't reach the top
+  const displayMaxValue = maxValue * 1.25;
 
   return (
     <div className="w-full">
@@ -121,29 +163,32 @@ function MonthlyBarChart({ data, title }: { data: Record<string, number>; title:
       <div className="relative">
         {/* Y-axis labels */}
         <div className="flex items-end h-64 gap-2">
-          {sortedEntries.map(([month, value]) => (
-            <div key={month} className="flex-1 flex flex-col items-center">
-              <div className="flex-1 w-full flex items-end mb-2">
-                <div
-                  className="w-full bg-emerald-500 rounded-t transition-all duration-300 hover:bg-emerald-400"
-                  style={{
-                    height: `${(value / maxValue) * 100}%`,
-                    minHeight: value > 0 ? "4px" : "0",
-                  }}
-                  title={`${month}: ${value.toLocaleString()}`}
-                />
+          {uniqueEntries.map((entry) => {
+            const barHeight = displayMaxValue > 0 ? (entry.value / displayMaxValue) * 100 : 0;
+            return (
+              <div key={entry.monthKey} className="flex-1 flex flex-col items-center">
+                <div className="w-full flex items-end mb-2" style={{ height: "256px" }}>
+                  <div
+                    className="w-full bg-emerald-500 rounded-t transition-all duration-300 hover:bg-emerald-400"
+                    style={{
+                      height: `${barHeight}%`,
+                      minHeight: entry.value > 0 ? "4px" : "0",
+                    }}
+                    title={`${entry.monthKey}: ${entry.value.toLocaleString()}`}
+                  />
+                </div>
+                {/* X-axis label */}
+                <div className="text-xs text-neutral-500 truncate w-full text-center">
+                  {entry.formatted}
+                </div>
               </div>
-              {/* X-axis label */}
-              <div className="text-xs text-neutral-500 truncate w-full text-center">
-                {new Date(month + "-01").toLocaleDateString("en-US", { month: "short", year: "2-digit" })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         {/* Y-axis scale */}
         <div className="absolute left-0 top-0 h-64 flex flex-col justify-between text-xs text-neutral-600">
-          <span>{maxValue.toLocaleString()}</span>
-          <span>{Math.round(maxValue / 2).toLocaleString()}</span>
+          <span>{Math.ceil(displayMaxValue).toLocaleString()}</span>
+          <span>{Math.round(displayMaxValue / 2).toLocaleString()}</span>
           <span>0</span>
         </div>
       </div>
@@ -162,7 +207,7 @@ function ServiceAnalyticsSection({
   const [selectedService, setSelectedService] = useState<string | null>(
     enabledServices.length > 0 ? enabledServices[0].slug : null
   );
-  const [selectedMetric, setSelectedMetric] = useState<string>("send_otp");
+  const [selectedMetric, setSelectedMetric] = useState<string>("sms_send_otp");
 
   const { analytics, isLoadingServiceAnalytics } = useServiceAnalytics(
     selectedService || "", 
@@ -198,7 +243,7 @@ function ServiceAnalyticsSection({
                 value={selectedService}
                 onChange={(e) => {
                   setSelectedService(e.target.value);
-                  setSelectedMetric("send_otp");
+                  setSelectedMetric("sms_send_otp");
                 }}
                 className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
               >
@@ -222,7 +267,8 @@ function ServiceAnalyticsSection({
                   onChange={(e) => setSelectedMetric(e.target.value)}
                   className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
                 >
-                  <option value="send_otp">OTP Send</option>
+                  <option value="sms_send_otp">SMS Send</option>
+                  <option value="email_send_otp">Email Send</option>
                   <option value="verify_otp">OTP Verified</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -256,7 +302,7 @@ function ServiceAnalyticsSection({
                 value={selectedService}
                 onChange={(e) => {
                   setSelectedService(e.target.value);
-                  setSelectedMetric("send_otp");
+                  setSelectedMetric("sms_send_otp");
                 }}
                 className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
               >
@@ -280,7 +326,8 @@ function ServiceAnalyticsSection({
                   onChange={(e) => setSelectedMetric(e.target.value)}
                   className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
                 >
-                  <option value="send_otp">OTP Send</option>
+                  <option value="sms_send_otp">SMS Send</option>
+                  <option value="email_send_otp">Email Send</option>
                   <option value="verify_otp">OTP Verified</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -301,9 +348,13 @@ function ServiceAnalyticsSection({
   const isEzAuth = selectedService === "ezauth";
 
   // Get the right monthly data based on selected metric
-  const monthlyData = isEzAuth && selectedMetric === "send_otp"
-    ? ezauthData.send_otp_completed_monthly_requests
-    : ezauthData.verify_otp_completed_monthly_requests;
+  const monthlyData = isEzAuth 
+    ? selectedMetric === "sms_send_otp"
+      ? ezauthData.sms_send_otp_completed_monthly_requests
+      : selectedMetric === "email_send_otp"
+      ? ezauthData.email_send_otp_completed_monthly_requests
+      : ezauthData.verify_otp_completed_monthly_requests
+    : {};
 
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
@@ -312,24 +363,24 @@ function ServiceAnalyticsSection({
         <div className="flex-1">
           <label className="block text-sm font-medium text-neutral-400 mb-2">Service</label>
           <div className="relative">
-            <select
-              value={selectedService}
-              onChange={(e) => {
-                setSelectedService(e.target.value);
-                // Reset metric when switching services
-                setSelectedMetric("send_otp");
-              }}
-              className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
-            >
-              {enabledServices.map((service) => (
-                <option key={service.slug} value={service.slug}>
-                  {service.title}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+              <select
+                value={selectedService}
+                onChange={(e) => {
+                  setSelectedService(e.target.value);
+                  // Reset metric when switching services
+                  setSelectedMetric("sms_send_otp");
+                }}
+                className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
+              >
+                {enabledServices.map((service) => (
+                  <option key={service.slug} value={service.slug}>
+                    {service.title}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
+            </div>
           </div>
-        </div>
 
         {/* Metric Selection Dropdown (only for EzAuth) */}
         {isEzAuth && (
@@ -341,7 +392,8 @@ function ServiceAnalyticsSection({
                 onChange={(e) => setSelectedMetric(e.target.value)}
                 className="appearance-none w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/60 cursor-pointer"
               >
-                <option value="send_otp">OTP Send</option>
+                <option value="sms_send_otp">SMS Send</option>
+                <option value="email_send_otp">Email Send</option>
                 <option value="verify_otp">OTP Verified</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none" />
@@ -351,11 +403,23 @@ function ServiceAnalyticsSection({
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <AnalyticsStatCard
-          title="OTPs Sent"
-          value={ezauthData.send_otp_completed_requests || 0}
-          subtitle="Total sent"
+          title="SMS OTPs Sent"
+          value={ezauthData.sms_send_otp_completed_requests || 0}
+          subtitle="Total SMS sent"
+          icon={MessageSquare}
+        />
+        <AnalyticsStatCard
+          title="Email OTPs Sent"
+          value={ezauthData.email_send_otp_completed_requests || 0}
+          subtitle="Total email sent"
+          icon={Mail}
+        />
+        <AnalyticsStatCard
+          title="Total OTPs Sent"
+          value={(ezauthData.sms_send_otp_completed_requests || 0) + (ezauthData.email_send_otp_completed_requests || 0)}
+          subtitle="SMS + Email"
           icon={Send}
         />
         <AnalyticsStatCard
@@ -364,19 +428,19 @@ function ServiceAnalyticsSection({
           subtitle="Total verified"
           icon={CheckCircle2}
         />
-        <AnalyticsStatCard
-          title="Monthly Requests"
-          value={Object.values(monthlyData || {}).reduce((sum, val) => sum + val, 0) || 0}
-          subtitle="Current period"
-          icon={Activity}
-        />
       </div>
 
       {/* Bar Chart */}
       <div className="border-t border-neutral-800 pt-6">
         <MonthlyBarChart
           data={monthlyData || {}}
-          title={selectedMetric === "send_otp" ? "OTPs Sent Over Time" : "OTPs Verified Over Time"}
+          title={
+            selectedMetric === "sms_send_otp" 
+              ? "SMS OTPs Sent Over Time" 
+              : selectedMetric === "email_send_otp"
+              ? "Email OTPs Sent Over Time"
+              : "OTPs Verified Over Time"
+          }
         />
       </div>
     </div>

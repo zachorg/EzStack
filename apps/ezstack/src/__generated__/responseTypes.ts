@@ -23,14 +23,20 @@ export interface ListApiKeysResponse {
 }
 
 export interface EzAuthAnalyticsResponse {
-  // Number of completed send OTP requests per month
-  send_otp_completed_monthly_requests: Record<string, number>;
-  // Number of completed send OTP requests
-  send_otp_completed_requests: number;
+  // Number of completed send OTP requests via SMS per month
+  sms_send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests via SMS
+  sms_send_otp_completed_requests: number;
+  // Number of completed send OTP requests via email per month
+  email_send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests via email
+  email_send_otp_completed_requests: number;
   // Number of completed verify OTP requests per month
   verify_otp_completed_monthly_requests: Record<string, number>;
   // Number of completed verify OTP requests
   verify_otp_completed_requests: number;
+  // analytics metrics
+  [key: string]: any;
 }
 
 export interface ServiceAnalyticsResponse {

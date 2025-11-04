@@ -71,6 +71,10 @@ class SimpleJSDocParser {
             propName = "[key: string]";
             propType = "boolean";
           }
+          if(memberFieldLine === "[key: string]: any;") {
+            propName = "[key: string]";
+            propType = "any";
+          }
 
           const fieldInfo = {
             name: propName,

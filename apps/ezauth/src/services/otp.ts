@@ -55,35 +55,74 @@ export async function send(app: any, body: any): Promise<EzAuthSendResponse> {
   };
 
   // Send OTP via SNS
-  if (app.sns?.isReady()) {
-    try {
-      const result = await app.sns.sendOtp(destination, otp, serviceInfo);
-      if (!result.success) {
-        log.error(
-          { requestId, destination, error: result.error },
-          "Failed to send OTP via SNS"
-        );
-        throw new Error(`Failed to send OTP via SNS: ${result.error}`);
-      } else {
-        const redisKey = kOtp(userId, requestId);
-        await redis.set(redisKey, JSON.stringify(blob), "EX", OTP_TTL_SECONDS);
-        console.log(`OTP redis key: ${redisKey}`);
-        log.info(
-          { requestId, messageId: result.messageId },
-          "OTP sent via SNS"
-        );
+  if (channel === "sms") {
+    if (app.sns?.isReady()) {
+      try {
+        const result = await app.sns.sendOtp(destination, otp, serviceInfo);
+        if (!result.success) {
+          log.error(
+            { requestId, destination, error: result.error },
+            "Failed to send OTP via SNS"
+          );
+          throw new Error(`Failed to send OTP via SNS: ${result.error}`);
+        } else {
+          const redisKey = kOtp(userId, requestId);
+          await redis.set(
+            redisKey,
+            JSON.stringify(blob),
+            "EX",
+            OTP_TTL_SECONDS
+          );
+          console.log(`OTP redis key: ${redisKey}`);
+          log.info(
+            { requestId, messageId: result.messageId },
+            "OTP sent via SNS"
+          );
+        }
+      } catch (error) {
+        log.error({ requestId, destination, error }, "SNS send error");
+        throw new Error(`Failed to send OTP via SNS: ${error}`);
       }
-    } catch (error) {
-      log.error({ requestId, destination, error }, "SNS send error");
-      throw new Error(`Failed to send OTP via SNS: ${error}`);
+    } else {
+      throw new Error("SNS not configured - OTP generated but not sent via SMS");
     }
-  } else {
-    log.warn(
-      { requestId, destination },
-      "SNS not configured - OTP generated but not sent"
-    );
   }
-  return {request_id: requestId, code: otp} as EzAuthSendResponse;
+
+  if (channel === "email") {
+    // Send OTP via SES
+    if (app.ses?.isReady()) {
+      try {
+        const result = await app.ses.sendOtp(destination, otp, serviceInfo);
+        if (!result.success) {
+          log.error(
+            { requestId, destination, error: result.error },
+            "Failed to send OTP via SNS"
+          );
+          throw new Error(`Failed to send OTP via SNS: ${result.error}`);
+        } else {
+          const redisKey = kOtp(userId, requestId);
+          await redis.set(
+            redisKey,
+            JSON.stringify(blob),
+            "EX",
+            OTP_TTL_SECONDS
+          );
+          console.log(`OTP redis key: ${redisKey}`);
+          log.info(
+            { requestId, messageId: result.messageId },
+            "OTP sent via SNS"
+          );
+        }
+      } catch (error) {
+        log.error({ requestId, destination, error }, "SNS send error");
+        throw new Error(`Failed to send OTP via SNS: ${error}`);
+      }
+    } else {
+      throw new Error("SES not configured - OTP generated but not sent via email");
+    }
+  }
+
+  return { request_id: requestId, code: otp } as EzAuthSendResponse;
 }
 
 export async function verify(app: FastifyInstance, body: any) {
@@ -96,7 +135,7 @@ export async function verify(app: FastifyInstance, body: any) {
 
   if (!raw) {
     console.log(`OTP verify: request not found: `, key);
-    return {verified: false, error: "Request not found"};
+    return { verified: false, error: "Request not found" };
   }
 
   const data = JSON.parse(raw);
@@ -108,16 +147,16 @@ export async function verify(app: FastifyInstance, body: any) {
       { requestId },
       "OTP verify: exceeded max attempts; invalidated"
     );
-    return {verified: false, error: "Exceeded max attempts"};
+    return { verified: false, error: "Exceeded max attempts" };
   }
 
   const ok = hashOtp(code, data.salt) === data.hash;
   if (!ok) {
     await redis.set(key, JSON.stringify(data), "EX", OTP_TTL_SECONDS);
     app.log.warn({ requestId }, "OTP verify: incorrect code");
-    return {verified: false, error: "Incorrect code"};
+    return { verified: false, error: "Incorrect code" };
   }
 
   await redis.del(key);
-  return {verified: true};
+  return { verified: true };
 }

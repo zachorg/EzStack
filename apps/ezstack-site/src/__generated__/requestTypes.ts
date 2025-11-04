@@ -58,6 +58,10 @@ export interface EzAuthServiceUpdateRequest {
   otp_ttl_seconds: number;
   // Maximum number of OTP verification attempts
   otp_max_verification_attempts: number;
+  // Email theme
+  email_theme: "light" | "dark" | "vibrant" | "custom";
+  // 
+  email_theme_config: ConfigTypes.EzAuthEmailThemeConfig;
 }
 
 export interface BillingUpdateRequest {
