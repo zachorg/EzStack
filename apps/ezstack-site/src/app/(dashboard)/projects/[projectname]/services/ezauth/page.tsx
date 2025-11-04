@@ -127,24 +127,25 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
         return;
       }
 
-      // Auto-save when disabling the service
       const updatedConfig = config ? { ...config, [field]: value } : null;
       setConfig(updatedConfig);
 
-      if (updatedConfig) {
+      // Auto-save only when enabling/disabling the service
+      if (field === "enabled" && updatedConfig) {
         setIsSaving(true);
         try {
           await updateServiceSettings("ezauth", updatedConfig);
           originalConfigRef.current = JSON.parse(JSON.stringify(updatedConfig));
           setHasChanges(false);
         } catch (error) {
-          console.error("Failed to auto-save on disable:", error);
+          console.error("Failed to auto-save on enable/disable:", error);
           // Revert the state on error
           setConfig(config);
         } finally {
           setIsSaving(false);
         }
       }
+      // For all other fields, just update local state - user must click Save Changes
     },
     [config, updateServiceSettings]
   );

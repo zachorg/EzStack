@@ -2,13 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import type Redis from "ioredis";
 import { destHash, randomOtp, hashOtp } from "../utils/crypto.js";
+import { EzAuthSendOtpResponse } from "../__generated__/responseTypes.js";
 
 const kOtp = (t: string, id: string) => `otp:${t}:${id}`;
 // const kIdem   = (t: string, k: string)  => `idem:${t}:${k}`;
 const kRate = (dh: string) => `rate:dest:${dh}`;
 // const kResend = (id: string)            => `resend:${id}`;
 
-export async function send(app: any, body: any) {
+export async function send(app: any, body: any): Promise<EzAuthSendOtpResponse> {
   if (!app.sns) {
     throw new Error("SNS not configured");
   }
@@ -82,7 +83,7 @@ export async function send(app: any, body: any) {
       "SNS not configured - OTP generated but not sent"
     );
   }
-  return requestId;
+  return {request_id: requestId, code: otp} as EzAuthSendOtpResponse;
 }
 
 export async function verify(app: FastifyInstance, body: any) {

@@ -31,7 +31,8 @@ export default fp(async (app) => {
         req.project_id = res.projectId;
         req.service_info = res.serviceInfo;
         req.stripe_customer_id = res.stripeCustomerId;
-
+        req.apiKeyRules = res.apiKeyRules;
+        
         if (!res.serviceInfo.enabled) {
           const err: any = new Error("EzAuth service is not enabled");
           err.statusCode = 403;

@@ -1,11 +1,14 @@
 // Generated Request Types
 
+import * as ConfigTypes from "./configTypes"
 
 export interface CreateApiKeyRequest {
   // Name of project
   project_name: string;
   // Name of the key
   name: string;
+  // 
+  api_key_rules: ConfigTypes.ApiKeyRulesConfig;
 }
 
 export interface ListApiKeysRequest {

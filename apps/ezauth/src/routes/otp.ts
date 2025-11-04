@@ -4,6 +4,11 @@ import * as OTP from "../services/otp.js";
 import { hashApiKey } from "../utils/crypto.js";
 import { EzAuthAnalyticsDocument } from "../__generated__/documentTypes.js";
 import Stripe from "stripe";
+import { EzAuthSendOtpResponse } from "../__generated__/responseTypes.js";
+import {
+  ApiKeyRulesConfig,
+  EzAuthServiceConfig,
+} from "../__generated__/configTypes.js";
 
 export const kSendOtpUsageByProject = (
   apikeyPepper: string,
@@ -117,20 +122,20 @@ const routes: FastifyPluginAsync = async (app) => {
   }
 
   async function check_and_increment_otp_send_usage(
-    trySendOtp: () => Promise<string>,
+    trySendOtp: () => Promise<EzAuthSendOtpResponse>,
     usage_key_lookup_id: string,
     stripe_customer_id: string,
     request_limits?: {
       max_free_requests_per_month?: number;
     }
-  ): Promise<string | undefined> {
+  ): Promise<EzAuthSendOtpResponse | undefined> {
     if (!db) {
       throw new Error("Firebase firestore not initialized");
     }
 
     const usageRef = db.doc(`analytics/ezauth/otp/${usage_key_lookup_id}`);
 
-    const result: string | undefined = await db.runTransaction(
+    const result: EzAuthSendOtpResponse | undefined = await db.runTransaction(
       async (transaction) => {
         const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
 
@@ -278,9 +283,22 @@ const routes: FastifyPluginAsync = async (app) => {
       const keyId = req.key_id as string | undefined;
       const projectId = req.project_id as string | undefined;
       const stripe_customer_id = req.stripe_customer_id as string | undefined;
-      if (!userId || !keyId || !projectId || !stripe_customer_id) {
+      const apiKeyRules = req.apiKeyRules as ApiKeyRulesConfig | undefined;
+      if (
+        !userId ||
+        !keyId ||
+        !projectId ||
+        !stripe_customer_id ||
+        !apiKeyRules
+      ) {
         return rep.status(401).send({
           error: { message: "Unauthenticated or missing keyId / projectId" },
+        });
+      }
+
+      if (!apiKeyRules.ezauth_send_otp_enabled) {
+        return rep.status(403).send({
+          error: { message: "EzAuth send OTP is not enabled on this API key" },
         });
       }
 
@@ -306,12 +324,12 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         try {
-          const trySendOtp = async (): Promise<string> => {
+          const trySendOtp = async (): Promise<EzAuthSendOtpResponse> => {
             return await OTP.send(app, payload);
           };
 
           // update analytics for the user after successfully sending the OTP
-          const requestId = await check_and_increment_otp_send_usage(
+          const response = await check_and_increment_otp_send_usage(
             trySendOtp,
             kSendOtpUsageByProject(app.apikeyPepper, userId, projectId),
             stripe_customer_id,
@@ -320,16 +338,16 @@ const routes: FastifyPluginAsync = async (app) => {
             }
           );
 
-          if (requestId === undefined) {
+          if (response === undefined) {
             throw new Error("OTP Send Failed");
           }
           await check_and_increment_otp_send_usage(
-            (): Promise<string> => Promise.resolve(requestId),
+            (): Promise<EzAuthSendOtpResponse> => Promise.resolve(response),
             kSendOtpUsageByKey(app.apikeyPepper, userId, projectId, keyId),
             ""
           );
 
-          return rep.status(200).send({ requestId });
+          return rep.status(200).send(response);
         } catch (error: any) {
           req.log.error({ message: error.message }, "otp/send: error");
           return rep.status(500).send({ error: error.message });
@@ -363,13 +381,36 @@ const routes: FastifyPluginAsync = async (app) => {
       const requestId = req.params.requestId as string | undefined;
       const stripe_customer_id = req.stripe_customer_id as string | undefined;
       const code = req.params.code as string | undefined;
-      if (!userId || !requestId || !code || !projectId || !stripe_customer_id) {
+      const apiKeyRules = req.apiKeyRules as ApiKeyRulesConfig | undefined;
+      const serviceInfo = req.service_info as EzAuthServiceConfig | undefined;
+      if (
+        !userId ||
+        !requestId ||
+        !code ||
+        !projectId ||
+        !stripe_customer_id ||
+        !apiKeyRules ||
+        !serviceInfo
+      ) {
         return rep.status(401).send({
           error: { message: "Unauthenticated or missing requestId / code" },
         });
       }
 
-      const { verified, error } = await OTP.verify(app, { userId, requestId, code });
+      if (!apiKeyRules?.ezauth_verify_otp_enabled) {
+        return rep.status(403).send({
+          error: {
+            message: "EzAuth verify OTP is not enabled on this API key",
+          },
+        });
+      }
+
+      const { verified, error } = await OTP.verify(app, {
+        userId,
+        requestId,
+        code,
+        serviceInfo,
+      });
       if (!verified) {
         return rep.status(400).send({ error: { message: error } });
       }

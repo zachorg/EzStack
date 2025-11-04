@@ -37,12 +37,9 @@ interface ApiKeyDescriptor {
   // Date updated
   /** @ApiKeyDocument */
   updated_at: string;
-  // Version of the config
-  /** @ApiKeyDocument */
-  config_version: number;
   // Key: Service name. Value: JSON string of config.
   /** @ApiKeyDocument */
-  config: Record<string, string>;
+  config: ApiKeyRulesConfig;
   // Name of the key
   /** @ListApiKeysResponse */
   /** @CreateApiKeyResponse */
@@ -55,6 +52,10 @@ interface ApiKeyDescriptor {
   /** @CreateApiKeyResponse */
   /** @ApiKeyDocument */
   key_prefix: string;
+
+  /** @CreateApiKeyRequest */
+  /** @ListApiKeysResponse */
+  api_key_rules: ApiKeyRulesConfig;
 }
 
 interface ProjectsAnalyticsDescriptor {
@@ -203,4 +204,24 @@ interface UserBillingDescriptor {
   // Whether the user has a valid payment method
   /** @BillingIsSuscribedResponse */
   has_valid_payment_method: boolean;
+}
+
+interface EzAuth
+{
+  // Request ID
+  /** @EzAuthSendOtpResponse */
+  request_id: string;
+
+  // Code -- -1 if verify_otp rule enabled in api key config..
+  /** @EzAuthSendOtpResponse */
+  code: string;
+
+  /** @ApiKeyRulesConfig */
+  ezauth_send_otp_enabled: boolean;
+
+  /** @ApiKeyRulesConfig */
+  ezauth_verify_otp_enabled: boolean;
+
+  /** @ApiKeyRulesConfig */
+  [key: string]: boolean;
 }

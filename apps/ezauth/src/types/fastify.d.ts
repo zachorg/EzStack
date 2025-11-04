@@ -40,6 +40,7 @@ declare module "fastify" {
       projectId: string;
       serviceInfo: EzAuthServiceConfig;
       stripeCustomerId?: string;
+      apiKeyRules: ApiKeyRulesConfig;
     } | null>;
     introspectIdToken: (idToken: string) => Promise<{
       uid?: string;

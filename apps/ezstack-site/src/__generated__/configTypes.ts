@@ -15,3 +15,12 @@ export interface EzAuthServiceConfig {
   otp_max_verification_attempts: number;
 }
 
+export interface ApiKeyRulesConfig {
+  // 
+  ezauth_send_otp_enabled: boolean;
+  // 
+  ezauth_verify_otp_enabled: boolean;
+  // 
+  [key: string]: boolean;
+}
+

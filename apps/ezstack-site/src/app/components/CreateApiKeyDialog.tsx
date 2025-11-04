@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { apiKeys } from "@/lib/api/apikeys";
 import { CreateApiKeyRequest } from "@/__generated__/requestTypes";
+import { ApiKeyRulesConfig } from "@/__generated__/configTypes";
 import { ApiError } from "@/lib/api/client";
 import { CreateApiKeyResponse } from "@/__generated__/responseTypes";
 
@@ -28,6 +29,10 @@ export default function CreateApiKeyDialog({
   const [createdKey, setCreatedKey] = useState<{ key: string; keyPrefix: string } | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiKeyRules, setApiKeyRules] = useState<ApiKeyRulesConfig>({
+    ezauth_send_otp_enabled: false,
+    ezauth_verify_otp_enabled: false,
+  });
 
   // Enhanced close handler that also clears state
   const handleClose = useCallback(() => {
@@ -37,6 +42,10 @@ export default function CreateApiKeyDialog({
     setCreatedKey(null);
     setRevealed(false);
     setCopied(false);
+    setApiKeyRules({
+      ezauth_send_otp_enabled: false,
+      ezauth_verify_otp_enabled: false,
+    });
     onClose();
   }, [onClose]);
 
@@ -68,6 +77,10 @@ export default function CreateApiKeyDialog({
       setCreatedKey(null);
       setRevealed(false);
       setCopied(false);
+      setApiKeyRules({
+        ezauth_send_otp_enabled: false,
+        ezauth_verify_otp_enabled: false,
+      });
     }
   }, [isOpen]);
 
@@ -94,6 +107,7 @@ export default function CreateApiKeyDialog({
       const payload: CreateApiKeyRequest = {
         name: trimmed ? trimmed.slice(0, 120) : "",
         project_name: projectName || "",
+        api_key_rules: apiKeyRules,
       };
       
       const res = await apiKeys.create(payload);
@@ -203,6 +217,67 @@ export default function CreateApiKeyDialog({
                       disabled={submitting}
                       className="appearance-none relative block w-full px-4 py-3 border border-gray-600 placeholder-gray-400 text-white bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent focus:z-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                     />
+                  </div>
+
+                  {/* API Key Rules Section */}
+                  <div className="border-t border-gray-600 pt-4">
+                    <label className="block text-sm font-medium text-gray-200 mb-3">
+                      API Key Permissions
+                    </label>
+                    <p className="text-xs text-gray-400 mb-4">
+                      Select which operations this API key can perform
+                    </p>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={apiKeyRules.ezauth_send_otp_enabled}
+                          onChange={(e) =>
+                            setApiKeyRules((prev) => ({
+                              ...prev,
+                              ezauth_send_otp_enabled: e.target.checked,
+                            }))
+                          }
+                          disabled={submitting}
+                          className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-gray-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                            Send OTP
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            Allow this key to send OTP codes via email or SMS
+                          </div>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={apiKeyRules.ezauth_verify_otp_enabled}
+                          onChange={(e) =>
+                            setApiKeyRules((prev) => ({
+                              ...prev,
+                              ezauth_verify_otp_enabled: e.target.checked,
+                            }))
+                          }
+                          disabled={submitting}
+                          className="mt-1 w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 focus:ring-offset-gray-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                            Verify OTP
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            Allow this key to verify OTP codes
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                    {!apiKeyRules.ezauth_send_otp_enabled && !apiKeyRules.ezauth_verify_otp_enabled && (
+                      <p className="mt-3 text-xs text-amber-400">
+                        ⚠️ At least one permission should be selected for the key to be useful
+                      </p>
+                    )}
                   </div>
 
                   {/* Action Buttons */}

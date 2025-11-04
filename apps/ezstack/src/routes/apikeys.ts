@@ -161,6 +161,7 @@ const routes: FastifyPluginAsync = async (app) => {
             status: "active",
             created_at: new Date().toLocaleDateString(),
             updated_at: new Date().toLocaleDateString(),
+            config: body.api_key_rules,
           } as ApiKeyDocument;
           await keyDoc.set(keyData);
         } catch (error) {
@@ -217,11 +218,12 @@ const routes: FastifyPluginAsync = async (app) => {
 
           const items: ListApiKeysResponse[] = querySnapshot.docs.map(
             (doc: any) => {
-              const data = doc.data();
+              const data = doc.data() as ApiKeyDocument;
               return {
                 name: data.name ?? null,
                 key_prefix: data.key_prefix,
                 status: data.status,
+                api_key_rules: data.config,
               } as ListApiKeysResponse;
             }
           );

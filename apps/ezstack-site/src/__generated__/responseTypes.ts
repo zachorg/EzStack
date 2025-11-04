@@ -1,5 +1,6 @@
 // Generated Response Types
 
+import * as ConfigTypes from "./configTypes"
 
 export interface CreateApiKeyResponse {
   // Primary key
@@ -17,6 +18,8 @@ export interface ListApiKeysResponse {
   name: string;
   // Prefix of the key
   key_prefix: string;
+  // 
+  api_key_rules: ConfigTypes.ApiKeyRulesConfig;
 }
 
 export interface EzAuthAnalyticsResponse {
@@ -78,5 +81,12 @@ export interface ListUserProjectsResponse {
 export interface BillingIsSuscribedResponse {
   // Whether the user has a valid payment method
   has_valid_payment_method: boolean;
+}
+
+export interface EzAuthSendOtpResponse {
+  // Request ID
+  request_id: string;
+  // Code -- -1 if verify_otp rule enabled in api key config..
+  code: string;
 }
 

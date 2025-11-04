@@ -12,10 +12,13 @@ class SimpleJSDocParser {
 
     this.documentRequiresResponseTypes = false;
     this.documentRequiresRequestTypes = false;
+    this.documentRequiresConfigTypes = false;
 
     this.responseRequiresRequestTypes = false;
+    this.responseRequiresConfigTypes = false;
 
     this.requestRequiresResponseTypes = false;
+    this.requestRequiresConfigTypes = false;
   }
 
   parseFile() {
@@ -48,21 +51,26 @@ class SimpleJSDocParser {
         }
 
         const memberFieldLine = lines[j].trim();
-        console.log(j, memberFieldLine);
+        // console.log(j, memberFieldLine);
         if (memberFieldLine.includes(":") && !memberFieldLine.includes("//")) {
           const comments = [];
 
           // Collect comments for the member field
           for (let l = k; l < j; l++) {
             const line = lines[l].trim();
-            console.log(l, line);
+            // console.log(l, line);
 
             if (line.includes("//")) {
               comments.push(line.substring(2).trim());
             }
           }
 
-          const [propName, propType] = memberFieldLine.split(":");
+          let [propName, propType] = memberFieldLine.split(":");
+
+          if(memberFieldLine === "[key: string]: boolean;") {
+            propName = "[key: string]";
+            propType = "boolean";
+          }
 
           const fieldInfo = {
             name: propName,
@@ -91,6 +99,10 @@ class SimpleJSDocParser {
                   pt = `RequestTypes.${newFieldInfo.type}`;
                   this.documentRequiresRequestTypes = true;
                 }
+                if (fieldInfo.type.includes("Config")) {
+                  pt = `ConfigTypes.${fieldInfo.type}`;
+                  this.documentRequiresConfigTypes = true;
+                }
                 this.documentTypes
                   .get(interfaceName)
                   .push({ name: propName, type: pt, comment: comments });
@@ -104,6 +116,10 @@ class SimpleJSDocParser {
                   pt = `RequestTypes.${fieldInfo.type}`;
                   this.responseRequiresRequestTypes = true;
                 }
+                if (fieldInfo.type.includes("Config")) {
+                  pt = `ConfigTypes.${fieldInfo.type}`;
+                  this.responseRequiresConfigTypes = true;
+                }
                 this.responseTypes.get(interfaceName).push({ name: propName, type: pt, comment: comments });
               }
               if (annotation.includes("Request")) {
@@ -114,6 +130,10 @@ class SimpleJSDocParser {
                 if (fieldInfo.type.includes("Response")) {
                   pt = `ResponseTypes.${fieldInfo.type}`;
                   this.requestRequiresResponseTypes = true;
+                }
+                if (fieldInfo.type.includes("Config")) {
+                  pt = `ConfigTypes.${fieldInfo.type}`;
+                  this.requestRequiresConfigTypes = true;
                 }
                 this.requestTypes.get(interfaceName).push({ name: propName, type: pt, comment: comments });
               }
@@ -144,6 +164,9 @@ class SimpleJSDocParser {
     if (this.documentRequiresRequestTypes) {
       content += `import * as RequestTypes from "./requestTypes"\n`;
     }
+    if (this.documentRequiresConfigTypes) {
+      content += `import * as ConfigTypes from "./configTypes"\n`;
+    }
     content += `\n`;
 
     this.documentTypes.forEach((fields, interfaceName) => {
@@ -166,7 +189,7 @@ class SimpleJSDocParser {
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     // fs.writeFileSync(p3, content);
-    console.log(`Generated document types file: ${outputPath}`);
+    // console.log(`Generated document types file: ${outputPath}`);
   }
 
   generateResponseTypesFile(paths) {
@@ -175,6 +198,9 @@ class SimpleJSDocParser {
 
     if (this.responseRequiresRequestTypes) {
       content += `import * as RequestTypes from "./requestTypes"\n`;
+    }
+    if (this.responseRequiresConfigTypes) {
+      content += `import * as ConfigTypes from "./configTypes"\n`;
     }
     content += `\n`;
 
@@ -198,7 +224,7 @@ class SimpleJSDocParser {
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     fs.writeFileSync(p3, content);
-    console.log(`Generated response types file: ${outputPath}`);
+    // console.log(`Generated response types file: ${outputPath}`);
   }
 
   generateRequestTypesFile(paths) {
@@ -207,6 +233,9 @@ class SimpleJSDocParser {
 
     if (this.requestRequiresResponseTypes) {
       content += `import * as ResponseTypes from "./responseTypes"\n`;
+    }
+    if (this.requestRequiresConfigTypes) {
+      content += `import * as ConfigTypes from "./configTypes"\n`;
     }
     content += `\n`;
 
@@ -230,7 +259,7 @@ class SimpleJSDocParser {
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     fs.writeFileSync(p3, content);
-    console.log(`Generated Request types file: ${outputPath}`);
+    // console.log(`Generated Request types file: ${outputPath}`);
   }
 
   generateConfigTypesFile(paths) {
@@ -257,7 +286,7 @@ class SimpleJSDocParser {
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     fs.writeFileSync(p3, content);
-    console.log(`Generated config types file: ${outputPath}`);
+    // console.log(`Generated config types file: ${outputPath}`);
   }
 
   generateFiles(outputDir) {

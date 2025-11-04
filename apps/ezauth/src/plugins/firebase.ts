@@ -11,7 +11,10 @@ import {
   UserProfileDocument,
   UserProjectDocument,
 } from "../__generated__/documentTypes.js";
-import { EzAuthServiceConfig } from "../__generated__/configTypes.js";
+import {
+  ApiKeyRulesConfig,
+  EzAuthServiceConfig,
+} from "../__generated__/configTypes.js";
 
 const ARGON_PARAMS = {
   type: argon2.argon2id,
@@ -146,12 +149,32 @@ export default fp(async (app: any) => {
             project.services[EZAUTH_SERVICE_NAME]
           ) as EzAuthServiceConfig)
         : EZAUTH_SERVICE_CONFIG;
+
+      let apiKeyRules: ApiKeyRulesConfig = keyData.config;
+      if (!apiKeyRules) {
+        apiKeyRules = {
+          ezauth_send_otp_enabled: false,
+          ezauth_verify_otp_enabled: false,
+        };
+
+        keyDoc.docs[0].ref.update({
+          config: JSON.stringify(apiKeyRules),
+          config_version: 0,
+        });
+      }
+      if (
+        !apiKeyRules?.ezauth_send_otp_enabled &&
+        !apiKeyRules?.ezauth_verify_otp_enabled
+      ) {
+        throw new Error("EzAuth send/verify OTP is not enabled");
+      }
       return {
         keyId: keyData.id,
         projectId: keyData.project_id,
         userId: userId,
         serviceInfo,
         stripeCustomerId: userData.stripe_customer_id,
+        apiKeyRules,
       };
     } catch (error) {
       app.log.error(error);

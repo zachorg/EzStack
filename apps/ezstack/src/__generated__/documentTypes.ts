@@ -1,5 +1,6 @@
 // Generated Document Types
 
+import * as ConfigTypes from "./configTypes"
 
 export interface ApiKeyDocument {
   // Primary key
@@ -22,10 +23,8 @@ export interface ApiKeyDocument {
   created_at: string;
   // Date updated
   updated_at: string;
-  // Version of the config
-  config_version: number;
   // Key: Service name. Value: JSON string of config.
-  config: Record<string, string>;
+  config: ConfigTypes.ApiKeyRulesConfig;
   // Name of the key
   name: string;
   // Prefix of the key

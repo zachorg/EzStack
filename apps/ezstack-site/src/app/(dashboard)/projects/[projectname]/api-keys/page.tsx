@@ -12,6 +12,7 @@ import {
 } from "@/__generated__/responseTypes";
 import CreateApiKeyDialog from "@/app/components/CreateApiKeyDialog";
 import RevokeApiKeyDialog from "@/app/components/RevokeApiKeyDialog";
+import ViewApiKeyRulesDialog from "@/app/components/ViewApiKeyRulesDialog";
 import { apiKeys as apiKeysApi } from "@/lib/api/apikeys";
 import {
   ListApiKeysRequest,
@@ -40,6 +41,9 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [apiKeys, setApiKeys] = useState<ListApiKeysResponse[]>([]);
   const [revokingKey, setRevokingKey] = useState<ListApiKeysResponse | null>(
+    null
+  );
+  const [viewingRulesKey, setViewingRulesKey] = useState<ListApiKeysResponse | null>(
     null
   );
   const [ezauthAnalytics, setEzauthAnalytics] = useState<EzAuthAnalyticsResponse | null>(null);
@@ -130,13 +134,31 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     setIsLoading(false);
   }, [authLoading, isAuthenticated, fetchedProjects, router, resolvedParams]);
 
-  const handleKeyCreated = (opts: { newKey: CreateApiKeyResponse }) => {
-    // Add the new key to the list but don't close the dialog yet
-    // The dialog will remain open so user can copy the key
-    setApiKeys([
-      ...apiKeys,
-      { ...opts.newKey, status: "active" } as ListApiKeysResponse,
-    ]);
+  const handleKeyCreated = async (opts: { newKey: CreateApiKeyResponse }) => {
+    // Refetch the API keys list to get the complete data including rules
+    if (project?.name) {
+      hasFetchedApiKeys.current = false;
+      try {
+        const res = await apiKeysApi.list({
+          project_name: project.name,
+        } as ListApiKeysRequest);
+        setApiKeys(res?.api_keys ?? []);
+      } catch (error) {
+        console.error("Failed to refresh API keys list:", error);
+        // Fallback: Add the new key with default rules if refetch fails
+        setApiKeys([
+          ...apiKeys,
+          { 
+            ...opts.newKey, 
+            status: "active" as const,
+            api_key_rules: {
+              ezauth_send_otp_enabled: false,
+              ezauth_verify_otp_enabled: false,
+            },
+          } as ListApiKeysResponse,
+        ]);
+      }
+    }
     // Note: Dialog will stay open until user clicks "Done" button
     // The CreateApiKeyDialog will close itself when user clicks the close/Done button
   };
@@ -230,12 +252,20 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
                           </span>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-left text-sm font-medium">
-                          <button
-                            className="text-red-400 hover:text-red-300"
-                            onClick={() => setRevokingKey(key)}
-                          >
-                            Revoke
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              className="text-blue-400 hover:text-blue-300"
+                              onClick={() => setViewingRulesKey(key)}
+                            >
+                              View Rules
+                            </button>
+                            <button
+                              className="text-red-400 hover:text-red-300"
+                              onClick={() => setRevokingKey(key)}
+                            >
+                              Revoke
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -289,6 +319,13 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
           projectName={project.name}
         />
       )}
+
+      {/* View API Key Rules Dialog */}
+      <ViewApiKeyRulesDialog
+        isOpen={!!viewingRulesKey}
+        onClose={() => setViewingRulesKey(null)}
+        apiKey={viewingRulesKey}
+      />
     </div>
   );
 }
