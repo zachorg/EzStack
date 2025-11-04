@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { UserProfileDocument } from "../__generated__/documentTypes";
 import type Stripe from "stripe";
+import { CreateUserProfileRequest } from "../__generated__/requestTypes";
 
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
@@ -83,6 +84,97 @@ const routes: FastifyPluginAsync = async (app) => {
         error: {
           code: "internal_error",
           message: "Login failed",
+          ...(isDev ? { detail } : {}),
+        },
+      });
+    }
+  });
+
+  app.post("/update", {}, async (req: any, rep) => {
+    try {
+      const jwtAuthToken = req.headers["authorization"] as string;
+      const authToken = jwtAuthToken.startsWith("Bearer ")
+        ? jwtAuthToken.slice(7).trim()
+        : null;
+      if (!authToken) {
+        return rep.status(401).send({ error: { message: "Invalid token" } });
+      }
+
+      const request = req.body as CreateUserProfileRequest;
+      if (!request.organization_name) {
+        return rep
+          .status(400)
+          .send({ error: { message: "Organization name is required" } });
+      }
+
+      // Verify the Firebase ID token
+      const decodedToken = await firebase.auth.verifyIdToken(authToken);
+      const uid = decodedToken.uid;
+
+      // Create or update user document in Firestore
+      const userRef = db.collection("users").doc(uid);
+
+      // Update existing user
+      await userRef.update({
+        updated_at: new Date().toLocaleDateString(),
+        last_login: new Date().toLocaleDateString(),
+        user_info: {
+          name: request.organization_name,
+        },
+      } as Pick<UserProfileDocument, "updated_at" | "last_login" | "user_info">);
+
+      return rep.status(200).send({
+        ok: true,
+      });
+    } catch (err: any) {
+      const isDev = process.env.NODE_ENV !== "production";
+      const detail = err instanceof Error ? err.message : String(err);
+      req.log?.error({ detail }, "/create-or-update failed");
+      return rep.status(500).send({
+        error: {
+          code: "internal_error",
+          message: "Create or update user profile failed",
+          ...(isDev ? { detail } : {}),
+        },
+      });
+    }
+  });
+
+  app.post("/get", {}, async (req: any, rep) => {
+    try {
+      const jwtAuthToken = req.headers["authorization"] as string;
+      const authToken = jwtAuthToken.startsWith("Bearer ")
+        ? jwtAuthToken.slice(7).trim()
+        : null;
+      if (!authToken) {
+        return rep.status(401).send({ error: { message: "Invalid token" } });
+      }
+
+      // Verify the Firebase ID token
+      const decodedToken = await firebase.auth.verifyIdToken(authToken);
+      const uid = decodedToken.uid;
+
+      // Create or update user document in Firestore
+      const userRef = db.collection("users").doc(uid);
+
+      // Get existing user
+      const userDoc = await userRef.get();
+      if (!userDoc.exists) {
+        return rep.status(404).send({ error: { message: "User not found" } });
+      }
+      const userData = userDoc.data() as UserProfileDocument;
+      return rep.status(200).send({
+        ok: true,
+        user_info: userData.user_info || null,
+      });
+    } catch (err: any) {
+      const isDev = process.env.NODE_ENV !== "production";
+      const detail = err instanceof Error ? err.message : String(err);
+      req.log?.error({ detail }, "/get failed");
+      return rep.status(500).send({
+        error: {
+          code: "internal_error",
+          message: "Get user profile failed",
           ...(isDev ? { detail } : {}),
         },
       });

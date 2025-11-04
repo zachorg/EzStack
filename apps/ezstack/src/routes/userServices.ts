@@ -6,12 +6,11 @@ import { EzAuthServiceConfig } from "../__generated__/configTypes";
 
 const EZAUTH_SERVICE_CONFIG = {
   enabled: false,
-  organization_name: "EzStack",
   otp_code_length: 6,
   otp_rate_limit_destination_per_minute: 5,
   otp_max_verification_attempts: 5,
   otp_ttl_seconds: 300,
-} as EzAuthServiceConfig;
+} as Omit<EzAuthServiceConfig, "organization_name">;
 
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
@@ -65,7 +64,7 @@ const routes: FastifyPluginAsync = async (app) => {
         const service =
           projectData.services["ezauth"] ??
           JSON.stringify(EZAUTH_SERVICE_CONFIG);
-        return rep.status(200).send(JSON.parse(service) as EzAuthServiceConfig);
+        return rep.status(200).send(JSON.parse(service) as Omit<EzAuthServiceConfig, "organization_name">);
       } catch (err: any) {
         const isDev = process.env.NODE_ENV !== "production";
         const detail = err instanceof Error ? err.message : String(err);
@@ -122,7 +121,7 @@ const routes: FastifyPluginAsync = async (app) => {
           projectData.services = {};
         }
         projectData.services["ezauth"] = JSON.stringify(
-          request as EzAuthServiceConfig
+          request as Omit<EzAuthServiceConfig, "organization_name">
         );
         await projectDoc.ref.set(projectData);
         return rep.status(200).send({

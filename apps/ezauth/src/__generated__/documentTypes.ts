@@ -85,5 +85,7 @@ export interface UserProfileDocument {
   last_login: string;
   // Stripe customer ID
   stripe_customer_id: string;
+  // User info
+  user_info: ConfigTypes.UserProfileUserInfoConfig;
 }
 

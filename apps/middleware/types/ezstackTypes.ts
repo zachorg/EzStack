@@ -156,7 +156,6 @@ interface ServiceConfigDescriptor {
   project_name: string;
   // Company name to be displayed on OTP email/SMS
   /** @EzAuthServiceConfig */
-  /** @EzAuthServiceUpdateRequest */
   organization_name: string;
   // Length of the OTP code (min 4 - max 6)
   /** @EzAuthServiceConfig */
@@ -211,6 +210,18 @@ interface UserProfileDescriptor {
   // Stripe customer ID
   /** @UserProfileDocument */
   stripe_customer_id: string;
+
+  // User info
+  /** @UserProfileDocument */
+  user_info: UserProfileUserInfoConfig;
+
+  /** @UserProfileUserInfoConfig */
+  name: string;
+
+  // Company name to be displayed on OTP email/SMS
+  /** @UserProfileUserInfoConfig */
+  /** @CreateUserProfileRequest */
+  organization_name: string;
 }
 
 interface UserBillingDescriptor {

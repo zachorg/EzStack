@@ -19,6 +19,13 @@ export interface EzAuthServiceConfig {
   email_theme_config: EzAuthEmailThemeConfig;
 }
 
+export interface UserProfileUserInfoConfig {
+  // 
+  name: string;
+  // Company name to be displayed on OTP email/SMS
+  organization_name: string;
+}
+
 export interface ApiKeyRulesConfig {
   // 
   ezauth_send_otp_enabled: boolean;

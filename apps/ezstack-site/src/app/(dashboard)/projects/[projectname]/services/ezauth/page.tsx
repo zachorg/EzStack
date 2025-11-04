@@ -39,8 +39,8 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   const service = productTiles.find((tile) => tile.slug === "ezauth");
 
   // Local state for the config
-  const [config, setConfig] = useState<EzAuthServiceConfig | null>(null);
-  const originalConfigRef = useRef<EzAuthServiceConfig | null>(null);
+  const [config, setConfig] = useState<Omit<EzAuthServiceConfig, "organization_name"> | null>(null);
+  const originalConfigRef = useRef<Omit<EzAuthServiceConfig, "organization_name"> | null>(null);
 
   // Initialize config when service settings are loaded
   useEffect(() => {
@@ -142,9 +142,9 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   ]);
 
   const handleInputChange = useCallback(
-    async <K extends keyof EzAuthServiceConfig>(
+    async <K extends keyof Omit<EzAuthServiceConfig, "organization_name">>(
       field: K,
-      value: EzAuthServiceConfig[K]
+      value: Omit<EzAuthServiceConfig, "organization_name">[K]
     ) => {
       // Don't allow changes if service is disabled (except for the enabled field itself)
       if (!config?.enabled && field !== "enabled") {
@@ -536,34 +536,6 @@ function EmailThemeEditorDialog({
           ref={settingsRef}
           className={`space-y-6 ${!isEnabled ? "opacity-60" : ""}`}
         >
-          {/* Organization Name */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-            <label
-              className={`block text-sm font-medium mb-2 ${
-                !isEnabled ? "text-neutral-500" : "text-white"
-              }`}
-            >
-              Organization Name
-            </label>
-            <input
-              type="text"
-              value={config.organization_name}
-              onChange={(e) =>
-                handleInputChange("organization_name", e.target.value)
-              }
-              disabled={!isEnabled}
-              className={`w-full px-3 py-2 rounded-md border border-neutral-800 bg-neutral-950 focus:outline-none focus:ring-2 ${
-                !isEnabled
-                  ? "text-neutral-500 cursor-not-allowed"
-                  : "text-neutral-200 focus:ring-emerald-400/60"
-              }`}
-              placeholder="Your Company Name"
-            />
-            <p className="mt-2 text-xs text-neutral-500">
-              This name will appear on OTP emails and SMS messages
-            </p>
-          </div>
-
           {/* Email Theme */}
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
             <div className="flex items-center justify-between mb-2">
@@ -758,7 +730,7 @@ function EmailThemeEditorDialog({
                handleInputChange("email_theme_config", newThemeConfig);
                setIsThemeDialogOpen(false);
              }}
-             organizationName={config.organization_name || "Your Company"}
+             organizationName="Your Company"
            />
          )}
        </div>
