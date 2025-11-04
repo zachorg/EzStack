@@ -145,11 +145,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         req
       );
       if (!response.ok) {
-        // @TODO: Show a prompt to update user info...
         console.log("AuthProvider: fetchUserInfo: userInfo not found");
+        setUserInfo(null);
         return;
       }
-      const userInfo = (await response.json()).user_info;
+      const data = await response.json();
+      const userInfo = data.user_info;
+      
+      if (!userInfo) {
+        setUserInfo(null);
+        return;
+      }
+      
       setUserInfo(userInfo as UserProfileUserInfoConfig);
       console.log(
         "AuthProvider: fetchUserInfo: userInfo",
@@ -387,7 +394,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

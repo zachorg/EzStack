@@ -119,7 +119,7 @@ const routes: FastifyPluginAsync = async (app) => {
         updated_at: new Date().toLocaleDateString(),
         last_login: new Date().toLocaleDateString(),
         user_info: {
-          name: request.organization_name,
+          organization_name: request.organization_name,
         },
       } as Pick<UserProfileDocument, "updated_at" | "last_login" | "user_info">);
 
@@ -140,7 +140,7 @@ const routes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.post("/get", {}, async (req: any, rep) => {
+  app.get("/get", {}, async (req: any, rep) => {
     try {
       const jwtAuthToken = req.headers["authorization"] as string;
       const authToken = jwtAuthToken.startsWith("Bearer ")
