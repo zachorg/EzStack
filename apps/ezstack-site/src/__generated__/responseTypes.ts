@@ -83,7 +83,7 @@ export interface BillingIsSuscribedResponse {
   has_valid_payment_method: boolean;
 }
 
-export interface EzAuthSendOtpResponse {
+export interface EzAuthSendResponse {
   // Request ID
   request_id: string;
   // Code -- -1 if verify_otp rule enabled in api key config..

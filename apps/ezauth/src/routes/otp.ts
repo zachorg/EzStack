@@ -4,7 +4,7 @@ import * as OTP from "../services/otp.js";
 import { hashApiKey } from "../utils/crypto.js";
 import { EzAuthAnalyticsDocument } from "../__generated__/documentTypes.js";
 import Stripe from "stripe";
-import { EzAuthSendOtpResponse } from "../__generated__/responseTypes.js";
+import { EzAuthSendResponse } from "../__generated__/responseTypes.js";
 import {
   ApiKeyRulesConfig,
   EzAuthServiceConfig,
@@ -122,20 +122,20 @@ const routes: FastifyPluginAsync = async (app) => {
   }
 
   async function check_and_increment_otp_send_usage(
-    trySendOtp: () => Promise<EzAuthSendOtpResponse>,
+    trySendOtp: () => Promise<EzAuthSendResponse>,
     usage_key_lookup_id: string,
     stripe_customer_id: string,
     request_limits?: {
       max_free_requests_per_month?: number;
     }
-  ): Promise<EzAuthSendOtpResponse | undefined> {
+  ): Promise<EzAuthSendResponse | undefined> {
     if (!db) {
       throw new Error("Firebase firestore not initialized");
     }
 
     const usageRef = db.doc(`analytics/ezauth/otp/${usage_key_lookup_id}`);
 
-    const result: EzAuthSendOtpResponse | undefined = await db.runTransaction(
+    const result: EzAuthSendResponse | undefined = await db.runTransaction(
       async (transaction) => {
         const dateKey = new Date().toISOString().substring(0, 7); // YYYY-MM format
 
@@ -324,7 +324,7 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         try {
-          const trySendOtp = async (): Promise<EzAuthSendOtpResponse> => {
+          const trySendOtp = async (): Promise<EzAuthSendResponse> => {
             return await OTP.send(app, payload);
           };
 
@@ -342,7 +342,7 @@ const routes: FastifyPluginAsync = async (app) => {
             throw new Error("OTP Send Failed");
           }
           await check_and_increment_otp_send_usage(
-            (): Promise<EzAuthSendOtpResponse> => Promise.resolve(response),
+            (): Promise<EzAuthSendResponse> => Promise.resolve(response),
             kSendOtpUsageByKey(app.apikeyPepper, userId, projectId, keyId),
             ""
           );

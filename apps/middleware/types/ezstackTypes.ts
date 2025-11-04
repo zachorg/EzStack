@@ -209,11 +209,11 @@ interface UserBillingDescriptor {
 interface EzAuth
 {
   // Request ID
-  /** @EzAuthSendOtpResponse */
+  /** @EzAuthSendResponse */
   request_id: string;
 
   // Code -- -1 if verify_otp rule enabled in api key config..
-  /** @EzAuthSendOtpResponse */
+  /** @EzAuthSendResponse */
   code: string;
 
   /** @ApiKeyRulesConfig */
@@ -221,6 +221,12 @@ interface EzAuth
 
   /** @ApiKeyRulesConfig */
   ezauth_verify_otp_enabled: boolean;
+
+  /** @ApiKeyRulesConfig */
+  ezauth_send_ote_enabled: boolean;
+
+  /** @ApiKeyRulesConfig */
+  ezauth_verify_ote_enabled: boolean;
 
   /** @ApiKeyRulesConfig */
   [key: string]: boolean;

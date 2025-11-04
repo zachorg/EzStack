@@ -21,6 +21,10 @@ export interface ApiKeyRulesConfig {
   // 
   ezauth_verify_otp_enabled: boolean;
   // 
+  ezauth_send_ote_enabled: boolean;
+  // 
+  ezauth_verify_ote_enabled: boolean;
+  // 
   [key: string]: boolean;
 }
 
