@@ -1,19 +1,19 @@
 # EzStack SDK (JavaScript/TypeScript)
 
-A lightweight, typed SDK for EzStack APIs. Similar to Stripe's client, it handles auth headers and request shaping so you can focus on your app.
+A lightweight, typed SDK for EzStack APIs. It handles auth headers and request shaping so you can focus on your app.
 
 ## Install
 
 ```bash
-npm install @ezstack/sdk
+npm install @ezstack
 # or
-pnpm add @ezstack/sdk
+pnpm add @ezstack
 ```
 
 ## Quickstart
 
 ```ts
-import EzStack from '@ezstack/sdk';
+import EzStack from '@ezstack';
 
 const ez = new EzStack({
   apiKey: process.env.EZSTACK_API_KEY!,
@@ -26,9 +26,6 @@ const verify = await ez.ezauth.otp.verify(send.requestId, '1234');
 
 ## Configuration
 - apiKey: Required. Sent as `eza-api-key` header.
-
-## Node/Edge support
-The SDK uses the global `fetch`. In Node 18+ it's built-in. For older Node, polyfill `fetch`.
 
 ## Runtime examples
 

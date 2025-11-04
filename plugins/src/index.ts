@@ -103,6 +103,7 @@ export interface SendOtpRequest {
 }
 export interface SendOtpResponse {
   requestId: string;
+  code: string;
 }
 export interface VerifyOtpRequest {
   requestId: string;
