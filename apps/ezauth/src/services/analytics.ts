@@ -141,8 +141,9 @@ export async function check_and_increment_otp_send_usage(
       const requestId = await trySendOtp();
 
       if (should_charge) {
+        const eventName = sms ? "sms_otp_send_api_requests" : "email_otp_send_api_requests";
         await stripe.billing.meterEvents.create({
-          event_name: "otp_send_api_requests", // your meter name from Stripe dashboard
+          event_name: eventName, // your meter name from Stripe dashboard
           payload: {
             value: "1", // usage amount
             stripe_customer_id: stripe_customer_id, // target customer
