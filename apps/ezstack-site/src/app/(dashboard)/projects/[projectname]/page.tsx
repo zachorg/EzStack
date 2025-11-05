@@ -2,7 +2,6 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
 import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
@@ -16,6 +15,20 @@ interface ProjectPageProps {
   params: Promise<{
     projectname: string;
   }>;
+}
+
+// Skeleton loader for service cards
+function ServiceCardSkeleton() {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-lg border border-neutral-800 bg-neutral-900/50 animate-pulse">
+      <div className="w-12 h-12 rounded-md bg-neutral-800/60"></div>
+      <div className="flex-1 space-y-2">
+        <div className="h-4 bg-neutral-800 rounded w-24"></div>
+        <div className="h-3 bg-neutral-800 rounded w-32"></div>
+      </div>
+      <div className="w-16 h-6 bg-neutral-800 rounded-full"></div>
+    </div>
+  );
 }
 
 // Helper component to show enabled service cards
@@ -449,7 +462,6 @@ function ServiceAnalyticsSection({
 
 export default function ProjectPage({ params }: ProjectPageProps) {
   const resolvedParams = use(params);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { fetchedProjects, setSelectedProject } = useProjects();
   const router = useRouter();
   const [project, setProject] = useState<UserProjectResponse | null>(null);
@@ -476,12 +488,6 @@ export default function ProjectPage({ params }: ProjectPageProps) {
   }, [setSections, resolvedParams]);
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!authLoading && !isAuthenticated) {
-      router.push("/get-started");
-      return;
-    }
-
     // Only proceed if we have fetched projects
     if (!fetchedProjects) {
       return;
@@ -501,24 +507,30 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     }
 
     setIsLoading(false);
-  }, [authLoading, isAuthenticated, fetchedProjects, router, setSelectedProject, resolvedParams]);
+  }, [fetchedProjects, router, setSelectedProject, resolvedParams]);
 
   // Loading state
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-          <p className="text-sm text-neutral-400">
-            Loading project...
-          </p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-10 bg-neutral-800 rounded w-48"></div>
+            <div className="h-4 bg-neutral-800 rounded w-32"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+          </div>
+          <div className="h-64 bg-neutral-800 rounded-lg"></div>
         </div>
       </div>
     );
   }
 
-  // If not authenticated or no project found
-  if (!isAuthenticated || !project) {
+  // If no project found
+  if (!project) {
     return null;
   }
 
@@ -529,6 +541,9 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     }
     return false;
   });
+
+  // Check if services are loading
+  const isLoadingServices = ezauthService?.settings?.isLoading || false;
 
   return (
     <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
@@ -550,7 +565,16 @@ export default function ProjectPage({ params }: ProjectPageProps) {
         </header>
 
         {/* Enabled Services Section */}
-        {enabledServices.length > 0 && (
+        {isLoadingServices ? (
+          <section>
+            <h2 className="text-xl font-semibold text-white mb-4">Enabled Services</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <ServiceCardSkeleton />
+              <ServiceCardSkeleton />
+              <ServiceCardSkeleton />
+            </div>
+          </section>
+        ) : enabledServices.length > 0 && (
           <section>
             <h2 className="text-xl font-semibold text-white mb-4">Enabled Services</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -592,7 +616,16 @@ export default function ProjectPage({ params }: ProjectPageProps) {
             </div>
 
             {/* Services Container */}
-            {(() => {
+            {isLoadingServices ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+                <ServiceCardSkeleton />
+              </div>
+            ) : (() => {
               // Get enabled service slugs
               const enabledServiceSlugs = new Set(enabledServices.map(s => s.slug));
               

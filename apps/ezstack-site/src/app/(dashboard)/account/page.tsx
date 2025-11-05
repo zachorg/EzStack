@@ -314,11 +314,26 @@ export default function AccountPage() {
   if (isLoading) {
     return (
       <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
-        <div className="mx-auto w-full max-w-6xl">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-              <p className="text-sm text-neutral-400">Loading...</p>
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="h-10 bg-neutral-800 rounded w-64"></div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="h-4 w-20 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-40 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-28 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-32 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-20 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-36 bg-neutral-800 rounded"></div>
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, use, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/components/AuthProvider";
 import { useProjects } from "@/app/components/ProjectsProvider";
 import { UserProjectResponse } from "@/__generated__/responseTypes";
 import { useSidebar } from "@/app/components/SidebarProvider";
@@ -23,7 +22,6 @@ interface EzAuthServicePageProps {
 
 export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   const resolvedParams = use(params);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { fetchedProjects, setSelectedProject } = useProjects();
   const { updateServiceSettings } = useProjectServices();
   const { settings: serviceSettings } = useService("ezauth");
@@ -107,12 +105,6 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   }, [setSections, resolvedParams]);
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!authLoading && !isAuthenticated) {
-      router.push("/get-started");
-      return;
-    }
-
     // Only proceed if we have fetched projects
     if (!fetchedProjects) {
       return;
@@ -133,8 +125,6 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
 
     setIsLoading(false);
   }, [
-    authLoading,
-    isAuthenticated,
     fetchedProjects,
     router,
     setSelectedProject,
@@ -193,14 +183,29 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
   }, [config, hasChanges, isSaving, updateServiceSettings]);
 
   // Loading state
-  if (authLoading || isLoading || serviceSettings?.isLoading) {
+  if (isLoading || serviceSettings?.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-          <p className="text-sm text-neutral-400">
-            Loading service settings...
-          </p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-10 bg-neutral-800 rounded w-64"></div>
+            <div className="h-4 bg-neutral-800 rounded w-96"></div>
+          </div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-neutral-800 rounded"></div>
+                  <div className="h-10 bg-neutral-800 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-neutral-800 rounded"></div>
+                  <div className="h-10 bg-neutral-800 rounded"></div>
+                </div>
+              </div>
+              <div className="h-48 bg-neutral-800 rounded-lg"></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -219,8 +224,8 @@ export default function EzAuthServicePage({ params }: EzAuthServicePageProps) {
     );
   }
 
-  // If not authenticated or no project found
-  if (!isAuthenticated || !project || !service) {
+  // If no project found
+  if (!project || !service) {
     return null;
   }
 

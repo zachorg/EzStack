@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 
 export default function ApiKeysPage() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+  const { isLoading } = useAuth();
   const [apiKeys] = useState([
     {
       id: 1,
@@ -26,25 +24,41 @@ export default function ApiKeysPage() {
     }
   ]);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/get-started");
-    }
-  }, [isAuthenticated, isLoading, router]);
-
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading...</p>
+      <div className="bg-white min-h-full">
+        <div className="p-6 space-y-6 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="h-8 bg-gray-200 rounded w-32"></div>
+            <div className="h-10 bg-gray-200 rounded w-40"></div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-40"></div>
+              <div className="space-y-3">
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="h-6 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-10 bg-gray-200 rounded w-24"></div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="h-6 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-10 bg-gray-200 rounded w-24"></div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="h-6 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-10 bg-gray-200 rounded w-24"></div>
+            </div>
+          </div>
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   return (

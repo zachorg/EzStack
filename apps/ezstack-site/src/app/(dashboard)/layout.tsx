@@ -70,6 +70,13 @@ export default function DashboardLayout({
     };
   }, [isAuthenticated, isLoading, userInfo, user]);
 
+  // Global redirect: Redirect to home if user is not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push("/");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   useEffect(() => {
     // Only show dialog on dashboard pages when authenticated and userInfo is missing
     // Don't show dialog on /account page since that's where users go to update their info
@@ -104,15 +111,64 @@ export default function DashboardLayout({
   const isAccountPage = pathname === "/account";
   const showAccountLoading = isAccountPage && isUserInfoFetching;
 
+  // Prevent pages from loading until authentication is verified
+  if (isLoading) {
+    return (
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="h-10 bg-neutral-800 rounded w-64"></div>
+          <div className="space-y-4">
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show loading while redirect happens
+  if (!isAuthenticated) {
+    return (
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="h-10 bg-neutral-800 rounded w-64"></div>
+          <div className="space-y-4">
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+            <div className="h-32 bg-neutral-800 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {showAccountLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-            <p className="text-sm text-neutral-400">
-              Loading...
-            </p>
+        <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+          <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+            <div className="h-10 bg-neutral-800 rounded w-64"></div>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="h-4 w-20 bg-neutral-800 rounded"></div>
+                  <div className="h-6 w-40 bg-neutral-800 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-28 bg-neutral-800 rounded"></div>
+                  <div className="h-6 w-32 bg-neutral-800 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-neutral-800 rounded"></div>
+                  <div className="h-6 w-20 bg-neutral-800 rounded"></div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-neutral-800 rounded"></div>
+                  <div className="h-6 w-36 bg-neutral-800 rounded"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ) : (

@@ -32,7 +32,7 @@ interface ProjectPageProps {
 export default function ApiKeysPage({ params }: ProjectPageProps) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { fetchedProjects } = useProjects();
   const [project, setProject] = useState<UserProjectResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,12 +106,6 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   }, [isAuthenticated, project]);
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!authLoading && !isAuthenticated) {
-      router.push("/get-started");
-      return;
-    }
-
     // Only proceed if we have fetched projects
     if (!fetchedProjects) {
       return;
@@ -129,7 +123,7 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
     }
 
     setIsLoading(false);
-  }, [authLoading, isAuthenticated, fetchedProjects, router, resolvedParams]);
+  }, [fetchedProjects, resolvedParams]);
 
   const handleKeyCreated = async (opts: { newKey: CreateApiKeyResponse }) => {
     // Refetch the API keys list to get the complete data including rules
@@ -175,19 +169,31 @@ export default function ApiKeysPage({ params }: ProjectPageProps) {
   };
 
   // Loading state
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-          <p className="text-sm text-neutral-400">Loading API keys...</p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-10 bg-neutral-800 rounded w-48"></div>
+            <div className="h-4 bg-neutral-800 rounded w-64"></div>
+          </div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <div className="space-y-4">
+              <div className="h-6 bg-neutral-800 rounded w-32"></div>
+              <div className="space-y-3">
+                <div className="h-12 bg-neutral-800 rounded"></div>
+                <div className="h-12 bg-neutral-800 rounded"></div>
+                <div className="h-12 bg-neutral-800 rounded"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // If not authenticated or no project found
-  if (!isAuthenticated || !project) {
+  // If no project found
+  if (!project) {
     return null;
   }
 
