@@ -149,7 +149,7 @@ export default fp(async (app: any) => {
             project.services[EZAUTH_SERVICE_NAME]
           ) as EzAuthServiceConfig)
         : EZAUTH_SERVICE_CONFIG;
-      serviceInfo.organization_name = userData.user_info.name;
+      serviceInfo.organization_name = userData.user_info.organization_name;
 
       let apiKeyRules: ApiKeyRulesConfig = keyData.config;
       if (!apiKeyRules) {

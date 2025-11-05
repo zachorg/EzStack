@@ -96,9 +96,9 @@ export async function send(app: any, body: any): Promise<EzAuthSendResponse> {
         if (!result.success) {
           log.error(
             { requestId, destination, error: result.error },
-            "Failed to send OTP via SNS"
+            "Failed to send OTP via SES"
           );
-          throw new Error(`Failed to send OTP via SNS: ${result.error}`);
+          throw new Error(`Failed to send OTP via SES: ${result.error}`);
         } else {
           const redisKey = kOtp(userId, requestId);
           await redis.set(
@@ -110,12 +110,12 @@ export async function send(app: any, body: any): Promise<EzAuthSendResponse> {
           console.log(`OTP redis key: ${redisKey}`);
           log.info(
             { requestId, messageId: result.messageId },
-            "OTP sent via SNS"
+            "OTP sent via SES"
           );
         }
       } catch (error) {
-        log.error({ requestId, destination, error }, "SNS send error");
-        throw new Error(`Failed to send OTP via SNS: ${error}`);
+        log.error({ requestId, destination, error }, "SES send error");
+        throw new Error(`Failed to send OTP via SES: ${error}`);
       }
     } else {
       throw new Error("SES not configured - OTP generated but not sent via email");

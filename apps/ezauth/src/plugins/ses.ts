@@ -142,10 +142,7 @@ export default fp(async (app: any) => {
     }
 
     // Create the email content
-    const organizationName =
-      serviceInfo.organization_name.length > 0
-        ? serviceInfo.organization_name
-        : "EzAuth";
+    const organizationName = serviceInfo.organization_name || "EzStack";
 
     const otpValidMinutes = Math.floor(serviceInfo.otp_ttl_seconds / 60);
 
