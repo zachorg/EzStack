@@ -27,7 +27,7 @@ const ARGON_PARAMS = {
 const EZAUTH_SERVICE_NAME = "ezauth";
 const EZAUTH_SERVICE_CONFIG = {
   enabled: false,
-  organization_name: "EzAuth",
+  organization_name: "EzStack",
   otp_code_length: 6,
   otp_rate_limit_destination_per_minute: 5,
   otp_max_verification_attempts: 5,
@@ -149,6 +149,7 @@ export default fp(async (app: any) => {
             project.services[EZAUTH_SERVICE_NAME]
           ) as EzAuthServiceConfig)
         : EZAUTH_SERVICE_CONFIG;
+      serviceInfo.organization_name = userData.user_info.organization_name;
 
       let apiKeyRules: ApiKeyRulesConfig = keyData.config;
       if (!apiKeyRules) {

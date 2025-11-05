@@ -22,7 +22,7 @@ export type ServiceId = "ezauth" | string;
 // Service settings interface
 export interface ServiceSettings {
   serviceId: ServiceId;
-  ezauthConfig?: EzAuthServiceConfig;
+  ezauthConfig?: Omit<EzAuthServiceConfig, "organization_name">;
   lastUpdated: string;
   error: string | null;
   lastFetchTime: number | null;
@@ -37,7 +37,7 @@ export interface ProjectServiceSettingsState {
 interface ProjectServicesContextType {
   // State - this is reactive and will trigger re-renders
   state: ProjectServiceSettingsState;
-  
+
   // Fetch service settings for the current project
   fetchServiceSettings: (serviceId: ServiceId) => Promise<void>;
   refreshServiceSettings: (serviceId: ServiceId) => Promise<void>;
@@ -45,7 +45,10 @@ interface ProjectServicesContextType {
   clearSettingsError: () => void;
 
   // Update service settings
-  updateServiceSettings: (serviceId: ServiceId, config: EzAuthServiceConfig) => Promise<void>;
+  updateServiceSettings: (
+    serviceId: ServiceId,
+    config: Omit<EzAuthServiceConfig, "organization_name">
+  ) => Promise<void>;
 
   // Get service settings
   getServiceSettings: (serviceId: ServiceId) => ServiceSettings | null;
@@ -113,7 +116,9 @@ export function ProjectServicesProvider({
       }));
 
       try {
-        const response = await ezstack_api_fetch<EzAuthServiceConfig>(
+        const response = await ezstack_api_fetch<
+          Omit<EzAuthServiceConfig, "organization_name">
+        >(
           `/api/v1/user/projects/services/${serviceId}/config/${selectedProject}`,
           {
             method: "GET",
@@ -128,7 +133,10 @@ export function ProjectServicesProvider({
             ...prev.settings,
             [serviceId]: {
               serviceId,
-              ezauthConfig: response as EzAuthServiceConfig,
+              ezauthConfig: response as Omit<
+                EzAuthServiceConfig,
+                "organization_name"
+              >,
               lastUpdated: new Date().toISOString(),
               error: null,
               lastFetchTime: Date.now(),
@@ -164,13 +172,19 @@ export function ProjectServicesProvider({
   );
 
   // Refresh service settings for current project
-  const refreshServiceSettings = useCallback(async (serviceId: ServiceId) => {
-    await fetchServiceSettings(serviceId);
-  }, [fetchServiceSettings]);
+  const refreshServiceSettings = useCallback(
+    async (serviceId: ServiceId) => {
+      await fetchServiceSettings(serviceId);
+    },
+    [fetchServiceSettings]
+  );
 
   // Update service settings
   const updateServiceSettings = useCallback(
-    async (serviceId: ServiceId, config: EzAuthServiceConfig) => {
+    async (
+      serviceId: ServiceId,
+      config: Omit<EzAuthServiceConfig, "organization_name">
+    ) => {
       if (!selectedProject || !isAuthenticated) {
         throw new Error("No project selected or not authenticated");
       }

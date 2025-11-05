@@ -48,8 +48,6 @@ export interface EzAuthServiceUpdateRequest {
   enabled: boolean;
   // Name of the project this service is associated with
   project_name: string;
-  // Company name to be displayed on OTP email/SMS
-  organization_name: string;
   // Length of the OTP code (min 4 - max 6)
   otp_code_length: number;
   // Rate limit for destination per minute
@@ -58,6 +56,15 @@ export interface EzAuthServiceUpdateRequest {
   otp_ttl_seconds: number;
   // Maximum number of OTP verification attempts
   otp_max_verification_attempts: number;
+  // Email theme
+  email_theme: "light" | "dark" | "vibrant" | "custom";
+  // 
+  email_theme_config: ConfigTypes.EzAuthEmailThemeConfig;
+}
+
+export interface CreateUserProfileRequest {
+  // Company name to be displayed on OTP email/SMS
+  organization_name: string;
 }
 
 export interface BillingUpdateRequest {

@@ -101,7 +101,6 @@ function ServiceCard({ service, projectname }: { service: ProductTile, projectna
 
 export default function ServicesPage({ params }: ServicesPageProps) {
   const resolvedParams = use(params);
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { fetchedProjects, setSelectedProject } = useProjects();
   const router = useRouter();
   const [project, setProject] = useState<UserProjectResponse | null>(null);
@@ -124,12 +123,6 @@ export default function ServicesPage({ params }: ServicesPageProps) {
   }, [setSections, resolvedParams]);
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!authLoading && !isAuthenticated) {
-      router.push("/get-started");
-      return;
-    }
-
     // Only proceed if we have fetched projects
     if (!fetchedProjects) {
       return;
@@ -149,22 +142,29 @@ export default function ServicesPage({ params }: ServicesPageProps) {
     }
 
     setIsLoading(false);
-  }, [authLoading, isAuthenticated, fetchedProjects, router, setSelectedProject, resolvedParams]);
+  }, [fetchedProjects, router, setSelectedProject, resolvedParams]);
 
   // Loading state
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-          <p className="text-sm text-neutral-400">Loading services...</p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="space-y-2">
+            <div className="h-10 bg-neutral-800 rounded w-64"></div>
+            <div className="h-4 bg-neutral-800 rounded w-96"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="h-80 bg-neutral-800 rounded-lg"></div>
+            <div className="h-80 bg-neutral-800 rounded-lg"></div>
+            <div className="h-80 bg-neutral-800 rounded-lg"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // If not authenticated or no project found
-  if (!isAuthenticated || !project) {
+  // If no project found
+  if (!project) {
     return null;
   }
 

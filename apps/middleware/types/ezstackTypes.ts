@@ -62,14 +62,22 @@ interface ProjectsAnalyticsDescriptor {
   // Name of the project
   /** @EzAuthAnalyticsRequest */
   project_name: string;
-  // Number of completed send OTP requests per month
+  // Number of completed send OTP requests via SMS per month
   /** @EzAuthAnalyticsDocument */
   /** @EzAuthAnalyticsResponse */
-  send_otp_completed_monthly_requests: Record<string, number>;
-  // Number of completed send OTP requests
+  sms_send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests via SMS
   /** @EzAuthAnalyticsDocument */
   /** @EzAuthAnalyticsResponse */
-  send_otp_completed_requests: number;
+  sms_send_otp_completed_requests: number;
+  // Number of completed send OTP requests via email per month
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  email_send_otp_completed_monthly_requests: Record<string, number>;
+  // Number of completed send OTP requests via email
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  email_send_otp_completed_requests: number;
   // Number of completed verify OTP requests per month
   /** @EzAuthAnalyticsDocument */
   /** @EzAuthAnalyticsResponse */
@@ -78,6 +86,10 @@ interface ProjectsAnalyticsDescriptor {
   /** @EzAuthAnalyticsDocument */
   /** @EzAuthAnalyticsResponse */
   verify_otp_completed_requests: number;
+  // analytics metrics
+  /** @EzAuthAnalyticsDocument */
+  /** @EzAuthAnalyticsResponse */
+  [key: string]: any;
 }
 
 interface ServiceAnalyticsDescriptor {
@@ -144,7 +156,6 @@ interface ServiceConfigDescriptor {
   project_name: string;
   // Company name to be displayed on OTP email/SMS
   /** @EzAuthServiceConfig */
-  /** @EzAuthServiceUpdateRequest */
   organization_name: string;
   // Length of the OTP code (min 4 - max 6)
   /** @EzAuthServiceConfig */
@@ -162,6 +173,13 @@ interface ServiceConfigDescriptor {
   /** @EzAuthServiceConfig */
   /** @EzAuthServiceUpdateRequest */
   otp_max_verification_attempts: number;
+  // Email theme
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  email_theme: "light" | "dark" | "vibrant" | "custom";
+  /** @EzAuthServiceConfig */
+  /** @EzAuthServiceUpdateRequest */
+  email_theme_config: EzAuthEmailThemeConfig;
 }
 
 interface UserProfileDescriptor {
@@ -192,6 +210,18 @@ interface UserProfileDescriptor {
   // Stripe customer ID
   /** @UserProfileDocument */
   stripe_customer_id: string;
+
+  // User info
+  /** @UserProfileDocument */
+  user_info: UserProfileUserInfoConfig;
+
+  /** @UserProfileUserInfoConfig */
+  name: string;
+
+  // Company name to be displayed on OTP email/SMS
+  /** @UserProfileUserInfoConfig */
+  /** @CreateUserProfileRequest */
+  organization_name: string;
 }
 
 interface UserBillingDescriptor {
@@ -206,14 +236,13 @@ interface UserBillingDescriptor {
   has_valid_payment_method: boolean;
 }
 
-interface EzAuth
-{
+interface EzAuth {
   // Request ID
-  /** @EzAuthSendOtpResponse */
+  /** @EzAuthSendResponse */
   request_id: string;
 
   // Code -- -1 if verify_otp rule enabled in api key config..
-  /** @EzAuthSendOtpResponse */
+  /** @EzAuthSendResponse */
   code: string;
 
   /** @ApiKeyRulesConfig */
@@ -224,4 +253,35 @@ interface EzAuth
 
   /** @ApiKeyRulesConfig */
   [key: string]: boolean;
+}
+
+interface EzAuthEmailThemeDescriptor {
+  /** @EzAuthEmailThemeConfig */
+  bodyBg: string;
+  /** @EzAuthEmailThemeConfig */
+  containerBg: string;
+  /** @EzAuthEmailThemeConfig */
+  containerBorder: string;
+  /** @EzAuthEmailThemeConfig */
+  headerBg: string;
+  /** @EzAuthEmailThemeConfig */
+  textPrimary: string;
+  /** @EzAuthEmailThemeConfig */
+  textSecondary: string;
+  /** @EzAuthEmailThemeConfig */
+  textMuted: string;
+  /** @EzAuthEmailThemeConfig */
+  accentPrimary: string;
+  /** @EzAuthEmailThemeConfig */
+  codeBoxBg: string;
+  /** @EzAuthEmailThemeConfig */
+  codeBoxBorder: string;
+  /** @EzAuthEmailThemeConfig */
+  timerBoxBg: string;
+  /** @EzAuthEmailThemeConfig */
+  timerBoxBorder: string;
+  /** @EzAuthEmailThemeConfig */
+  footerBg: string;
+  /** @EzAuthEmailThemeConfig */
+  footerBorder: string;
 }

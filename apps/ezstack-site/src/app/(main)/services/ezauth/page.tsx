@@ -171,11 +171,18 @@ export default function EzAuthServicePage() {
                   <p className="text-sm text-gray-400 mt-2">
                     Usage-based pricing only. No plans.
                   </p>
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900/50 to-gray-900/30 backdrop-blur-sm p-4 hover:border-blue-500/50 transition-all duration-300">
-                      <div className="text-white font-medium">Sending OTP</div>
+                      <div className="text-white font-medium">Sending OTP (SMS)</div>
                       <ul className="mt-3 text-sm text-gray-300 space-y-1">
                         <li>• Flat 0.01¢ per send</li>
+                        <li>• 20 sends free per month</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900/50 to-gray-900/30 backdrop-blur-sm p-4 hover:border-blue-500/50 transition-all duration-300">
+                      <div className="text-white font-medium">Sending OTP (Email)</div>
+                      <ul className="mt-3 text-sm text-gray-300 space-y-1">
+                        <li>• Flat 0.001¢ per send</li>
                         <li>• 20 sends free per month</li>
                       </ul>
                     </div>

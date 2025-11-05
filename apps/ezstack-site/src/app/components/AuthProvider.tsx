@@ -8,6 +8,7 @@ const {
   createUserWithEmailAndPassword,
 } = await import("firebase/auth");
 
+import { UserProfileUserInfoConfig } from "@/__generated__/configTypes";
 import { foward_req_to_ezstack_api } from "@/lib/functions-proxy";
 import { User } from "firebase/auth";
 import React, {
@@ -36,6 +37,7 @@ interface UserProfile {
 interface AuthContextType {
   // Auth state
   user: UserProfile | null;
+  userInfo: UserProfileUserInfoConfig | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -62,6 +64,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userInfo, setUserInfo] = useState<UserProfileUserInfoConfig | null>(
+    null
+  );
 
   // Clear error function
   const clearError = useCallback(() => {
@@ -118,6 +123,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [fetchUserProfile]);
 
+  // Fetch user info from API
+  const fetchUserInfo = useCallback(async (firebaseUser: User) => {
+    if (!firebaseUser) {
+      return;
+    }
+
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const req: RequestInit = {
+        method: "GET",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${idToken}`,
+        },
+        cache: "no-store",
+      };
+
+      const response = await foward_req_to_ezstack_api(
+        "/api/v1/user/profile/get",
+        req
+      );
+      if (!response.ok) {
+        console.log("AuthProvider: fetchUserInfo: userInfo not found");
+        setUserInfo(null);
+        return;
+      }
+      const data = await response.json();
+      const userInfo = data.user_info;
+      
+      if (!userInfo) {
+        setUserInfo(null);
+        return;
+      }
+      
+      setUserInfo(userInfo as UserProfileUserInfoConfig);
+      console.log(
+        "AuthProvider: fetchUserInfo: userInfo",
+        JSON.stringify(userInfo, null, 2)
+      );
+    } catch (err) {
+      console.error("Error fetching user info:", err);
+    }
+  }, []);
+
   // Initialize auth state and listen for auth changes
   useEffect(() => {
     const initializeAuth = async () => {
@@ -162,6 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               };
               setUserProfile(userProfile);
               setIsAuthenticated(true);
+              fetchUserInfo(firebaseUser);
             } else {
               // User is signed out
               setUserProfile(null);
@@ -183,7 +233,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         unsubscribe();
       }
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, fetchUserInfo]);
 
   const tryUserLogin = async (userId: string) => {
     const req: RequestInit = {
@@ -327,6 +377,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const contextValue: AuthContextType = {
     // Auth state
     user: userProfile,
+    userInfo,
     isAuthenticated,
     isLoading,
     error,
@@ -343,7 +394,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

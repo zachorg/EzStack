@@ -3,8 +3,10 @@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/app/components/AuthProvider";
 import { PAGE_SECTIONS } from "@/app/pageSections";
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSidebar } from "@/app/components/SidebarProvider";
+import { foward_req_to_ezstack_api } from "@/lib/functions-proxy";
+import { CreateUserProfileRequest } from "@/__generated__/requestTypes";
 
 type UserProfile = {
   uid: string;
@@ -44,14 +46,122 @@ function useUserProfile() {
 }
 
 
+function OrganizationNameWidget({
+  organizationName,
+  onUpdate,
+}: {
+  organizationName: string | null;
+  onUpdate: (newName: string) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState(organizationName || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Sync value with prop changes
+  useEffect(() => {
+    if (!isEditing) {
+      setValue(organizationName || "");
+    }
+  }, [organizationName, isEditing]);
+
+  const handleSave = useCallback(async () => {
+    if (!value.trim()) {
+      setError("Organization name cannot be empty");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onUpdate(value.trim());
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update organization name");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [value, onUpdate]);
+
+  const handleCancel = useCallback(() => {
+    setValue(organizationName || "");
+    setIsEditing(false);
+    setError(null);
+  }, [organizationName]);
+
+  if (isEditing) {
+    return (
+      <div>
+        <dt className="text-sm font-medium text-neutral-400">Organization Name</dt>
+        <dd className="mt-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError(null);
+              }}
+              disabled={isSaving}
+              className="flex-1 px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-950 text-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/60 disabled:opacity-50"
+              placeholder="Enter organization name"
+            />
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !value.trim()}
+              className="px-3 py-1.5 rounded-md bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="px-3 py-1.5 rounded-md border border-neutral-800 bg-neutral-900 text-neutral-300 text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+          {error && (
+            <p className="text-xs text-red-400">{error}</p>
+          )}
+          <p className="text-xs text-neutral-500">
+            This will be displayed on OTP emails and SMS
+          </p>
+        </dd>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <dt className="text-sm font-medium text-neutral-400">Organization Name</dt>
+      <dd className="mt-1 flex items-center gap-2">
+        <span className="text-sm text-neutral-100">
+          {organizationName || "—"}
+        </span>
+        <button
+          onClick={() => setIsEditing(true)}
+          className="text-xs text-neutral-400 hover:text-neutral-300 transition-colors"
+        >
+          Edit
+        </button>
+      </dd>
+    </div>
+  );
+}
+
 function UserInfoSection({
   profile,
   loading,
   error,
+  userInfo,
+  onUpdateOrganizationName,
 }: {
   profile: UserProfile | null;
   loading: boolean;
   error: string | null;
+  userInfo: { organization_name: string } | null;
+  onUpdateOrganizationName: (newName: string) => Promise<void>;
 }) {
   if (loading) {
     return (
@@ -130,6 +240,10 @@ function UserInfoSection({
               </span>
             </dd>
           </div>
+          <OrganizationNameWidget
+            organizationName={userInfo?.organization_name || null}
+            onUpdate={onUpdateOrganizationName}
+          />
         </div>
       </div>
     </section>
@@ -138,7 +252,7 @@ function UserInfoSection({
 
 
 export default function AccountPage() {
-  const { isLoading } = useAuth();
+  const { isLoading, user, userInfo } = useAuth();
   const {
     profile,
     loading: profileLoading,
@@ -161,15 +275,65 @@ export default function AccountPage() {
     setSections(dashboardSections);
   }, [setSections]);
 
+  // Handle organization name update
+  const handleUpdateOrganizationName = useCallback(async (newName: string) => {
+    if (!user?.firebaseUser) {
+      throw new Error("User not authenticated");
+    }
+
+    const idToken = await user.firebaseUser.getIdToken();
+    const req: RequestInit = {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
+        organization_name: newName,
+      } as CreateUserProfileRequest),
+      cache: "no-store",
+    };
+
+    const response = await foward_req_to_ezstack_api(
+      "/api/v1/user/profile/update",
+      req
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.error?.message || "Failed to update organization name"
+      );
+    }
+
+    // Refresh user info
+    window.location.reload();
+  }, [user]);
+
   // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
-        <div className="mx-auto w-full max-w-6xl">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-              <p className="text-sm text-neutral-400">Loading...</p>
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="h-10 bg-neutral-800 rounded w-64"></div>
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <div className="h-4 w-20 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-40 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-28 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-32 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-24 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-20 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 w-32 bg-neutral-800 rounded"></div>
+                <div className="h-6 w-36 bg-neutral-800 rounded"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -189,6 +353,8 @@ export default function AccountPage() {
           profile={profile}
           loading={profileLoading}
           error={profileError}
+          userInfo={userInfo}
+          onUpdateOrganizationName={handleUpdateOrganizationName}
         />
       </div>
     </div>

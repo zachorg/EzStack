@@ -13,6 +13,17 @@ export interface EzAuthServiceConfig {
   otp_ttl_seconds: number;
   // Maximum number of OTP verification attempts
   otp_max_verification_attempts: number;
+  // Email theme
+  email_theme: "light" | "dark" | "vibrant" | "custom";
+  // 
+  email_theme_config: EzAuthEmailThemeConfig;
+}
+
+export interface UserProfileUserInfoConfig {
+  // 
+  name: string;
+  // Company name to be displayed on OTP email/SMS
+  organization_name: string;
 }
 
 export interface ApiKeyRulesConfig {
@@ -22,5 +33,36 @@ export interface ApiKeyRulesConfig {
   ezauth_verify_otp_enabled: boolean;
   // 
   [key: string]: boolean;
+}
+
+export interface EzAuthEmailThemeConfig {
+  // 
+  bodyBg: string;
+  // 
+  containerBg: string;
+  // 
+  containerBorder: string;
+  // 
+  headerBg: string;
+  // 
+  textPrimary: string;
+  // 
+  textSecondary: string;
+  // 
+  textMuted: string;
+  // 
+  accentPrimary: string;
+  // 
+  codeBoxBg: string;
+  // 
+  codeBoxBorder: string;
+  // 
+  timerBoxBg: string;
+  // 
+  timerBoxBorder: string;
+  // 
+  footerBg: string;
+  // 
+  footerBorder: string;
 }
 

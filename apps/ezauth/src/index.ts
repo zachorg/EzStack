@@ -5,6 +5,7 @@ import auth from "./plugins/auth.js";
 import redis from "./plugins/redis.js";
 // import sqs from "./plugins/sqs.js";
 import sns from "./plugins/sns.js";
+import ses from "./plugins/ses.js";
 import rl from "./plugins/rate-limit.js";
 import errors from "./plugins/errors.js";
 import tenantSettings from "./plugins/tenant-settings.js";
@@ -13,7 +14,6 @@ import firebase from "./plugins/firebase.js";
 import stripe from "./plugins/stripe.js";
 import email from "./plugins/email.js";
 import otpRoutes from "./routes/otp.js";
-import oteRoutes from "./routes/ote.js";
 
 const app = Fastify({
   logger: {
@@ -40,12 +40,12 @@ await app.register(firebase);
 await app.register(stripe);
 await app.register(email);
 await app.register(sns);
+await app.register(ses);
 await app.register(fastifyRateLimit, { global: false });
 await app.register(rl);
 await app.register(auth);
 
 await app.register(otpRoutes, { prefix: "api/v1/ezauth/otp" });
-await app.register(oteRoutes, { prefix: "api/v1/ezauth/ote" });
 
 // Start server
 const port = Number(process.env.PORT_EZAUTH || 8081);

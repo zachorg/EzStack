@@ -126,10 +126,14 @@ function ProjectDocument() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800"></div>
-          <span className="ml-3 text-neutral-400">Loading projects...</span>
-        </div>
+        <section>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-pulse">
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+          </div>
+        </section>
       )}
 
       {/* Error State */}
@@ -169,16 +173,8 @@ function ProjectDocument() {
 }
 
 export default function Dashboard() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
+  const { isLoading } = useAuth();
   const { setSections } = useSidebar();
-
-  useEffect(() => {
-    // Only redirect if we're not loading and not authenticated
-    if (!isLoading && !isAuthenticated) {
-      router.push("/get-started");
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   // Set sidebar sections for this page
   useEffect(() => {
@@ -199,20 +195,18 @@ export default function Dashboard() {
   // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
-          <p className="text-sm text-neutral-400">
-            Checking authentication...
-          </p>
+      <div className="px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
+        <div className="mx-auto w-full max-w-6xl space-y-6 animate-pulse">
+          <div className="h-10 bg-neutral-800 rounded w-48"></div>
+          <div className="h-16 bg-neutral-800 rounded-lg"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+            <div className="h-24 bg-neutral-800 rounded-lg"></div>
+          </div>
         </div>
       </div>
     );
-  }
-
-  // If not authenticated, don't render anything (redirect will happen)
-  if (!isAuthenticated) {
-    return null;
   }
 
   return (

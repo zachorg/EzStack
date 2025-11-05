@@ -75,10 +75,9 @@ export default fp(async (app: any) => {
     }
 
     // Create the SMS message
+    const organizationName = serviceInfo.organization_name || "EzStack";
     const message = `Your ${
-      serviceInfo.organization_name.length > 0
-        ? serviceInfo.organization_name
-        : "EzAuth"
+      organizationName
     } verification code is: ${otp}. Valid for ${Math.floor(serviceInfo.otp_ttl_seconds / 60)} minutes.`;
 
     app.log.info(`📱 [AWS SNS] Sending SMS to: ${formattedPhone}`);
