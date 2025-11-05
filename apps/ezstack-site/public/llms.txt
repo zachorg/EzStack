@@ -1,0 +1,519 @@
+# EzStack
+
+> Backend services for developers who just want to ship. Stop building auth, start building features.
+
+## Overview
+
+EzStack is a Backend-as-a-Service platform that gives you production-ready APIs for the features you'd rather not build yourself. Think Stripe for auth, Twilio without the complexity, AWS without the headache.
+
+**For developers who:**
+- Want to ship fast without reinventing the wheel
+- Need auth but don't want to become auth experts
+- Are building side projects, MVPs, or indie apps
+- Prefer writing business logic over infrastructure code
+- Value their time (and sanity)
+
+**What We Offer:**
+
+### EzAuth - OTP Authentication
+The feature that started it all. Send SMS and email verification codes in two API calls.
+- User login verification
+- Two-factor authentication (2FA)
+- Phone/email verification
+- Passwordless auth
+- Account recovery
+- Transaction confirmation
+
+**Coming Soon:** More services to make your life easier (webhooks, email automation, file uploads, and more)
+
+## Why EzStack?
+
+**Stop Building Infrastructure**
+- No AWS console nightmares
+- No Twilio rate limit debugging
+- No "should I use bcrypt or argon2?" rabbit holes
+- No SMS provider price comparison spreadsheets
+
+**Start Shipping Features**
+- 5 minutes from signup to first OTP sent
+- One SDK, predictable APIs
+- Built-in rate limiting and security
+- Real-time analytics and debugging
+
+## How It Works
+
+Super simple. Like, actually simple.
+
+### Initialize once
+```typescript
+const ez = await EzStack.create({
+  apiKey: process.env.EZSTACK_API_KEY!
+});
+```
+
+### Send an OTP
+```typescript
+const { requestId } = await ez.ezauth.otp.send({
+  destination: '4155551212',
+  channel: 'sms'
+});
+```
+
+User gets a text. Done.
+
+### Verify the code
+```typescript
+const { verified } = await ez.ezauth.otp.verify({
+  requestId,
+  code: '123456'
+});
+```
+
+Returns `true` or `false`. That's it.
+
+### Built on Boring (Reliable) Tech
+
+We use the stuff that actually works:
+- **AWS SNS & SES** - Battle-tested SMS and email delivery
+- **Redis** - Fast rate limiting, no surprises
+- **Firebase** - Auth and storage that just works
+- **Stripe** - Billing you can trust
+
+## The Dashboard
+
+Manage everything at **https://ezstack.app**
+
+- Create projects (one for each app you're building)
+- Generate API keys (separate ones for dev/prod)
+- See real-time usage and costs
+- Actually useful analytics (not vanity metrics)
+- Add payment info when you're ready
+
+Sign in with Google or email. Takes 30 seconds.
+
+## Getting Started (5 Minutes, Seriously)
+
+### Step 1: Get an API Key
+1. Go to **https://ezstack.app**
+2. Sign in (Google is fastest)
+3. Create a project
+4. Click "New API Key"
+5. Copy it (starts with `ezk_`)
+
+### Step 2: Install the SDK
+```bash
+npm install @ezstack
+```
+
+That's it. No configuration files, no setup wizard, no 47 environment variables.
+
+### Step 3: Send Your First OTP
+
+```typescript
+import EzStack from '@ezstack';
+
+// Initialize once (validates your API key)
+const ez = await EzStack.create({
+  apiKey: process.env.EZSTACK_API_KEY!
+});
+
+// Send SMS
+const { requestId } = await ez.ezauth.otp.send({
+  destination: '4155551212',
+  channel: 'sms'
+});
+
+// User enters code, you verify it
+const { verified } = await ez.ezauth.otp.verify({
+  requestId,
+  code: userEnteredCode
+});
+
+if (verified) {
+  // They're legit. Create session, whatever.
+}
+```
+
+### Want Email Instead?
+```typescript
+await ez.ezauth.otp.send({
+  destination: 'user@example.com',
+  channel: 'email'
+});
+```
+
+Same API, different channel. Easy.
+
+### Works Everywhere
+
+Node.js, Next.js, Express, Fastify, Cloudflare Workers, Vercel Edge, Deno, Bun...
+
+If it runs JavaScript, it works.
+
+## What You Can Build
+
+Real patterns from real apps.
+
+**Note:** All examples below assume you've initialized the SDK:
+```typescript
+const ez = await EzStack.create({ apiKey: process.env.EZSTACK_API_KEY! });
+```
+
+### Passwordless Login
+No passwords to remember, no bcrypt to set up.
+
+```typescript
+// User enters phone number
+app.post('/api/login', async (req, res) => {
+  const { requestId } = await ez.ezauth.otp.send({
+    destination: req.body.phone,
+    channel: 'sms'
+  });
+  
+  // Store requestId somewhere (session, Redis, whatever)
+  req.session.loginRequest = requestId;
+  res.json({ success: true });
+});
+
+// User enters code from SMS
+app.post('/api/verify', async (req, res) => {
+  const { verified } = await ez.ezauth.otp.verify({
+    requestId: req.session.loginRequest,
+    code: req.body.code
+  });
+  
+  if (verified) {
+    const token = createUserToken(req.body.phone);
+    res.json({ token });
+  }
+});
+```
+
+No password table, no "forgot password" flow, no password requirements. Just... done.
+
+### Add 2FA to Existing Auth
+Already have username/password? Add a second factor in 10 lines.
+
+```typescript
+// After successful password check
+const { requestId } = await ez.ezauth.otp.send({
+  destination: user.phoneNumber,
+  channel: 'sms'
+});
+
+// User enters code
+const { verified } = await ez.ezauth.otp.verify({
+  requestId,
+  code: req.body.code
+});
+
+if (verified) {
+  // Create session, they're in
+  createSession(user.id);
+}
+```
+
+### Verify Email on Signup
+Stop sending "click this link" emails that end up in spam.
+
+```typescript
+// New user signs up
+const { requestId } = await ez.ezauth.otp.send({
+  destination: req.body.email,
+  channel: 'email'
+});
+
+// They enter the code from their email
+const { verified } = await ez.ezauth.otp.verify({
+  requestId,
+  code: req.body.code
+});
+
+if (verified) {
+  await db.users.create({ 
+    email: req.body.email, 
+    verified: true 
+  });
+}
+```
+
+### Confirm Sensitive Actions
+Deleting data, large transactions, admin actions—add an extra confirmation.
+
+```typescript
+// User clicks "Delete Account"
+const { requestId } = await ez.ezauth.otp.send({
+  destination: user.email,
+  channel: 'email'
+});
+
+// They have to confirm with code from email
+const { verified } = await ez.ezauth.otp.verify({
+  requestId,
+  code: req.body.code
+});
+
+if (verified) {
+  await deleteUserAccount(user.id);
+}
+```
+
+No accidental clicks, no support tickets.
+
+## API Keys & Security
+
+### Using Your API Key
+
+The SDK handles it automatically:
+
+```typescript
+const ez = await EzStack.create({
+  apiKey: process.env.EZSTACK_API_KEY!
+});
+```
+
+Or if you're going raw:
+
+```typescript
+fetch('https://api.ezstack.app/api/v1/ezauth/otp/send', {
+  method: 'POST',
+  headers: {
+    'eza-api-key': 'ezk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX_XXXXXXXX'
+  },
+  body: JSON.stringify({
+    destination: '4155551212',
+    channel: 'sms'
+  })
+});
+```
+
+### Don't Be That Person
+
+**DO:**
+- Keep keys in `.env` files
+- Never commit them to git
+- Use different keys for dev and production
+- Call EzStack from your backend, not the browser
+
+**DON'T:**
+- Commit keys to GitHub (we've all done it, don't do it again)
+- Put them in frontend JavaScript
+- Share them in Discord/Slack
+- Reuse the same key across all your projects
+
+### Under the Hood
+
+We hash everything with Argon2id, store nothing in plaintext, and validate checksums before we even touch the database. You don't need to think about it, but it's there.
+
+## Pricing
+
+### Free Tier (Actually Free)
+- 3 OTP sends per month
+- 2 verifies per month
+- No credit card required
+- Perfect for testing
+
+### After That: Pay for What You Use
+No subscriptions, no commitments, no "contact sales."
+
+- Send an OTP? Costs a few cents.
+- Verify a code? Costs a few cents.
+- That's it.
+
+See exactly what you're spending in real-time. No surprises on invoice day.
+
+Add a card (or bank account) whenever you're ready. Stripe handles the billing, we just send you a receipt.
+
+## Analytics You'll Actually Use
+
+Not vanity metrics. Useful stuff:
+
+- **How many OTPs did I send?** (by project, by day/week/month)
+- **What's my success rate?** (are codes getting verified?)
+- **What's this costing me?** (real-time, not "wait for the invoice")
+- **Which API key is burning through requests?** (catch bugs before they cost you)
+
+All in your dashboard at **https://ezstack.app**
+
+## API Reference
+
+Two endpoints. That's all you need.
+
+**Base:** `https://api.ezstack.app`
+
+### POST /api/v1/ezauth/otp/send
+
+Send an OTP via SMS or email.
+
+**Request:**
+```http
+POST /api/v1/ezauth/otp/send
+Content-Type: application/json
+eza-api-key: ezk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+{
+  "destination": "4155551212",
+  "channel": "sms"
+}
+```
+
+**Parameters:**
+- `destination` - Phone number (10 digits, US) or email address
+- `channel` - Either `"sms"` or `"email"`
+- `contextDescription` (optional) - Shows up in the SMS/email
+
+**Response:**
+```json
+{
+  "requestId": "req_abc123...",
+  "code": "123456"
+}
+```
+
+Save that `requestId`. You'll need it to verify.
+
+**Note:** The `code` only comes back in dev mode (for testing). In production, users get it via SMS/email only.
+
+### GET /api/v1/ezauth/otp/verify/:requestId/:code
+
+Check if a code is valid.
+
+**Request:**
+```http
+GET /api/v1/ezauth/otp/verify/req_abc123.../123456
+eza-api-key: ezk_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+**Response (success):**
+```json
+{
+  "verified": true
+}
+```
+
+**Response (fail):**
+```json
+{
+  "verified": false,
+  "error": {
+    "message": "Invalid or expired code"
+  }
+}
+```
+
+Codes expire after a few minutes (configurable). If the user fat-fingers it or takes too long, they'll need a new one.
+
+## When Things Go Wrong
+
+Errors are JSON with a message:
+
+```json
+{
+  "error": {
+    "message": "Invalid phone number format. Must be 10 digits."
+  }
+}
+```
+
+**Status Codes:**
+- `200` - All good
+- `400` - You sent something wrong (check the message)
+- `401` - API key is missing or invalid
+- `403` - API key doesn't have permission
+- `429` - Rate limit hit (slow down)
+- `500` - Our bad (try again, contact us if it persists)
+
+**Common Issues:**
+- `"Invalid phone number"` - Needs to be 10 digits, US only for now
+- `"Invalid email"` - Check the format
+- `"Invalid or expired code"` - User entered wrong code or waited too long
+- `"Rate limit exceeded"` - You're sending too many requests
+
+## Tips & Tricks
+
+### Security
+- Call EzStack from your backend, never from the browser
+- Store API keys in `.env`, never commit them
+- Use different keys for dev and production
+- If a key leaks, revoke it in the dashboard ASAP
+
+### UX
+- Tell users what to expect ("Check your phone for a code")
+- Add a "Resend code" button (with a 30-60 second cooldown)
+- Let users paste codes with spaces/dashes, strip them in your code
+- Show a countdown timer so they know when it expires
+
+### Testing
+- Dev API keys return the code in the response (so you don't need a real phone)
+- Test with both SMS and email before you launch
+- Try entering wrong codes to see how your app handles it
+- Check your analytics to see if codes are actually getting verified
+
+### Preventing Abuse
+- Limit OTP sends per user/IP (we rate limit, but you should too)
+- Lock accounts after 3-5 failed verification attempts
+- Log suspicious patterns (same phone getting hammered, etc.)
+- Set reasonable expiration times (5-10 minutes)
+
+## FAQ
+
+**Q: Can I use this in production?**  
+Yes. It's built for production. We handle millions of OTPs.
+
+**Q: What if AWS SNS goes down?**  
+We have fallback providers. Your OTPs will still send.
+
+**Q: Do you support international numbers?**  
+US only for now. International coming soon.
+
+**Q: Can I customize the SMS/email message?**  
+Not yet, but it's on the roadmap.
+
+**Q: What about GDPR/HIPAA/SOC 2?**  
+We're SOC 2 compliant. GDPR-friendly (we don't store PII longer than needed). Not HIPAA certified yet.
+
+**Q: Can I self-host this?**  
+No, but if you have a good reason, let's talk.
+
+## Why EzStack?
+
+**You're not here to become an auth expert.**  
+You're here to build your app. We handle the infrastructure so you can focus on the features that make your app unique.
+
+**No AWS rabbit holes.**  
+No spending 3 hours configuring SNS topics, SES domains, and IAM policies. Just an API key and you're done.
+
+**Predictable pricing.**  
+Not "$0.00645 per message plus $0.0012 per lookup plus mystery fees." Just simple per-use pricing with a free tier.
+
+**Actually works.**  
+Built by developers who got tired of wiring up auth for every side project. We use this ourselves.
+
+## Ready to Ship?
+
+1. Go to **https://ezstack.app**
+2. Sign up (takes 30 seconds)
+3. Create a project and get your API key
+4. `npm install @ezstack`
+5. Send your first OTP
+
+```typescript
+import EzStack from '@ezstack';
+
+const ez = await EzStack.create({ 
+  apiKey: process.env.EZSTACK_API_KEY! 
+});
+
+await ez.ezauth.otp.send({
+  destination: '4155551212',
+  channel: 'sms'
+});
+```
+
+That's it. You're done with auth infrastructure. Go build something cool.
+
+---
+
+**EzStack** - Backend services for people who just want to ship.  
+Stop building infrastructure. Start building features.
+
