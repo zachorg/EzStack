@@ -45,13 +45,14 @@ const routes: FastifyPluginAsync = async (app) => {
         // create otp send subscription
         await stripe.subscriptions.create({
           customer: customer.id,
-          items: [{ price: "price_1SNdk2AZqNXFtPMLegnBzCER" }],
-        });
-
-        // create otp verify subscription
-        await stripe.subscriptions.create({
-          customer: customer.id,
-          items: [{ price: "price_1SNduqAZqNXFtPMLmUlf0fIQ" }],
+          items: [
+            // sms send otp
+            { price: "price_1SNdk2AZqNXFtPMLegnBzCER" },
+            // email send otp
+            { price: "price_1SPvyUAZqNXFtPMLYYL8MYaS" },
+            // verify otp
+            { price: "price_1SPwBHAZqNXFtPMLUrLXDACw" },
+          ],
         });
 
         // Create new user document
