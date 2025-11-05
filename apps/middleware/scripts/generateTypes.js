@@ -188,11 +188,12 @@ class SimpleJSDocParser {
 
     const p1 = path.join(outputPath, "ezauth/src/__generated__/documentTypes.ts");
     const p2 = path.join(outputPath, "ezstack/src/__generated__/documentTypes.ts");
+    const p3 = path.join(outputPath, "ezusers/src/__generated__/documentTypes.ts");
     // const p3 = path.join(outputPath, "ezstack-site/src/__generated__/documentTypes.ts");
 
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
-    // fs.writeFileSync(p3, content);
+    fs.writeFileSync(p3, content);
     // console.log(`Generated document types file: ${outputPath}`);
   }
 
@@ -224,10 +225,12 @@ class SimpleJSDocParser {
     const p1 = path.join(outputPath, "ezauth/src/__generated__/responseTypes.ts");
     const p2 = path.join(outputPath, "ezstack/src/__generated__/responseTypes.ts");
     const p3 = path.join(outputPath, "ezstack-site/src/__generated__/responseTypes.ts");
+    const p4 = path.join(outputPath, "ezusers/src/__generated__/responseTypes.ts");
 
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     fs.writeFileSync(p3, content);
+    fs.writeFileSync(p4, content);
     // console.log(`Generated response types file: ${outputPath}`);
   }
 
@@ -259,10 +262,12 @@ class SimpleJSDocParser {
     const p1 = path.join(outputPath, "ezauth/src/__generated__/requestTypes.ts");
     const p2 = path.join(outputPath, "ezstack/src/__generated__/requestTypes.ts");
     const p3 = path.join(outputPath, "ezstack-site/src/__generated__/requestTypes.ts");
+    const p4 = path.join(outputPath, "ezusers/src/__generated__/requestTypes.ts");
 
     fs.writeFileSync(p1, content);
     fs.writeFileSync(p2, content);
     fs.writeFileSync(p3, content);
+    fs.writeFileSync(p4, content);
     // console.log(`Generated Request types file: ${outputPath}`);
   }
 

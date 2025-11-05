@@ -75,6 +75,26 @@ services:
     networks:
       - internal
 
+  ezusers:
+    build:
+      context: ./apps/ezusers
+      dockerfile: Dockerfile
+    image: ezusers:latest
+    container_name: ezusers
+    restart: unless-stopped
+    ports:
+      - "8082:8082"  # Exposed for Cloudflare Tunnel
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./secrets:/app/secrets:ro
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
   redis:
     image: redis:7-alpine
     container_name: redis
