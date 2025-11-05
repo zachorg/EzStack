@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/app/components/AuthProvider";
 import UserInfoInitialDialog from "@/app/components/UserInfoInitialDialog";
+import { UserProfileUserInfoConfig } from "@/__generated__/configTypes";
 
 export default function DashboardLayout({
   children,
@@ -14,17 +15,71 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [showDialog, setShowDialog] = useState(false);
+  const [hasUserInfoBeenFetched, setHasUserInfoBeenFetched] = useState(false);
+  const prevUserInfoRef = useRef<UserProfileUserInfoConfig | null | undefined>(undefined);
+  const authCompletedRef = useRef(false);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track if userInfo has ever been fetched (even if it's null)
+  // We detect this by checking if userInfo value has changed after authentication completes
+  // If userInfo stays null, we use a timeout as fallback to assume fetch completed
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && user) {
+      // Mark that authentication has completed
+      if (!authCompletedRef.current) {
+        authCompletedRef.current = true;
+        prevUserInfoRef.current = userInfo; // Initialize with current value
+        
+        // If userInfo is already non-null, it's been fetched
+        if (userInfo !== null) {
+          setHasUserInfoBeenFetched(true);
+        } else {
+          // Set a timeout: if userInfo is still null after 3 seconds, assume fetch completed
+          fetchTimeoutRef.current = setTimeout(() => {
+            setHasUserInfoBeenFetched(true);
+          }, 3000);
+        }
+      } else {
+        // If userInfo value changed after auth completed, the fetch completed
+        if (prevUserInfoRef.current !== userInfo) {
+          // Clear timeout if it exists
+          if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+            fetchTimeoutRef.current = null;
+          }
+          setHasUserInfoBeenFetched(true);
+          prevUserInfoRef.current = userInfo;
+        }
+      }
+    } else {
+      // Reset when user logs out
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+        fetchTimeoutRef.current = null;
+      }
+      setHasUserInfoBeenFetched(false);
+      prevUserInfoRef.current = undefined;
+      authCompletedRef.current = false;
+    }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
+  }, [isAuthenticated, isLoading, userInfo, user]);
 
   useEffect(() => {
     // Only show dialog on dashboard pages when authenticated and userInfo is missing
     // Don't show dialog on /account page since that's where users go to update their info
     const isAccountPage = pathname === "/account";
-    if (isAuthenticated && !isLoading && !userInfo && user && !isAccountPage) {
+    if (isAuthenticated && !isLoading && !userInfo && user && !isAccountPage && hasUserInfoBeenFetched) {
       setShowDialog(true);
     } else {
       setShowDialog(false);
     }
-  }, [isAuthenticated, isLoading, userInfo, user, pathname]);
+  }, [isAuthenticated, isLoading, userInfo, user, pathname, hasUserInfoBeenFetched]);
 
   const handleSuccess = async () => {
     // Refresh user info after successful update
@@ -32,17 +87,37 @@ export default function DashboardLayout({
     setShowDialog(false);
   };
 
+  // Check if userInfo is being fetched (user is authenticated but userInfo hasn't been fetched yet)
+  // This happens when auth is ready but userInfo fetch hasn't completed yet
+  const isUserInfoFetching = isAuthenticated && !isLoading && user && !hasUserInfoBeenFetched;
+
   // Check if userInfo is invalid (missing or missing organization_name)
-  // This will automatically update when userInfo changes from AuthProvider
-  const isUserInfoInvalid = isAuthenticated && !isLoading && user && (!userInfo || !userInfo.organization_name || userInfo.organization_name.trim() === "");
+  // Only show button when userInfo has been fetched and is invalid or missing
+  // Don't show button while userInfo is still being fetched
+  const isUserInfoInvalid = isAuthenticated && !isLoading && user && hasUserInfoBeenFetched && (userInfo === null || !userInfo.organization_name || userInfo.organization_name.trim() === "");
 
   const handleCompleteProfileClick = () => {
     router.push("/account");
   };
 
+  // Show loading animation on /account page while userInfo is being fetched
+  const isAccountPage = pathname === "/account";
+  const showAccountLoading = isAccountPage && isUserInfoFetching;
+
   return (
     <>
-      {children}
+      {showAccountLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-800 dark:border-white mx-auto"></div>
+            <p className="text-sm text-neutral-400">
+              Loading...
+            </p>
+          </div>
+        </div>
+      ) : (
+        children
+      )}
       <UserInfoInitialDialog
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
