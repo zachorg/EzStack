@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./plugins
+        run: npm ci
+
+      - name: Build package
+        working-directory: ./plugins
+        run: npm run build
+
+      - name: Check package contents
+        working-directory: ./plugins
+        run: |
+          echo "Checking built files..."
+          ls -la dist/
+          
+      - name: Verify package.json
+        working-directory: ./plugins
+        run: |
+          echo "Package version:"
+          node -p "require('./package.json').version"
+
