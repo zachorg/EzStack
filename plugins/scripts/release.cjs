@@ -60,7 +60,7 @@ try {
 
   console.log(`\n Release ${tag} completed successfully!`);
   console.log(`\n GitHub Actions will now build and publish to npm.`);
-  console.log(`\n Check progress at: https://github.com/YOUR_USERNAME/YOUR_REPO/actions\n`);
+  console.log(`\n Check progress at: https://github.com/zachorg/EzStack/actions\n`);
 
 } catch (error) {
   console.error('\n Release failed:', error.message);

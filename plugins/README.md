@@ -5,15 +5,15 @@ A lightweight, typed SDK for EzStack APIs. It handles auth headers and request s
 ## Install
 
 ```bash
-npm install @ezstack
+npm install ezstack
 # or
-pnpm add @ezstack
+pnpm add ezstack
 ```
 
 ## Quickstart
 
 ```ts
-import EzStack from '@ezstack';
+import EzStack from 'ezstack';
 
 const ez = new EzStack({
   apiKey: process.env.EZSTACK_API_KEY!,

@@ -494,11 +494,11 @@ Built by developers who got tired of wiring up auth for every side project. We u
 1. Go to **https://ezstack.app**
 2. Sign up (takes 30 seconds)
 3. Create a project and get your API key
-4. `npm install @ezstack`
+4. `npm install ezstack`
 5. Send your first OTP
 
 ```typescript
-import EzStack from '@ezstack';
+import EzStack from 'ezstack';
 
 const ez = await EzStack.create({ 
   apiKey: process.env.EZSTACK_API_KEY! 
