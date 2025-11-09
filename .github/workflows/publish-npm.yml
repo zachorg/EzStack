@@ -9,7 +9,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     
     steps:
@@ -37,19 +37,20 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            Release of ezstack npm package version ${{ github.ref_name }}
-            
-            Install via:
-            ```bash
-            npm install ezstack
-            ```
-          draft: false
-          prerelease: false
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "Release ${{ github.ref_name }}" \
+            --notes "Release of ezstack npm package version ${{ github.ref_name }}
+
+          Install via:
+          \`\`\`bash
+          npm install ezstack
+          \`\`\`
+
+          **Changes:**
+          - See commit history for details
+          
+          **NPM Package:** https://www.npmjs.com/package/ezstack"
 
