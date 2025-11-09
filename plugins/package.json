@@ -1,6 +1,6 @@
 {
   "name": "ezstack",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": false,
   "description": "Official EzStack JavaScript/TypeScript SDK",
   "license": "MIT",
@@ -46,5 +46,3 @@
     "auth"
   ]
 }
-
-
