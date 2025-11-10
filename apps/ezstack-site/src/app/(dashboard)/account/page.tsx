@@ -276,6 +276,7 @@ export default function AccountPage() {
         items: [
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).projects,
           PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).billing,
+          PAGE_SECTIONS({ resolvedParams: { projectname: "" } }).docs,
         ],
       },
     ];
