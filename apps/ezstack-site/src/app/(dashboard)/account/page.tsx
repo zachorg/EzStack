@@ -7,6 +7,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useSidebar } from "@/app/components/SidebarProvider";
 import { foward_req_to_ezstack_api } from "@/lib/functions-proxy";
 import { CreateUserProfileRequest } from "@/__generated__/requestTypes";
+import { validateOrganizationName } from "@/lib/organization-validator";
 
 type UserProfile = {
   uid: string;
@@ -68,6 +69,13 @@ function OrganizationNameWidget({
   const handleSave = useCallback(async () => {
     if (!value.trim()) {
       setError("Organization name cannot be empty");
+      return;
+    }
+
+    // Validate organization name
+    const validation = validateOrganizationName(value.trim());
+    if (!validation.isValid) {
+      setError(validation.error || "Invalid organization name");
       return;
     }
 

@@ -5,6 +5,7 @@ import { UserProfileUserInfoConfig } from "@/__generated__/configTypes";
 import { foward_req_to_ezstack_api } from "@/lib/functions-proxy";
 import { useAuth } from "./AuthProvider";
 import { CreateUserProfileRequest } from "@/__generated__/requestTypes";
+import { validateOrganizationName } from "@/lib/organization-validator";
 
 interface UserInfoInitialDialogProps {
   isOpen: boolean;
@@ -26,6 +27,13 @@ export default function UserInfoInitialDialog({
     e.preventDefault();
     if (!organizationName.trim()) {
       setError("Please fill in the organization name");
+      return;
+    }
+
+    // Validate organization name
+    const validation = validateOrganizationName(organizationName.trim());
+    if (!validation.isValid) {
+      setError(validation.error || "Invalid organization name");
       return;
     }
 
