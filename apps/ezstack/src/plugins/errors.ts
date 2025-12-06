@@ -26,7 +26,7 @@ export default fp(async (app) => {
 
     const message = isValidationError
       ? "Request validation failed"
-      : (err.message || "Unexpected error");
+      : ((err as any).message || "Unexpected error");
 
     // Log full error; return minimal shape
     app.log.error({ err, code, status }, "Request failed");
