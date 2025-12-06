@@ -16,7 +16,10 @@ export default fp(async (app) => {
     try { app.log.info("redis: ready"); } catch {}
   });
   redis.on("error", (err) => {
-    try { app.log.error({ err: err && err.message }, "redis: error"); } catch {}
+    try { 
+      const error = err instanceof Error ? err : { message: String(err) };
+      app.log.error({ err: error.message }, "redis: error"); 
+    } catch {}
   });
   redis.on("end", () => {
     try { app.log.warn("redis: connection closed"); } catch {}
