@@ -2,10 +2,13 @@ import fp from "fastify-plugin";
 
 export default fp(async (app) => {
   app.setErrorHandler((err, _req, rep) => {
+    // Cast err to any to avoid TypeScript strict type checking
+    const error = err as any;
+    
     // Normalize status and error codes for consistent API responses
-    const isValidationError = (err as any).validation || (err as any).code === "FST_ERR_VALIDATION";
-    const status = isValidationError ? 400 : (typeof (err as any).statusCode === "number" ? (err as any).statusCode : 500);
-    let code: string | undefined = (err as any).code;
+    const isValidationError = error.validation || error.code === "FST_ERR_VALIDATION";
+    const status = isValidationError ? 400 : (typeof error.statusCode === "number" ? error.statusCode : 500);
+    let code: string | undefined = error.code;
     if (!code) {
       if (isValidationError) code = "validation_error";
       else if (status === 401) code = "unauthorized";
@@ -15,9 +18,9 @@ export default fp(async (app) => {
       else if (status >= 400 && status < 500) code = "bad_request";
       else code = "internal_error";
     }
-    const message = isValidationError ? "Request validation failed" : (err.message || "Unexpected error");
+    const message = isValidationError ? "Request validation failed" : (error.message || "Unexpected error");
     // Log error with structured metadata. Fastify hides stack traces at lower levels.
-    app.log.error({ err, code, status }, "Request failed");
+    app.log.error({ err: error, code, status }, "Request failed");
     return rep.code(status >= 400 && status < 600 ? status : 500).type("application/json").send({ error: { code, message } });
   });
 
