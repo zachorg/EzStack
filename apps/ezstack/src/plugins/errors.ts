@@ -4,15 +4,18 @@ import fp from "fastify-plugin";
 export default fp(async (app) => {
   // Convert thrown/returned errors into consistent API error shape
   app.setErrorHandler((err, _req, rep) => {
+    // Cast err to any to avoid TypeScript strict type checking
+    const error = err as any;
+    
     // Validation errors from Fastify/Ajv
-    const isValidationError = (err as any).validation || (err as any).code === "FST_ERR_VALIDATION";
+    const isValidationError = error.validation || error.code === "FST_ERR_VALIDATION";
 
     const status = isValidationError
       ? 400
-      : (typeof (err as any).statusCode === "number" ? (err as any).statusCode : 500);
+      : (typeof error.statusCode === "number" ? error.statusCode : 500);
 
     // Prefer explicit error code if provided
-    let code: string | undefined = (err as any).code;
+    let code: string | undefined = error.code;
 
     if (!code) {
       if (isValidationError) code = "validation_error";
@@ -26,10 +29,10 @@ export default fp(async (app) => {
 
     const message = isValidationError
       ? "Request validation failed"
-      : ((err as any).message || "Unexpected error");
+      : (error.message || "Unexpected error");
 
     // Log full error; return minimal shape
-    app.log.error({ err, code, status }, "Request failed");
+    app.log.error({ err: error, code, status }, "Request failed");
 
     return rep
       .code(status >= 400 && status < 600 ? status : 500)
