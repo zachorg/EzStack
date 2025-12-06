@@ -68,7 +68,20 @@ data = {
 }
 
 response = requests.post(url, headers=headers, json=data)
-print(response.json())`
+print(response.json())`,
+        node: `import EzStack from 'ezstack';
+
+const ez = new EzStack({
+  apiKey: process.env.EZSTACK_API_KEY
+});
+
+const response = await ez.ezauth.otp.send({
+  destination: '1234567890',
+  channel: 'sms',
+  contextDescription: 'Login verification'
+});
+
+console.log(response);`
       },
       responseExample: `{
   "requestId": "req_a3f8b2c1d5e9"
@@ -129,7 +142,19 @@ data = {
 }
 
 response = requests.post(url, headers=headers, json=data)
-print(response.json())`
+print(response.json())`,
+        node: `import EzStack from 'ezstack';
+
+const ez = new EzStack({
+  apiKey: process.env.EZSTACK_API_KEY
+});
+
+const response = await ez.ezauth.otp.verify({
+  requestId: 'req_abc123xyz',
+  code: '123456'
+});
+
+console.log(response);`
       },
       responseExample: `{
   "verified": true

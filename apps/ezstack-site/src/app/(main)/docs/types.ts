@@ -1,4 +1,4 @@
-export type Language = "curl" | "python";
+export type Language = "curl" | "python" | "node";
 
 export interface ApiEndpoint {
   id: string;
@@ -27,6 +27,7 @@ export interface ApiEndpoint {
   examples: {
     curl: string;
     python: string;
+    node: string;
   };
   responseExample: string;
 }

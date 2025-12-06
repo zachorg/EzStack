@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
-import { UserProfileDocument } from "../__generated__/documentTypes";
+import { UserProfileDocument } from "../__generated__/documentTypes.js";
 import type Stripe from "stripe";
-import { CreateUserProfileRequest } from "../__generated__/requestTypes";
+import { CreateUserProfileRequest } from "../__generated__/requestTypes.js";
+import { validateOrganizationName } from "../utils/organization-validator.js";
 
 // API key management routes: create/list/revoke. All routes rely on the auth
 // plugin to populate req.userId and tenant authorization.
@@ -45,13 +46,14 @@ const routes: FastifyPluginAsync = async (app) => {
         // create otp send subscription
         await stripe.subscriptions.create({
           customer: customer.id,
-          items: [{ price: "price_1SNdk2AZqNXFtPMLegnBzCER" }],
-        });
-
-        // create otp verify subscription
-        await stripe.subscriptions.create({
-          customer: customer.id,
-          items: [{ price: "price_1SNduqAZqNXFtPMLmUlf0fIQ" }],
+          items: [
+            // sms send otp
+            { price: "price_1SNdk2AZqNXFtPMLegnBzCER" },
+            // email send otp
+            { price: "price_1SPvyUAZqNXFtPMLYYL8MYaS" },
+            // verify otp
+            { price: "price_1SPwBHAZqNXFtPMLUrLXDACw" },
+          ],
         });
 
         // Create new user document
@@ -105,6 +107,14 @@ const routes: FastifyPluginAsync = async (app) => {
         return rep
           .status(400)
           .send({ error: { message: "Organization name is required" } });
+      }
+
+      // Validate organization name to prevent fraudulent names
+      const validation = validateOrganizationName(request.organization_name);
+      if (!validation.isValid) {
+        return rep
+          .status(400)
+          .send({ error: { message: validation.error } });
       }
 
       // Verify the Firebase ID token
